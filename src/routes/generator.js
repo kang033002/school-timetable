@@ -114,7 +114,7 @@ router.get('/data', async (req, res) => {
       classes,
       subjects,
       teachers,
-      maxPeriodsPerDay: school.rows[0]?.max_periods_per_day || 7,
+      maxPeriodsPerDay: Math.max(school.rows[0]?.max_periods_per_day || 10, 10),
       operatingDays: school.rows[0]?.operating_days || 5
     });
   } catch (err) {
@@ -130,19 +130,17 @@ router.get('/data', async (req, res) => {
 router.post('/generate', async (req, res) => {
   try {
     const { schoolId, assignments } = req.body;
-    // assignments: [{ gradeClassId, subjects: [{ subjectId, teacherId, weeklyHours }] }]
     if (!schoolId || !assignments?.length) {
       return res.status(400).json({ error: 'schoolId and assignments are required' });
     }
 
-    // 과목명/교사명 조회
     const subjects = await all(`SELECT id, name FROM subjects WHERE school_id = ?`, [schoolId]);
     const teachers = await all(`SELECT id, name FROM teachers WHERE school_id = ?`, [schoolId]);
     const subMap = Object.fromEntries(subjects.map(s => [s.id, s.name]));
     const tchMap = Object.fromEntries(teachers.map(t => [t.id, t.name]));
 
     const school = await query(`SELECT max_periods_per_day, operating_days FROM schools WHERE id = ?`, [schoolId]);
-    const maxPeriodsPerDay = school.rows[0]?.max_periods_per_day || 7;
+    const maxPeriodsPerDay = Math.max(school.rows[0]?.max_periods_per_day || 10, 10);
     const operatingDays = school.rows[0]?.operating_days || 5;
 
     // 과목명/교사명 주입

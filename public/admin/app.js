@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
   tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
   tabBtnGenerator.addEventListener('click', () => switchTab('GENERATOR'));
 
-  // Default tab
-  switchTab('BASE');
+  // Default tab (1st tab: DAILY)
+  switchTab('DAILY');
 
   teacherSetupForm.addEventListener('submit', handleTeacherSetup);
   subjectSetupForm.addEventListener('submit', handleSubjectSetup);
@@ -361,23 +361,51 @@ async function loadSchoolMetadata() {
       tListUi.appendChild(div);
     });
 
-    // Render Subjects List for Deletion
-    const sListUi = document.getElementById('admin-subjects-list-ui');
-    sListUi.innerHTML = '';
-    currentSchoolMeta.subjects.forEach(s => {
-      const div = document.createElement('div');
-      div.className = 'settings-list-item';
-      div.innerHTML = `
-        <span>${s.name} (${s.short_name || s.name})</span>
-        <button onclick="deleteSubject('${s.id}')">삭제</button>
-      `;
-      sListUi.appendChild(div);
-    });
+    // Render Classes List with Homeroom Teacher Info for Deletion/View
+    const cListUi = document.getElementById('admin-classes-list-ui');
+    if (cListUi) {
+      cListUi.innerHTML = '';
+      if (!currentSchoolMeta.gradeClasses || currentSchoolMeta.gradeClasses.length === 0) {
+        cListUi.innerHTML = '<p class="text-center text-muted" style="font-size:0.85rem;">등록된 학년/학급이 없습니다.</p>';
+      } else {
+        currentSchoolMeta.gradeClasses.forEach(c => {
+          const homeroomTeacher = currentSchoolMeta.teachers.find(t => t.id === c.homeroom_teacher_id);
+          const div = document.createElement('div');
+          div.className = 'settings-list-item';
+          div.style.display = 'flex';
+          div.style.justifyContent = 'space-between';
+          div.style.alignItems = 'center';
+          div.style.padding = '0.4rem 0.6rem';
+          div.style.borderBottom = '1px solid var(--border-color)';
+          div.style.fontSize = '0.88rem';
+          div.innerHTML = `
+            <span>🏫 <strong>${c.grade}학년 ${c.class_number}반</strong> ${homeroomTeacher ? `<span style="color:var(--primary-color); font-weight:600;">(담임: ${homeroomTeacher.name})</span>` : '<span style="color:var(--text-sub);">(담임 미지정)</span>'}</span>
+            <button class="btn btn-danger btn-xs" onclick="deleteClass('${c.id}')" style="padding:2px 6px; font-size:11px; background:#ef4444; color:#fff; border-radius:4px;">삭제</button>
+          `;
+          cListUi.appendChild(div);
+        });
+      }
+    }
 
   } catch (err) {
     console.error('Metadata load error:', err);
   }
 }
+
+window.deleteClass = async function(id) {
+  if (!confirm('해당 학급을 삭제하시겠습니까? 관련 시간표 데이터도 삭제될 수 있습니다.')) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/classes/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      alert('학급이 삭제되었습니다.');
+      loadMetadata();
+    } else {
+      alert('학급 삭제 실패');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 // Global scope deletion methods
 window.deleteTeacher = async function(id) {
@@ -692,9 +720,9 @@ function renderGrid(weeklyData, mode) {
   if (!targetBody) return;
   targetBody.innerHTML = '';
 
-  const maxPeriods = (currentSchoolMeta && currentSchoolMeta.school) 
-    ? currentSchoolMeta.school.max_periods_per_day 
-    : 9;
+  const maxPeriods = (currentSchoolMeta && currentSchoolMeta.school && currentSchoolMeta.school.max_periods_per_day) 
+    ? Math.max(currentSchoolMeta.school.max_periods_per_day, 10) 
+    : 10;
 
   for (let p = 1; p <= maxPeriods; p++) {
     const tr = document.createElement('tr');
