@@ -711,77 +711,77 @@ async function loadTeacherStats() {
   }
 }
 
-// Render Grid
+// Render Grid (3개 탭 모든 테이블에 1~10교시 무조건 동시 렌더링)
 function renderGrid(weeklyData, mode) {
-  const targetBody = activeTab === 'BASE' 
-    ? document.getElementById('timetable-body-base') 
-    : (activeTab === 'GENERATOR' ? document.getElementById('timetable-body-gen') : document.getElementById('timetable-body-daily'));
-  
-  if (!targetBody) return;
-  targetBody.innerHTML = '';
+  const bodies = [
+    document.getElementById('timetable-body-daily'),
+    document.getElementById('timetable-body-base'),
+    document.getElementById('timetable-body-gen')
+  ].filter(Boolean);
 
-  const maxPeriods = (currentSchoolMeta && currentSchoolMeta.school && currentSchoolMeta.school.max_periods_per_day) 
-    ? Math.max(currentSchoolMeta.school.max_periods_per_day, 10) 
-    : 10;
+  bodies.forEach(targetBody => {
+    targetBody.innerHTML = '';
+    const maxPeriods = 10; // 고등학교 표준 10교시 고정 표출
 
-  for (let p = 1; p <= maxPeriods; p++) {
-    const tr = document.createElement('tr');
+    for (let p = 1; p <= maxPeriods; p++) {
+      const tr = document.createElement('tr');
 
-    // Period Header
-    const th = document.createElement('th');
-    th.textContent = `${p}교시`;
-    tr.appendChild(th);
+      // Period Header
+      const th = document.createElement('th');
+      th.textContent = `${p}교시`;
+      tr.appendChild(th);
 
-    // Days 1 to 5
-    for (let d = 0; d < 5; d++) {
-      const dayOfWeek = d + 1;
-      const dayData = (weeklyData && weeklyData.length > d) ? weeklyData[d] : null;
-      const slot = (dayData && dayData.slots && dayData.slots.length >= p) ? dayData.slots[p - 1] : null;
+      // Days 1 to 5 (월~금)
+      for (let d = 0; d < 5; d++) {
+        const dayOfWeek = d + 1;
+        const dayData = (weeklyData && Array.isArray(weeklyData) && weeklyData.length > d) ? weeklyData[d] : null;
+        const slot = (dayData && dayData.slots && Array.isArray(dayData.slots) && dayData.slots.length >= p) ? dayData.slots[p - 1] : null;
 
-      const td = document.createElement('td');
-      td.className = 'timetable-cell';
+        const td = document.createElement('td');
+        td.className = 'timetable-cell';
 
-      if (slot && slot.isChanged) {
-        td.classList.add('is-changed');
-        const badge = document.createElement('span');
-        badge.className = 'change-badge';
-        badge.textContent = slot.changeType === 'SUBSTITUTE' ? '보강' : '결강';
-        td.appendChild(badge);
-      }
-
-      if (slot && (slot.subjectName || slot.gradeName)) {
-        const subDiv = document.createElement('div');
-        subDiv.className = 'cell-subject';
-        subDiv.textContent = mode === 'CLASS' ? (slot.subjectName || '수업없음') : (slot.gradeName || '빈교시');
-        td.appendChild(subDiv);
-
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'cell-subinfo';
-        infoDiv.textContent = mode === 'CLASS' ? (slot.teacherName || '') : (slot.subjectName || '');
-        td.appendChild(infoDiv);
-
-        if (slot.roomName && slot.roomName !== '일반교실') {
-          const roomDiv = document.createElement('div');
-          roomDiv.className = 'cell-room';
-          roomDiv.textContent = `📍 ${slot.roomName}`;
-          td.appendChild(roomDiv);
+        if (slot && slot.isChanged) {
+          td.classList.add('is-changed');
+          const badge = document.createElement('span');
+          badge.className = 'change-badge';
+          badge.textContent = slot.changeType === 'SUBSTITUTE' ? '보강' : '결강';
+          td.appendChild(badge);
         }
-      } else {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'cell-subinfo';
-        emptyDiv.textContent = '-';
-        td.appendChild(emptyDiv);
+
+        if (slot && (slot.subjectName || slot.gradeName)) {
+          const subDiv = document.createElement('div');
+          subDiv.className = 'cell-subject';
+          subDiv.textContent = mode === 'CLASS' ? (slot.subjectName || '수업없음') : (slot.gradeName || '빈교시');
+          td.appendChild(subDiv);
+
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'cell-subinfo';
+          infoDiv.textContent = mode === 'CLASS' ? (slot.teacherName || '') : (slot.subjectName || '');
+          td.appendChild(infoDiv);
+
+          if (slot.roomName && slot.roomName !== '일반교실') {
+            const roomDiv = document.createElement('div');
+            roomDiv.className = 'cell-room';
+            roomDiv.textContent = `📍 ${slot.roomName}`;
+            td.appendChild(roomDiv);
+          }
+        } else {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'cell-subinfo';
+          emptyDiv.textContent = '-';
+          td.appendChild(emptyDiv);
+        }
+
+        // Click event for editing slot
+        const targetDate = dayData ? dayData.date : null;
+        td.addEventListener('click', () => openChangeModal(targetDate, dayOfWeek, p, slot, mode));
+
+        tr.appendChild(td);
       }
 
-      // Click event for editing slot
-      const targetDate = dayData ? dayData.date : null;
-      td.addEventListener('click', () => openChangeModal(targetDate, dayOfWeek, p, slot, mode));
-
-      tr.appendChild(td);
+      targetBody.appendChild(tr);
     }
-
-    targetBody.appendChild(tr);
-  }
+  });
 }
 
 // Open Change Modal
@@ -1100,21 +1100,33 @@ async function initGeneratorTab() {
 
     // 1. 학급 선택 체크박스 생성
     const classContainer = document.getElementById('gen-class-checkboxes');
+    const classesList = (generatorData && generatorData.classes && generatorData.classes.length > 0)
+      ? generatorData.classes
+      : (currentSchoolMeta && currentSchoolMeta.gradeClasses ? currentSchoolMeta.gradeClasses : []);
+
     if (classContainer) {
       classContainer.innerHTML = '';
-      generatorData.classes.forEach(c => {
-        const label = document.createElement('label');
-        label.style.display = 'inline-flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '0.35rem';
-        label.style.fontSize = '0.9rem';
-        label.style.cursor = 'pointer';
-        label.innerHTML = `
-          <input type="checkbox" class="gen-class-chk" value="${c.id}" checked>
-          <span>${c.grade}학년 ${c.class_number}반</span>
-        `;
-        classContainer.appendChild(label);
-      });
+      if (classesList.length === 0) {
+        classContainer.innerHTML = '<p style="color:var(--text-sub); font-size:0.85rem;">[⚙️ 학교/교사 설정] 패널에서 먼저 학년/반을 등록해주세요.</p>';
+      } else {
+        classesList.forEach(c => {
+          const label = document.createElement('label');
+          label.style.display = 'inline-flex';
+          label.style.alignItems = 'center';
+          label.style.gap = '0.35rem';
+          label.style.fontSize = '0.9rem';
+          label.style.cursor = 'pointer';
+          label.style.background = '#ffffff';
+          label.style.padding = '0.3rem 0.6rem';
+          label.style.borderRadius = '6px';
+          label.style.border = '1px solid var(--border-color)';
+          label.innerHTML = `
+            <input type="checkbox" class="gen-class-chk" value="${c.id}" checked>
+            <span><strong>${c.grade}학년 ${c.class_number || c.classNumber}반</strong></span>
+          `;
+          classContainer.appendChild(label);
+        });
+      }
     }
 
     // 2. 과목 및 교사 배정 시수 입력표 생성
