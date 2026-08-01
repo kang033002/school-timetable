@@ -124,6 +124,7 @@
           <button id="btn-refresh" class="btn btn-secondary">🔄 새로고침</button>
           <button id="btn-logs" class="btn btn-info">📜 변경 이력 로그</button>
           <button id="btn-settings-toggle" class="btn btn-outline">⚙️ 학교/교사 설정</button>
+          <button id="btn-print" class="btn btn-outline" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
         </div>
 
         <!-- School Settings View Panel -->
@@ -248,31 +249,192 @@
         <!-- Timetable Grid Display -->
         <div class="timetable-container" id="timetable-display-container">
           <div class="timetable-tabs">
-            <button class="tab-btn active" id="tab-btn-daily">📅 일자별 시간표 (일정 조정)</button>
-            <button class="tab-btn" id="tab-btn-base">🏫 학기 기본 시간표 (원본 설정)</button>
+            <button class="tab-btn active" id="tab-btn-base">🏫 학기 기본 시간표 (원본 설정 & 수동 수정)</button>
+            <button class="tab-btn" id="tab-btn-daily">📅 일자별 시간표 (일정 조정 & 보강)</button>
+            <button class="tab-btn" id="tab-btn-generator">🤖 시간표 자동 생성 (학기초 전용)</button>
           </div>
 
-          <div class="timetable-header">
-            <h3 id="timetable-title">1학년 1반 주간 시간표</h3>
-            <span class="subtext" id="week-date-subtext">2026.08.03(월) ~ 2026.08.07(금)</span>
+          <!-- 1. 기본 시간표 탭 영역 -->
+          <div id="tab-content-base" class="tab-content">
+            <div class="timetable-header">
+              <div>
+                <h3 id="timetable-title-base">🏫 학기 기본 시간표 원본 설정</h3>
+                <span class="subtext">각 학년/반 셀을 클릭하여 시간표를 직접 수동으로 입력 및 수정하여 적용할 수 있습니다.</span>
+              </div>
+              <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 기본 시간표 인쇄</button>
+            </div>
+            <div class="table-responsive">
+              <table class="timetable-grid">
+                <thead>
+                  <tr>
+                    <th class="th-period">교시</th>
+                    <th>월요일</th>
+                    <th>화요일</th>
+                    <th>수요일</th>
+                    <th>목요일</th>
+                    <th>금요일</th>
+                  </tr>
+                </thead>
+                <tbody id="timetable-body-base">
+                  <!-- Dynamically populated grid for Base -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 기본 시간표 탭 내 교사 시수 통계 -->
+            <div class="stats-section mt-4">
+              <div class="timetable-header">
+                <div>
+                  <h4>📊 교사별 주간 수업 시수 통계 (기본 시간표 기준)</h4>
+                  <span class="subtext">기본 시간표 배정에 따른 선생님별 주간/월간 시수 현황입니다.</span>
+                </div>
+                <button class="btn btn-sm btn-outline print-btn" onclick="window.print()">🖨️ 시수 통계 인쇄</button>
+              </div>
+              <div class="table-responsive">
+                <table class="logs-table" id="stats-table-base">
+                  <thead>
+                    <tr>
+                      <th>교사명</th>
+                      <th>담당 학급 (과목 및 주간 시수)</th>
+                      <th>주간 총 시수</th>
+                      <th>월간 추정 시수</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stats-body-base">
+                    <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-sub);">등록된 기본 시간표 정보가 없습니다.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <div class="table-responsive">
-            <table class="timetable-grid">
-              <thead>
-                <tr>
-                  <th class="th-period">교시</th>
-                  <th>월요일</th>
-                  <th>화요일</th>
-                  <th>수요일</th>
-                  <th>목요일</th>
-                  <th>금요일</th>
-                </tr>
-              </thead>
-              <tbody id="timetable-body">
-                <!-- Dynamically populated grid -->
-              </tbody>
-            </table>
+          <!-- 2. 일자별 시간표 탭 영역 -->
+          <div id="tab-content-daily" class="tab-content hidden">
+            <div class="timetable-header">
+              <div>
+                <h3 id="timetable-title-daily">📅 일자별 시간표 (일정 조정)</h3>
+                <span class="subtext" id="week-date-subtext">2026.08.03(월) ~ 2026.08.07(금)</span>
+              </div>
+              <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 일자별 시간표 인쇄</button>
+            </div>
+            <div class="table-responsive">
+              <table class="timetable-grid">
+                <thead>
+                  <tr>
+                    <th class="th-period">교시</th>
+                    <th>월요일</th>
+                    <th>화요일</th>
+                    <th>수요일</th>
+                    <th>목요일</th>
+                    <th>금요일</th>
+                  </tr>
+                </thead>
+                <tbody id="timetable-body-daily">
+                  <!-- Dynamically populated grid for Daily -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 3. 시간표 자동 생성 탭 영역 (학기초 전용) -->
+          <div id="tab-content-generator" class="tab-content hidden">
+            <div class="timetable-header">
+              <div>
+                <h3>🤖 학기초 시간표 자동 생성</h3>
+                <span class="subtext">과목별 주간 시수와 담당 교사를 설정하면 인공지능 알고리즘이 충돌 없이 전체 학년/반 시간표를 만들어 드립니다.</span>
+              </div>
+              <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 자동생성 설정 인쇄</button>
+            </div>
+
+            <div class="generator-setup">
+              <!-- 학급 선택 -->
+              <div class="gen-section">
+                <h4>① 적용할 학급 선택</h4>
+                <div id="gen-class-checkboxes" class="gen-class-grid">
+                  <!-- 동적 생성 -->
+                </div>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-select-all">전체 선택</button>
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-deselect-all">전체 해제</button>
+                </div>
+              </div>
+
+              <!-- 과목/시수/교사 입력 -->
+              <div class="gen-section">
+                <h4>② 과목별 주간 시수 및 담당 교사 설정</h4>
+                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수(시간)와 담당 교사를 선택하세요. 시수가 0이면 제외됩니다.</p>
+                <div class="table-responsive">
+                  <table class="logs-table" id="gen-subject-table">
+                    <thead>
+                      <tr>
+                        <th>과목명</th>
+                        <th>담당 교사</th>
+                        <th>주간 시수</th>
+                      </tr>
+                    </thead>
+                    <tbody id="gen-subject-body">
+                      <!-- 동적 생성 -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 생성 버튼 -->
+              <div class="gen-section" style="text-align:center;">
+                <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem;">
+                  🤖 AI 시간표 자동 생성 시작
+                </button>
+                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem;">생성 완료 후 아래 미리보기를 확인하고 '전체 학년/반에 적용'을 누르면 기본 시간표로 배정됩니다.</p>
+              </div>
+            </div>
+
+            <!-- 생성 결과 미리보기 -->
+            <div id="gen-preview" class="hidden">
+              <div class="timetable-header" style="margin-top:1.5rem;">
+                <h3>📋 생성된 시간표 미리보기</h3>
+                <div style="display:flex; gap:0.75rem; align-items:center;">
+                  <button type="button" id="btn-regen" class="btn btn-secondary btn-sm">🔄 다시 생성</button>
+                  <button type="button" id="btn-apply-timetable" class="btn btn-success" style="padding:0.5rem 1.5rem;">
+                    ✅ 전체 학년/반에 자동 적용
+                  </button>
+                </div>
+              </div>
+              <div id="gen-unassigned-alert" class="alert alert-danger hidden" style="margin-bottom:1rem;">
+                <strong>⚠️ 미배정 슬롯 발생</strong>
+                <ul id="gen-unassigned-list"></ul>
+                <p style="font-size:0.85rem; margin-top:0.5rem;">위 슬롯은 시수 과다 또는 교사 충돌로 인해 자동 배정되지 못했습니다. 적용 후 기본 시간표 탭에서 수동으로 수정할 수 있습니다.</p>
+              </div>
+              <div id="gen-preview-tables">
+                <!-- 학급별 미리보기 표가 동적으로 생성됩니다 -->
+              </div>
+            </div>
+
+            <!-- 자동 생성 탭 내 교사 시수 통계 -->
+            <div class="stats-section mt-5">
+              <div class="timetable-header">
+                <div>
+                  <h4>📊 교사별 수업 시수 현황 (참고용)</h4>
+                  <span class="subtext">현재 설정된 기본 시간표 기준 교사 시수 현황입니다.</span>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="logs-table" id="stats-table-gen">
+                  <thead>
+                    <tr>
+                      <th>교사명</th>
+                      <th>담당 학급 (과목 및 주간 시수)</th>
+                      <th>주간 총 시수</th>
+                      <th>월간 추정 시수</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stats-body-gen">
+                    <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-sub);">기본 시간표 정보를 불러오는 중입니다...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ const { initSchema } = require('./db/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const timetableRoutes = require('./routes/timetable');
+const generatorRoutes = require('./routes/generator');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/master', require('./routes/master'));
+app.use('/api/generator', generatorRoutes);
 app.use('/api', timetableRoutes);
 
 // Health check

@@ -28,6 +28,7 @@ router.post('/schools/approve', async (req, res) => {
     }
 
     await run(`UPDATE schools SET status = ? WHERE id = ?`, [status, schoolId]);
+    await run(`UPDATE user_accounts SET status = ? WHERE school_id = ?`, [status, schoolId]);
     res.json({ message: `학교 가입이 정상적으로 처리되었습니다. (${status})` });
   } catch (err) {
     console.error('Approve school error:', err);

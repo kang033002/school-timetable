@@ -94,24 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
 
-  const tabBtnDaily = document.getElementById('tab-btn-daily');
   const tabBtnBase = document.getElementById('tab-btn-base');
+  const tabBtnDaily = document.getElementById('tab-btn-daily');
+  const tabBtnGenerator = document.getElementById('tab-btn-generator');
 
-  tabBtnDaily.addEventListener('click', () => {
-    tabBtnDaily.classList.add('active');
-    tabBtnBase.classList.remove('active');
-    activeTab = 'DAILY';
-    datePicker.parentElement.style.display = 'block';
-    loadTimetable();
-  });
+  tabBtnBase.addEventListener('click', () => switchTab('BASE'));
+  tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
+  tabBtnGenerator.addEventListener('click', () => switchTab('GENERATOR'));
 
-  tabBtnBase.addEventListener('click', () => {
-    tabBtnBase.classList.add('active');
-    tabBtnDaily.classList.remove('active');
-    activeTab = 'BASE';
-    datePicker.parentElement.style.display = 'none';
-    loadTimetable();
-  });
+  // Default tab
+  switchTab('BASE');
 
   teacherSetupForm.addEventListener('submit', handleTeacherSetup);
   subjectSetupForm.addEventListener('submit', handleSubjectSetup);
@@ -613,9 +605,93 @@ async function loadTimetable() {
   }
 }
 
+function switchTab(tabName) {
+  activeTab = tabName;
+
+  const tabBtnBase = document.getElementById('tab-btn-base');
+  const tabBtnDaily = document.getElementById('tab-btn-daily');
+  const tabBtnGenerator = document.getElementById('tab-btn-generator');
+
+  const contentBase = document.getElementById('tab-content-base');
+  const contentDaily = document.getElementById('tab-content-daily');
+  const contentGenerator = document.getElementById('tab-content-generator');
+
+  [tabBtnBase, tabBtnDaily, tabBtnGenerator].forEach(btn => btn && btn.classList.remove('active'));
+  [contentBase, contentDaily, contentGenerator].forEach(cnt => cnt && cnt.classList.add('hidden'));
+
+  if (tabName === 'BASE') {
+    if (tabBtnBase) tabBtnBase.classList.add('active');
+    if (contentBase) contentBase.classList.remove('hidden');
+    datePicker.parentElement.style.display = 'none';
+    loadTimetable();
+    loadTeacherStats();
+  } else if (tabName === 'DAILY') {
+    if (tabBtnDaily) tabBtnDaily.classList.add('active');
+    if (contentDaily) contentDaily.classList.remove('hidden');
+    datePicker.parentElement.style.display = 'block';
+    loadTimetable();
+  } else if (tabName === 'GENERATOR') {
+    if (tabBtnGenerator) tabBtnGenerator.classList.add('active');
+    if (contentGenerator) contentGenerator.classList.remove('hidden');
+    datePicker.parentElement.style.display = 'none';
+    initGeneratorTab();
+    loadTeacherStats();
+  }
+}
+
+// 교사별 시수 통계 불러오기
+async function loadTeacherStats() {
+  if (!currentUser || !currentUser.schoolId) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/teacher-stats?schoolId=${currentUser.schoolId}`);
+    if (!res.ok) return;
+    const stats = await res.json();
+
+    const statsBodyBase = document.getElementById('stats-body-base');
+    const statsBodyGen = document.getElementById('stats-body-gen');
+
+    const renderStatsRows = (targetBody) => {
+      if (!targetBody) return;
+      targetBody.innerHTML = '';
+      if (!stats || stats.length === 0) {
+        targetBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-sub);">등록된 기본 시간표 정보가 없습니다.</td></tr>';
+        return;
+      }
+
+      stats.forEach(st => {
+        const tr = document.createElement('tr');
+        
+        const classDetails = st.classes.map(c => `${c.grade}학년 ${c.classNumber}반(${c.subjectName} ${c.weeklyHours}시간)`).join(', ');
+        const monthlyEst = st.totalWeeklyHours * 4;
+        const isOverload = st.totalWeeklyHours > 20;
+
+        tr.innerHTML = `
+          <td><strong>👩‍🏫 ${st.teacherName}</strong></td>
+          <td style="font-size:0.88rem; color:var(--text-main);">${classDetails || '-'}</td>
+          <td><span class="badge ${isOverload ? 'badge-danger' : 'badge-primary'}">${st.totalWeeklyHours} 시간</span></td>
+          <td>약 ${monthlyEst} 시간</td>
+          <td>${isOverload ? '<span style="color:#ef4444; font-weight:600;">⚠️ 과다 시수</span>' : '<span style="color:#10b981; font-weight:600;">✅ 적정</span>'}</td>
+        `;
+        targetBody.appendChild(tr);
+      });
+    };
+
+    renderStatsRows(statsBodyBase);
+    renderStatsRows(statsBodyGen);
+  } catch (err) {
+    console.error('Load teacher stats error:', err);
+  }
+}
+
 // Render Grid
 function renderGrid(weeklyData, mode) {
-  timetableBody.innerHTML = '';
+  const targetBody = activeTab === 'BASE' 
+    ? document.getElementById('timetable-body-base') 
+    : document.getElementById('timetable-body-daily');
+  
+  if (!targetBody) return;
+  targetBody.innerHTML = '';
+
   const maxPeriods = (currentSchoolMeta && currentSchoolMeta.school) 
     ? currentSchoolMeta.school.max_periods_per_day 
     : 9;
@@ -676,7 +752,7 @@ function renderGrid(weeklyData, mode) {
       tr.appendChild(td);
     }
 
-    timetableBody.appendChild(tr);
+    targetBody.appendChild(tr);
   }
 }
 
@@ -960,3 +1036,261 @@ window.deleteHoliday = async function(id) {
     console.error(err);
   }
 };
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🤖 시간표 자동 생성기 탭 프론트엔드 연동 Logic
+// ────────────────────────────────────────────────────────────────────────────
+let generatorData = null;
+let generatedResult = null;
+
+async function initGeneratorTab() {
+  if (!currentUser || !currentUser.schoolId) return;
+  try {
+    const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
+    if (!res.ok) return;
+    generatorData = await res.json();
+
+    // 1. 학급 선택 체크박스 생성
+    const classContainer = document.getElementById('gen-class-checkboxes');
+    if (classContainer) {
+      classContainer.innerHTML = '';
+      generatorData.classes.forEach(c => {
+        const label = document.createElement('label');
+        label.style.display = 'inline-flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '0.35rem';
+        label.style.fontSize = '0.9rem';
+        label.style.cursor = 'pointer';
+        label.innerHTML = `
+          <input type="checkbox" class="gen-class-chk" value="${c.id}" checked>
+          <span>${c.grade}학년 ${c.class_number}반</span>
+        `;
+        classContainer.appendChild(label);
+      });
+    }
+
+    // 2. 과목 및 교사 배정 시수 입력표 생성
+    const subjectBody = document.getElementById('gen-subject-body');
+    if (subjectBody) {
+      subjectBody.innerHTML = '';
+      if (generatorData.subjects.length === 0) {
+        subjectBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:1rem;">먼저 [⚙️ 학교/교사 설정] 패널에서 과목과 교사를 생성해주세요.</td></tr>';
+        return;
+      }
+
+      generatorData.subjects.forEach(sub => {
+        const tr = document.createElement('tr');
+        
+        // 교사 선택 옵션 HTML
+        const teacherOptions = generatorData.teachers.map(t => `<option value="${t.id}">${t.name} 선생님</option>`).join('');
+
+        tr.innerHTML = `
+          <td><strong>📚 ${sub.name}</strong></td>
+          <td>
+            <select class="form-select gen-teacher-select" data-subject-id="${sub.id}" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+              ${teacherOptions}
+            </select>
+          </td>
+          <td>
+            <input type="number" class="form-input gen-hours-input" data-subject-id="${sub.id}" min="0" max="10" value="3" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
+          </td>
+        `;
+        subjectBody.appendChild(tr);
+      });
+    }
+
+  } catch (err) {
+    console.error('Init generator tab error:', err);
+  }
+}
+
+// 전체 선택 / 해제
+document.getElementById('btn-gen-select-all')?.addEventListener('click', () => {
+  document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = true);
+});
+document.getElementById('btn-gen-deselect-all')?.addEventListener('click', () => {
+  document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = false);
+});
+
+// 자동 생성 시작 버튼 클릭
+document.getElementById('btn-generate')?.addEventListener('click', async () => {
+  const selectedClassIds = Array.from(document.querySelectorAll('.gen-class-chk:checked')).map(c => c.value);
+  if (selectedClassIds.length === 0) {
+    alert('시간표를 적용할 학급을 최소 1개 이상 선택해주세요!');
+    return;
+  }
+
+  // 학급별 과목 및 교사 배정 수집
+  const subjectsList = [];
+  document.querySelectorAll('.gen-hours-input').forEach(input => {
+    const subjectId = input.getAttribute('data-subject-id');
+    const weeklyHours = parseInt(input.value) || 0;
+    const teacherSelect = document.querySelector(`.gen-teacher-select[data-subject-id="${subjectId}"]`);
+    const teacherId = teacherSelect ? teacherSelect.value : null;
+
+    if (weeklyHours > 0 && teacherId) {
+      subjectsList.push({ subjectId, teacherId, weeklyHours });
+    }
+  });
+
+  if (subjectsList.length === 0) {
+    alert('주간 시수가 1시간 이상 지정된 과목이 없습니다!');
+    return;
+  }
+
+  const assignments = selectedClassIds.map(gcId => ({
+    gradeClassId: gcId,
+    subjects: subjectsList
+  }));
+
+  try {
+    const btnGen = document.getElementById('btn-generate');
+    if (btnGen) btnGen.textContent = '⏳ AI가 인공지능 배정 작업 중...';
+
+    const res = await fetch(`${API_BASE}/generator/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schoolId: currentUser.schoolId,
+        assignments
+      })
+    });
+
+    if (btnGen) btnGen.textContent = '🤖 AI 시간표 자동 생성 시작';
+
+    if (!res.ok) {
+      alert('자동 생성 작업 실패');
+      return;
+    }
+
+    const data = await res.json();
+    generatedResult = data.timetable;
+
+    // 생성 결과 미리보기 렌더링
+    renderGenPreview(data);
+  } catch (err) {
+    console.error('Generate click error:', err);
+    alert('생성 처리 중 오류가 발생했습니다.');
+  }
+});
+
+// 다시 생성 버튼
+document.getElementById('btn-regen')?.addEventListener('click', () => {
+  document.getElementById('btn-generate')?.click();
+});
+
+// 자동 생성된 시간표 전체 적용 버튼
+document.getElementById('btn-apply-timetable')?.addEventListener('click', async () => {
+  if (!generatedResult || generatedResult.length === 0) {
+    alert('적용할 시간표 데이터가 없습니다.');
+    return;
+  }
+
+  if (!confirm('생성된 자동 시간표를 전 학년/반 기본 시간표 원본으로 최종 저장할까요? 기존 수동 시간표는 덮어씌워집니다.')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/generator/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schoolId: currentUser.schoolId,
+        timetable: generatedResult
+      })
+    });
+
+    if (res.ok) {
+      alert('🎉 자동 생성 시간표가 전체 학년/반 기본 시간표로 깔끔하게 적용되었습니다!');
+      switchTab('BASE');
+    } else {
+      alert('시간표 적용 실패');
+    }
+  } catch (err) {
+    console.error('Apply timetable error:', err);
+  }
+});
+
+// 미리보기 렌더링 함수
+function renderGenPreview(data) {
+  const previewContainer = document.getElementById('gen-preview');
+  const previewTables = document.getElementById('gen-preview-tables');
+  const unassignedAlert = document.getElementById('gen-unassigned-alert');
+  const unassignedList = document.getElementById('gen-unassigned-list');
+
+  if (!previewContainer || !previewTables) return;
+  previewContainer.classList.remove('hidden');
+  previewTables.innerHTML = '';
+
+  // 미배정 항목 처리
+  if (data.unassigned && data.unassigned.length > 0) {
+    unassignedAlert.classList.remove('hidden');
+    unassignedList.innerHTML = '';
+    data.unassigned.forEach(u => {
+      const gc = generatorData.classes.find(c => c.id === u.gradeClassId);
+      const li = document.createElement('li');
+      li.textContent = `${gc ? `${gc.grade}학년 ${gc.class_number}반` : ''} - ${u.subjectName} (${u.teacherName} 선생님)`;
+      unassignedList.appendChild(li);
+    });
+  } else {
+    unassignedAlert.classList.add('hidden');
+  }
+
+  // 학급별로 생성 결과 그룹핑
+  const classMap = {};
+  data.timetable.forEach(t => {
+    if (!classMap[t.gradeClassId]) classMap[t.gradeClassId] = {};
+    if (!classMap[t.gradeClassId][t.dayOfWeek]) classMap[t.gradeClassId][t.dayOfWeek] = {};
+    classMap[t.gradeClassId][t.dayOfWeek][t.period] = t;
+  });
+
+  const dayNames = ['', '월요일', '화요일', '수요일', '목요일', '금요일'];
+
+  Object.keys(classMap).forEach(gcId => {
+    const gc = generatorData.classes.find(c => c.id === gcId);
+    const card = document.createElement('div');
+    card.className = 'timetable-card mt-3 p-3 style-card';
+    card.style.background = 'var(--panel-bg)';
+    card.style.borderRadius = '12px';
+    card.style.border = '1px solid var(--border-color)';
+    card.style.marginBottom = '1.5rem';
+
+    let tableHtml = `
+      <h4 style="margin-bottom:0.75rem; color:var(--primary-color);">🏫 ${gc ? `${gc.grade}학년 ${gc.class_number}반` : '학급'} 생성 미리보기</h4>
+      <div class="table-responsive">
+        <table class="timetable-grid">
+          <thead>
+            <tr>
+              <th class="th-period">교시</th>
+              <th>월요일</th>
+              <th>화요일</th>
+              <th>수요일</th>
+              <th>목요일</th>
+              <th>금요일</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for (let p = 1; p <= data.maxPeriodsPerDay; p++) {
+      tableHtml += `<tr><th>${p}교시</th>`;
+      for (let d = 1; d <= 5; d++) {
+        const slot = classMap[gcId]?.[d]?.[p];
+        if (slot) {
+          tableHtml += `
+            <td class="timetable-cell" style="background:rgba(59, 130, 246, 0.08);">
+              <div class="cell-subject" style="font-weight:600;">${slot.subjectName}</div>
+              <div class="cell-subinfo" style="font-size:0.8rem; color:var(--text-sub);">${slot.teacherName}</div>
+            </td>
+          `;
+        } else {
+          tableHtml += `<td class="timetable-cell"><div class="cell-subinfo">-</div></td>`;
+        }
+      }
+      tableHtml += `</tr>`;
+    }
+
+    tableHtml += `</tbody></table></div>`;
+    card.innerHTML = tableHtml;
+    previewTables.appendChild(card);
+  });
+}
+

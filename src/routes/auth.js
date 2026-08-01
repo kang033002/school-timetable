@@ -94,10 +94,10 @@ router.post('/register-school', async (req, res) => {
       [schoolId, schoolCode, schoolName]
     );
 
-    // 2. Create APPROVED user account under that school (but school status blocks login)
+    // 2. Create PENDING user account under that school (requires Master Approval)
     await run(
       `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-       VALUES (?, ?, ?, ?, 'ADMIN', null, '학교관리자', 'APPROVED')`,
+       VALUES (?, ?, ?, ?, 'ADMIN', null, '학교관리자', 'PENDING')`,
       [adminId, schoolId, adminEmail, adminPassword]
     );
 

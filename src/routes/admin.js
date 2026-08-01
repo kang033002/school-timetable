@@ -282,4 +282,56 @@ router.delete('/holidays/:id', async (req, res) => {
   }
 });
 
+// 13. GET /api/admin/teacher-stats?schoolId=...
+//     교사별 주간 수업 시수 통계 반환
+router.get('/teacher-stats', async (req, res) => {
+  try {
+    const { schoolId } = req.query;
+    if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+
+    const rows = await all(
+      `SELECT 
+         t.id as teacherId,
+         t.name as teacherName,
+         s.name as subjectName,
+         gc.grade,
+         gc.class_number,
+         COUNT(*) as weeklyHours
+       FROM base_timetable bt
+       JOIN teachers t ON bt.teacher_id = t.id
+       JOIN subjects s ON bt.subject_id = s.id
+       JOIN grade_classes gc ON bt.grade_class_id = gc.id
+       WHERE bt.school_id = ?
+       GROUP BY t.id, t.name, s.name, gc.grade, gc.class_number
+       ORDER BY t.name, gc.grade, gc.class_number`,
+      [schoolId]
+    );
+
+    // 교사별로 그룹핑
+    const statsMap = {};
+    for (const row of rows) {
+      if (!statsMap[row.teacherId]) {
+        statsMap[row.teacherId] = {
+          teacherId: row.teacherId,
+          teacherName: row.teacherName,
+          totalWeeklyHours: 0,
+          classes: []
+        };
+      }
+      statsMap[row.teacherId].totalWeeklyHours += parseInt(row.weeklyHours);
+      statsMap[row.teacherId].classes.push({
+        grade: row.grade,
+        classNumber: row.class_number,
+        subjectName: row.subjectName,
+        weeklyHours: parseInt(row.weeklyHours)
+      });
+    }
+
+    res.json(Object.values(statsMap));
+  } catch (err) {
+    console.error('Teacher stats error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
