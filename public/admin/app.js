@@ -678,6 +678,7 @@ function switchTab(tabName) {
     if (tabBtnGenerator) tabBtnGenerator.classList.add('active');
     if (contentGenerator) contentGenerator.classList.remove('hidden');
     datePicker.parentElement.style.display = 'none';
+    renderGrid([], 'CLASS');
     initGeneratorTab();
     loadTeacherStats();
   }
