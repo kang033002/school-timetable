@@ -72,19 +72,31 @@ const logsBody = document.getElementById('logs-body');
 document.addEventListener('DOMContentLoaded', () => {
   // Set default date to today
   const today = new Date().toISOString().split('T')[0];
-  datePicker.value = today;
+  if (datePicker) datePicker.value = today;
 
   // Check stored auth
   const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  if (token && user) {
-    currentUser = JSON.parse(user);
-    showDashboard();
+  const userStr = localStorage.getItem('user');
+  if (token && userStr) {
+    try {
+      const u = JSON.parse(userStr);
+      if (u && u.role === 'MASTER_ADMIN') {
+        // If master admin token remains, clear and show login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } else if (u) {
+        currentUser = u;
+        showDashboard();
+      }
+    } catch (e) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
   }
 
   // Event Listeners
-  loginForm.addEventListener('submit', handleLogin);
-  btnLogout.addEventListener('click', handleLogout);
+  if (loginForm) loginForm.addEventListener('submit', handleLogin);
+  if (btnLogout) btnLogout.addEventListener('click', handleLogout);
 
   viewModeSelect.addEventListener('change', handleViewModeChange);
   classSelect.addEventListener('change', loadTimetable);
@@ -152,14 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const studentSignupForm = document.getElementById('student-signup-form');
   const schoolSignupForm = document.getElementById('school-signup-form');
 
-  linkShowStudentSignup.addEventListener('click', (e) => {
+  linkShowStudentSignup?.addEventListener('click', (e) => {
     e.preventDefault();
     loginForm.classList.add('hidden');
     schoolSignupForm.classList.add('hidden');
     studentSignupForm.classList.remove('hidden');
   });
 
-  linkShowSchoolSignup.addEventListener('click', (e) => {
+  linkShowSchoolSignup?.addEventListener('click', (e) => {
     e.preventDefault();
     loginForm.classList.add('hidden');
     studentSignupForm.classList.add('hidden');
@@ -176,11 +188,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // School signup form submit
-  schoolSignupForm.addEventListener('submit', async (e) => {
+  schoolSignupForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const schoolName = document.getElementById('school-signup-name').value;
-    const adminEmail = document.getElementById('school-signup-email').value;
-    const adminPassword = document.getElementById('school-signup-password').value;
+    const schoolName = document.getElementById('school-signup-name').value.trim();
+    const adminEmail = document.getElementById('school-signup-email').value.trim();
+    const adminPassword = document.getElementById('school-signup-password').value.trim();
 
     try {
       const res = await fetch(`${API_BASE}/auth/register-school`, {
@@ -203,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  studentSignupForm.addEventListener('submit', async (e) => {
+  studentSignupForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('student-name').value;
     const grade = parseInt(document.getElementById('student-grade').value);
@@ -240,8 +252,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auth handlers
 async function handleLogin(e) {
   e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passwordInput ? passwordInput.value.trim() : '';
+
+  if (!email || !password) {
+    alert('아이디(이메일)와 비밀번호를 모두 입력해주세요!');
+    return;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -252,7 +272,13 @@ async function handleLogin(e) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || '로그인 실패');
+      alert(data.error || '로그인 실패: 아이디 또는 비밀번호를 확인해주세요.');
+      return;
+    }
+
+    // 마스터 계정일 경우 마스터 페이지로 안내
+    if (data.user && data.user.role === 'MASTER_ADMIN') {
+      window.location.href = '/master';
       return;
     }
 
@@ -263,7 +289,7 @@ async function handleLogin(e) {
     showDashboard();
   } catch (err) {
     console.error('Login error:', err);
-    alert('서버통신 오류가 발생했습니다.');
+    alert('서버 통신 오류가 발생했습니다.');
   }
 }
 
