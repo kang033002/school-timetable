@@ -800,18 +800,25 @@ function renderGrid(weeklyData, mode) {
   });
 }
 
-// Open Change Modal
+// Open Change Modal (수동 셀 클릭 수정)
 function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
-  if (!classSelect.value) {
-    alert('학급(학년/반) 설정이 존재하지 않습니다. 우측 상단의 [⚙️ 학교/교사 설정] 패널로 가셔서 먼저 학년/학급을 등록해주세요!');
+  if (!currentSchoolMeta || !currentSchoolMeta.gradeClasses || currentSchoolMeta.gradeClasses.length === 0) {
+    alert('등록된 학년/학급이 없습니다. 우측 상단의 [⚙️ 학교/교사 설정] 패널에서 먼저 학년/반을 생성해주세요!');
     return;
   }
-  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode };
 
-  const [grade, classNum] = classSelect.value.split('-');
-  const gcObj = currentSchoolMeta.gradeClasses.find(gc => gc.grade == grade && gc.class_number == classNum);
+  let selectedGcId = null;
+  if (classSelect.value) {
+    const [grade, classNum] = classSelect.value.split('-');
+    const gcObj = currentSchoolMeta.gradeClasses.find(gc => gc.grade == grade && gc.class_number == classNum);
+    if (gcObj) selectedGcId = gcObj.id;
+  }
+  
+  if (!selectedGcId && currentSchoolMeta.gradeClasses.length > 0) {
+    selectedGcId = currentSchoolMeta.gradeClasses[0].id;
+  }
 
-  selectedSlotData.gradeClassId = gcObj ? gcObj.id : null;
+  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId };
 
   const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
   const dayName = daysKor[dayOfWeek] || '월';
@@ -1181,11 +1188,13 @@ async function initGeneratorTab() {
 }
 
 // 전체 선택 / 해제
-document.getElementById('btn-gen-select-all')?.addEventListener('click', () => {
-  document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = true);
-});
-document.getElementById('btn-gen-deselect-all')?.addEventListener('click', () => {
-  document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = false);
+document.addEventListener('click', (e) => {
+  if (e.target && (e.target.id === 'btn-gen-select-all' || e.target.closest('#btn-gen-select-all'))) {
+    document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = true);
+  }
+  if (e.target && (e.target.id === 'btn-gen-deselect-all' || e.target.closest('#btn-gen-deselect-all'))) {
+    document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = false);
+  }
 });
 
 // 자동 생성 시작 버튼 클릭
