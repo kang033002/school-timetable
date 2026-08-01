@@ -1108,17 +1108,39 @@ let generatedResult = null;
 
 // 자동 생성 모드 vs 수동 작성 모드 토글 버튼 처리
 document.getElementById('btn-mode-auto')?.addEventListener('click', () => {
-  document.getElementById('btn-mode-auto').className = 'btn btn-primary';
-  document.getElementById('btn-mode-manual').className = 'btn btn-outline';
-  document.getElementById('btn-mode-manual').style.background = '#ffffff';
+  const autoBtn = document.getElementById('btn-mode-auto');
+  const manualBtn = document.getElementById('btn-mode-manual');
+
+  if (autoBtn) {
+    autoBtn.className = 'btn btn-primary';
+    autoBtn.style.background = 'var(--primary-color)';
+    autoBtn.style.color = '#ffffff';
+  }
+  if (manualBtn) {
+    manualBtn.className = 'btn btn-outline';
+    manualBtn.style.background = '#ffffff';
+    manualBtn.style.color = '#334155';
+  }
+
   document.getElementById('gen-auto-section')?.classList.remove('hidden');
   document.getElementById('gen-manual-notice')?.classList.add('hidden');
 });
 
 document.getElementById('btn-mode-manual')?.addEventListener('click', () => {
-  document.getElementById('btn-mode-manual').className = 'btn btn-primary';
-  document.getElementById('btn-mode-auto').className = 'btn btn-outline';
-  document.getElementById('btn-mode-auto').style.background = '#ffffff';
+  const autoBtn = document.getElementById('btn-mode-auto');
+  const manualBtn = document.getElementById('btn-mode-manual');
+
+  if (manualBtn) {
+    manualBtn.className = 'btn btn-primary';
+    manualBtn.style.background = 'var(--primary-color)';
+    manualBtn.style.color = '#ffffff';
+  }
+  if (autoBtn) {
+    autoBtn.className = 'btn btn-outline';
+    autoBtn.style.background = '#ffffff';
+    autoBtn.style.color = '#334155';
+  }
+
   document.getElementById('gen-auto-section')?.classList.add('hidden');
   document.getElementById('gen-manual-notice')?.classList.remove('hidden');
 });
