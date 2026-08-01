@@ -195,6 +195,8 @@ async function initSchema() {
        VALUES ($1, $2, 'master', 'master123', 'MASTER_ADMIN', null, '마스터관리자', 'APPROVED')`,
       ['u-master-001', masterSchoolId]
     );
+    console.log('Default master account initialized.');
+  }
   // Auto-sync: Ensure all user accounts belonging to APPROVED schools are set to APPROVED
   try {
     await pool.query(`
