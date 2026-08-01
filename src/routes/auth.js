@@ -25,17 +25,18 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    if (user.status !== 'APPROVED') {
-      return res.status(403).json({ error: '가입 승인 대기 중입니다. 관리자 승인 후 로그인할 수 있습니다.' });
-    }
-
-    // Validate school approval status (except for SYSTEM_ADMIN / MASTER_ADMIN)
+    // Validate school approval status
     if (user.role !== 'MASTER_ADMIN') {
       const school = await get(`SELECT status FROM schools WHERE id = ?`, [user.school_id]);
       if (!school || school.status !== 'APPROVED') {
         return res.status(403).json({
           error: '해당 학교가 가입 승인 대기 중이거나 정지되었습니다. 개발자(마스터 관리자) 승인 완료 후 이용해주세요.'
         });
+      }
+      
+      // 학교가 승인되었는데 사용자 status가 PENDING인 경우 자동으로 APPROVED 업데이트
+      if (user.status !== 'APPROVED') {
+        await run(`UPDATE user_accounts SET status = 'APPROVED' WHERE id = ?`, [user.id]);
       }
     }
 

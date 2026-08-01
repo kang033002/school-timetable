@@ -95,6 +95,8 @@ async function initSchema() {
     )
   `);
 
+
+
   // 5. Rooms (장소 / 특별실)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
@@ -193,7 +195,15 @@ async function initSchema() {
        VALUES ($1, $2, 'master', 'master123', 'MASTER_ADMIN', null, '마스터관리자', 'APPROVED')`,
       ['u-master-001', masterSchoolId]
     );
-    console.log('Default master account initialized.');
+  // Auto-sync: Ensure all user accounts belonging to APPROVED schools are set to APPROVED
+  try {
+    await pool.query(`
+      UPDATE user_accounts 
+      SET status = 'APPROVED' 
+      WHERE school_id IN (SELECT id FROM schools WHERE status = 'APPROVED')
+    `);
+  } catch (err) {
+    console.error('Auto sync APPROVED status error:', err);
   }
 
   console.log('Database schema initialized successfully (PostgreSQL).');
