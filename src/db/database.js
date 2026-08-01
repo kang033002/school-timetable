@@ -1,56 +1,53 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'timetable.db');
-const dbDir = path.dirname(dbPath);
-
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error opening database:', err);
-  } else {
-    console.log('Connected to SQLite database at:', dbPath);
-  }
+// Use DATABASE_URL env var for PostgreSQL (Supabase)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
-// Helper for promise-based queries
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL database via pg.Pool');
+});
+
+pool.on('error', (err) => {
+  console.error('PostgreSQL pool error:', err);
+});
+
+/**
+ * Converts SQLite-style positional params (?) to PostgreSQL-style ($1, $2, ...)
+ */
+function convertParams(sql, params) {
+  let i = 0;
+  const pgSql = sql.replace(/\?/g, () => `$${++i}`);
+  return { pgSql, params };
 }
 
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+// run: execute INSERT/UPDATE/DELETE — returns { lastID, changes } for SQLite compatibility
+async function run(sql, params = []) {
+  const { pgSql, params: pgParams } = convertParams(sql, params);
+  const result = await pool.query(pgSql, pgParams);
+  return { lastID: null, changes: result.rowCount };
 }
 
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+// get: SELECT a single row
+async function get(sql, params = []) {
+  const { pgSql, params: pgParams } = convertParams(sql, params);
+  const result = await pool.query(pgSql, pgParams);
+  return result.rows[0] || undefined;
 }
 
-// Initialize Tables
+// all: SELECT multiple rows
+async function all(sql, params = []) {
+  const { pgSql, params: pgParams } = convertParams(sql, params);
+  const result = await pool.query(pgSql, pgParams);
+  return result.rows;
+}
+
+// Initialize Tables (CREATE TABLE IF NOT EXISTS)
 async function initSchema() {
-  await run(`PRAGMA foreign_keys = ON;`);
-
   // 1. Schools
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS schools (
       id TEXT PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
@@ -62,7 +59,7 @@ async function initSchema() {
   `);
 
   // 2. Teachers
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
@@ -74,7 +71,7 @@ async function initSchema() {
   `);
 
   // 3. GradeClasses (학년-반)
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS grade_classes (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
@@ -88,7 +85,7 @@ async function initSchema() {
   `);
 
   // 4. Subjects
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS subjects (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
@@ -99,7 +96,7 @@ async function initSchema() {
   `);
 
   // 5. Rooms (장소 / 특별실)
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
@@ -110,13 +107,13 @@ async function initSchema() {
   `);
 
   // 6. BaseTimetable (원본시간표)
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS base_timetable (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
       grade_class_id TEXT NOT NULL,
-      day_of_week INTEGER NOT NULL, -- 1:월 ~ 5:금
-      period INTEGER NOT NULL,       -- 1~7교시
+      day_of_week INTEGER NOT NULL,
+      period INTEGER NOT NULL,
       teacher_id TEXT NOT NULL,
       subject_id TEXT NOT NULL,
       room_id TEXT,
@@ -129,15 +126,15 @@ async function initSchema() {
     )
   `);
 
-  // 7. TimetableChanges (시간표 변경 이력 및 변경건)
-  await run(`
+  // 7. TimetableChanges (시간표 변경 이력)
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS timetable_changes (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
-      target_date TEXT NOT NULL, -- YYYY-MM-DD
+      target_date TEXT NOT NULL,
       period INTEGER NOT NULL,
       grade_class_id TEXT NOT NULL,
-      change_type TEXT NOT NULL, -- 'SUBSTITUTE', 'CANCEL', 'SWAP'
+      change_type TEXT NOT NULL,
       original_teacher_id TEXT,
       changed_teacher_id TEXT,
       original_subject_id TEXT,
@@ -153,13 +150,13 @@ async function initSchema() {
   `);
 
   // 8. UserAccounts
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS user_accounts (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL, -- 'ADMIN', 'TEACHER'
+      role TEXT NOT NULL,
       teacher_id TEXT,
       name TEXT NOT NULL,
       status TEXT DEFAULT 'PENDING',
@@ -169,23 +166,24 @@ async function initSchema() {
   `);
 
   // 9. Holidays
-  await run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS holidays (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
-      target_date TEXT UNIQUE NOT NULL, -- YYYY-MM-DD
+      target_date TEXT NOT NULL,
       name TEXT NOT NULL,
+      UNIQUE(school_id, target_date),
       FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
     )
   `);
 
-  console.log('Database schema initialized successfully.');
+  console.log('Database schema initialized successfully (PostgreSQL).');
 }
 
 module.exports = {
-  db,
+  pool,
   run,
   get,
   all,
-  initSchema
+  initSchema,
 };

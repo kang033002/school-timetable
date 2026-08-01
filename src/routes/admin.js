@@ -233,7 +233,8 @@ router.post('/holidays', async (req, res) => {
 
     const id = `hol-${Date.now()}`;
     await run(
-      `INSERT OR REPLACE INTO holidays (id, school_id, target_date, name) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO holidays (id, school_id, target_date, name) VALUES (?, ?, ?, ?)
+       ON CONFLICT(school_id, target_date) DO UPDATE SET name = EXCLUDED.name, id = EXCLUDED.id`,
       [id, schoolId, targetDate, name]
     );
 
