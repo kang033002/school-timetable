@@ -62,7 +62,7 @@ const changeSubjectSelect = document.getElementById('change-subject-select');
 const changeTeacherSelect = document.getElementById('change-teacher-select');
 const conflictAlert = document.getElementById('conflict-alert');
 const conflictList = document.getElementById('conflict-list');
-const chkForceOverride = document.getElementById('chk-force-override');
+let pendingForcePayload = null; // stores payload to retry with force=true
 
 const logsModal = document.getElementById('logs-modal');
 const btnLogsClose = document.getElementById('btn-logs-close');
@@ -706,7 +706,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
 
   // Reset form
   conflictAlert.classList.add('hidden');
-  chkForceOverride.checked = false;
+  pendingForcePayload = null;
 
   const btnSave = document.getElementById('btn-modal-save');
   if (slot && slot.changeType === 'HOLIDAY') {
@@ -735,7 +735,8 @@ async function handleApplyChange(e) {
       dayOfWeek: selectedSlotData.dayOfWeek,
       period: selectedSlotData.period,
       subjectId: changedSubjectId,
-      teacherId: changedTeacherId
+      teacherId: changedTeacherId,
+      force: false
     };
     try {
       const res = await fetch(`${API_BASE}/admin/base-timetable`, {
@@ -743,12 +744,26 @@ async function handleApplyChange(e) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      const data = await res.json();
+      if (res.status === 409) {
+        // 충돌 감지 → 버튼 표시
+        conflictList.innerHTML = '';
+        data.conflicts.forEach(c => {
+          const li = document.createElement('li');
+          li.textContent = c.message;
+          conflictList.appendChild(li);
+        });
+        // 강제 저장 시 사용할 페이로드 저장
+        pendingForcePayload = { ...payload, force: true };
+        conflictAlert.classList.remove('hidden');
+        return;
+      }
       if (res.ok) {
         alert('기본 시간표 원본 설정이 성공적으로 저장되었습니다.');
         changeModal.classList.add('hidden');
         loadTimetable();
       } else {
-        alert('기본 시간표 저장 실패');
+        alert(data.error || '기본 시간표 저장 실패');
       }
     } catch (err) {
       console.error(err);
@@ -781,13 +796,15 @@ async function handleApplyChange(e) {
     const data = await res.json();
 
     if (res.status === 409) {
-      // Conflict detected!
+      // 충돌 감지!
       conflictList.innerHTML = '';
       data.conflicts.forEach(c => {
         const li = document.createElement('li');
         li.textContent = c.message;
         conflictList.appendChild(li);
       });
+      // 강제 저장 시 사용할 페이로드 저장
+      pendingForcePayload = { ...payload, force: true };
       conflictAlert.classList.remove('hidden');
       return;
     }
@@ -805,6 +822,44 @@ async function handleApplyChange(e) {
     alert('서버통신 중 오류가 발생했습니다.');
   }
 }
+
+// ── 충돌 발생 시 OK/취소 버튼 처리 ───────────────────────────────────────────
+document.getElementById('btn-force-ok').addEventListener('click', async () => {
+  if (!pendingForcePayload) return;
+  const payload = pendingForcePayload;
+  pendingForcePayload = null;
+  conflictAlert.classList.add('hidden');
+
+  // 어떤 API 엔드포인트로 보낼지 결정
+  const isBase = payload.dayOfWeek !== undefined && payload.targetDate === undefined;
+  const url = isBase
+    ? `${API_BASE}/admin/base-timetable`
+    : `${API_BASE}/timetable/change`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      alert(isBase ? '기본 시간표가 저장되었습니다.' : '시간표 변경이 적용되었습니다.');
+      changeModal.classList.add('hidden');
+      loadTimetable();
+    } else {
+      const d = await res.json();
+      alert(d.error || '저장 실패');
+    }
+  } catch (err) {
+    console.error('Force save error:', err);
+    alert('서버 오류가 발생했습니다.');
+  }
+});
+
+document.getElementById('btn-force-cancel').addEventListener('click', () => {
+  conflictAlert.classList.add('hidden');
+  pendingForcePayload = null;
+});
 
 // Logs Modal
 async function openLogsModal() {

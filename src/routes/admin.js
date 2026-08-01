@@ -188,9 +188,33 @@ router.post('/change-credentials', async (req, res) => {
 // 9. POST /api/admin/base-timetable (Upsert base timetable slot)
 router.post('/base-timetable', async (req, res) => {
   try {
-    const { schoolId, gradeClassId, dayOfWeek, period, subjectId, teacherId, roomId } = req.body;
+    const { schoolId, gradeClassId, dayOfWeek, period, subjectId, teacherId, roomId, force } = req.body;
     if (!schoolId || !gradeClassId || !dayOfWeek || !period || !subjectId || !teacherId) {
       return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    // ── 충돌 감지: 동일 교사가 같은 요일+교시에 다른 반에 이미 배정되어 있는지 확인 ──
+    if (!force) {
+      const conflictingSlots = await all(
+        `SELECT bt.grade_class_id, gc.grade, gc.class_number, t.name as teacher_name, s.name as subject_name
+         FROM base_timetable bt
+         JOIN grade_classes gc ON bt.grade_class_id = gc.id
+         JOIN teachers t ON bt.teacher_id = t.id
+         JOIN subjects s ON bt.subject_id = s.id
+         WHERE bt.school_id = ? AND bt.day_of_week = ? AND bt.period = ?
+           AND bt.teacher_id = ? AND bt.grade_class_id != ?`,
+        [schoolId, dayOfWeek, period, teacherId, gradeClassId]
+      );
+
+      if (conflictingSlots.length > 0) {
+        const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+        const dayName = dayNames[dayOfWeek] || dayOfWeek;
+        const conflicts = conflictingSlots.map(slot => ({
+          type: 'TEACHER_DUPLICATE',
+          message: `[교사 충돌] ${slot.teacher_name} 선생님은 동일 시간(${dayName}요일 ${period}교시)에 ${slot.grade}학년 ${slot.class_number}반 (${slot.subject_name})에 이미 배정되어 있습니다.`
+        }));
+        return res.status(409).json({ hasConflict: true, conflicts });
+      }
     }
 
     const id = `bt-${gradeClassId}-${dayOfWeek}-${period}`;
@@ -210,6 +234,7 @@ router.post('/base-timetable', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // 10. GET /api/admin/holidays
 router.get('/holidays', async (req, res) => {
