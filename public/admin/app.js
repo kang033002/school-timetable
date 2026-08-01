@@ -715,7 +715,7 @@ async function loadTeacherStats() {
 function renderGrid(weeklyData, mode) {
   const targetBody = activeTab === 'BASE' 
     ? document.getElementById('timetable-body-base') 
-    : document.getElementById('timetable-body-daily');
+    : (activeTab === 'GENERATOR' ? document.getElementById('timetable-body-gen') : document.getElementById('timetable-body-daily'));
   
   if (!targetBody) return;
   targetBody.innerHTML = '';
@@ -735,8 +735,8 @@ function renderGrid(weeklyData, mode) {
     // Days 1 to 5
     for (let d = 0; d < 5; d++) {
       const dayOfWeek = d + 1;
-      const dayData = weeklyData[d];
-      const slot = dayData ? dayData.slots[p - 1] : null;
+      const dayData = (weeklyData && weeklyData.length > d) ? weeklyData[d] : null;
+      const slot = (dayData && dayData.slots && dayData.slots.length >= p) ? dayData.slots[p - 1] : null;
 
       const td = document.createElement('td');
       td.className = 'timetable-cell';
@@ -1071,9 +1071,29 @@ window.deleteHoliday = async function(id) {
 let generatorData = null;
 let generatedResult = null;
 
+// 자동 생성 모드 vs 수동 작성 모드 토글 버튼 처리
+document.getElementById('btn-mode-auto')?.addEventListener('click', () => {
+  document.getElementById('btn-mode-auto').className = 'btn btn-primary';
+  document.getElementById('btn-mode-manual').className = 'btn btn-outline';
+  document.getElementById('btn-mode-manual').style.background = '#ffffff';
+  document.getElementById('gen-auto-section')?.classList.remove('hidden');
+  document.getElementById('gen-manual-notice')?.classList.add('hidden');
+});
+
+document.getElementById('btn-mode-manual')?.addEventListener('click', () => {
+  document.getElementById('btn-mode-manual').className = 'btn btn-primary';
+  document.getElementById('btn-mode-auto').className = 'btn btn-outline';
+  document.getElementById('btn-mode-auto').style.background = '#ffffff';
+  document.getElementById('gen-auto-section')?.classList.add('hidden');
+  document.getElementById('gen-manual-notice')?.classList.remove('hidden');
+});
+
 async function initGeneratorTab() {
   if (!currentUser || !currentUser.schoolId) return;
   try {
+    // 1~10교시 그리드 항시 기본 표출
+    renderGrid([], 'CLASS');
+
     const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
     if (!res.ok) return;
     generatorData = await res.json();
