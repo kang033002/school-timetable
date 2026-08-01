@@ -863,9 +863,13 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
 async function handleApplyChange(e) {
   e.preventDefault();
 
-  const changedSubjectId = changeSubjectSelect.value;
-  const changedTeacherId = changeTeacherSelect.value;
-  const force = chkForceOverride.checked;
+  if (!selectedSlotData || !selectedSlotData.gradeClassId) {
+    alert('선택된 학급 정보가 올바르지 않습니다. 학급을 선택한 후 다시 시도해 주세요.');
+    return;
+  }
+
+  const changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
+  const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
 
   if (activeTab === 'BASE') {
     const payload = {
@@ -886,21 +890,23 @@ async function handleApplyChange(e) {
       const data = await res.json();
       if (res.status === 409) {
         // 충돌 감지 → 버튼 표시
-        conflictList.innerHTML = '';
-        data.conflicts.forEach(c => {
-          const li = document.createElement('li');
-          li.textContent = c.message;
-          conflictList.appendChild(li);
-        });
-        // 강제 저장 시 사용할 페이로드 저장
+        if (conflictList) {
+          conflictList.innerHTML = '';
+          (data.conflicts || []).forEach(c => {
+            const li = document.createElement('li');
+            li.textContent = c.message;
+            conflictList.appendChild(li);
+          });
+        }
         pendingForcePayload = { ...payload, force: true };
-        conflictAlert.classList.remove('hidden');
+        if (conflictAlert) conflictAlert.classList.remove('hidden');
         return;
       }
       if (res.ok) {
-        alert('기본 시간표 원본 설정이 성공적으로 저장되었습니다.');
-        changeModal.classList.add('hidden');
+        alert('🎉 학기 기본 시간표 수업 설정이 성공적으로 저장되었습니다!');
+        if (changeModal) changeModal.classList.add('hidden');
         loadTimetable();
+        loadTeacherStats();
       } else {
         alert(data.error || '기본 시간표 저장 실패');
       }
@@ -911,9 +917,10 @@ async function handleApplyChange(e) {
     return;
   }
 
+  // DAILY Tab Case
   const payload = {
     schoolId: currentUser.schoolId,
-    targetDate: selectedSlotData.targetDate,
+    targetDate: selectedSlotData.targetDate || new Date().toISOString().split('T')[0],
     period: selectedSlotData.period,
     gradeClassId: selectedSlotData.gradeClassId,
     changeType: 'SUBSTITUTE',
@@ -921,13 +928,43 @@ async function handleApplyChange(e) {
     changedSubjectId,
     changedRoomId: null,
     reason: '일과계 시간표 조정',
-    createdBy: currentUser.name,
-    force
+    createdBy: currentUser.name || '관리자',
+    force: false
   };
 
   try {
     const res = await fetch(`${API_BASE}/timetable/change`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.status === 409) {
+      if (conflictList) {
+        conflictList.innerHTML = '';
+        (data.conflicts || []).forEach(c => {
+          const li = document.createElement('li');
+          li.textContent = c.message;
+          conflictList.appendChild(li);
+        });
+      }
+      pendingForcePayload = { ...payload, force: true };
+      if (conflictAlert) conflictAlert.classList.remove('hidden');
+      return;
+    }
+
+    if (res.ok) {
+      alert('🎉 수업 변경/보강이 성공적으로 저장 및 적용되었습니다!');
+      if (changeModal) changeModal.classList.add('hidden');
+      loadTimetable();
+    } else {
+      alert(data.error || '수업 변경 저장 실패');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('저장 처리 중 오류가 발생했습니다.');
+  }
+}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
