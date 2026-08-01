@@ -277,32 +277,48 @@ function handleLogout() {
 
 // Show Dashboard
 async function showDashboard() {
-  loginScreen.classList.add('hidden');
-  dashboardScreen.classList.remove('hidden');
+  try {
+    loginScreen?.classList.add('hidden');
+    dashboardScreen?.classList.remove('hidden');
 
-  document.getElementById('user-name-display').textContent = `${currentUser.name}`;
-  document.getElementById('user-role-badge').textContent = currentUser.role === 'ADMIN' ? '관리자(일과계)' : '교사';
-  document.getElementById('nav-school-name').textContent = `🏫 ${currentUser.schoolName} 시간표 관리자`;
+    const userNameElem = document.getElementById('user-name-display');
+    const userRoleElem = document.getElementById('user-role-badge');
+    const navSchoolNameElem = document.getElementById('nav-school-name');
 
-  await loadSchoolMetadata();
-  await loadTimetable();
+    if (userNameElem) userNameElem.textContent = `${currentUser?.name || '사용자'}`;
+    if (userRoleElem) userRoleElem.textContent = currentUser?.role === 'ADMIN' ? '관리자(일과계)' : '교사';
+    if (navSchoolNameElem) navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 관리자 시스템`;
+
+    // 1~10교시 그리드 즉시 항시 렌더링
+    renderGrid([], 'CLASS');
+
+    await loadSchoolMetadata();
+    await loadTimetable();
+  } catch (err) {
+    console.error('showDashboard error:', err);
+    renderGrid([], 'CLASS');
+  }
 }
 
 // Load Metadata
 async function loadSchoolMetadata() {
+  if (!currentUser || !currentUser.schoolId) return;
   try {
     const res = await fetch(`${API_BASE}/schools/${currentUser.schoolId}/meta`);
+    if (!res.ok) return;
     currentSchoolMeta = await res.json();
 
-    // Populate Class Select
-    classSelect.innerHTML = '';
-    currentSchoolMeta.gradeClasses.forEach(gc => {
-      const opt = document.createElement('option');
-      opt.value = `${gc.grade}-${gc.class_number}`;
-      opt.dataset.id = gc.id;
-      opt.textContent = `${gc.grade}학년 ${gc.class_number}반 (${gc.homeroom_teacher_name || '담임미정'})`;
-      classSelect.appendChild(opt);
-    });
+    if (currentSchoolMeta && currentSchoolMeta.gradeClasses) {
+      // Populate Class Select
+      classSelect.innerHTML = '';
+      currentSchoolMeta.gradeClasses.forEach(gc => {
+        const opt = document.createElement('option');
+        opt.value = `${gc.grade}-${gc.class_number}`;
+        opt.dataset.id = gc.id;
+        opt.textContent = `${gc.grade}학년 ${gc.class_number}반 (${gc.homeroom_teacher_name || '담임미정'})`;
+        classSelect.appendChild(opt);
+      });
+    }
 
     // Populate Teacher Select
     teacherSelect.innerHTML = '';
