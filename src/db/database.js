@@ -177,7 +177,7 @@ async function initSchema() {
     )
   `);
 
-  // ── Seed default accounts if they don't exist ──────────────────────────────
+  // ── Seed master account if it doesn't exist ──────────────────────────────
 
   // Master admin system school
   const masterSchoolId = 'sch-system-master';
@@ -193,24 +193,7 @@ async function initSchema() {
        VALUES ($1, $2, 'master', 'master123', 'MASTER_ADMIN', null, '마스터관리자', 'APPROVED')`,
       ['u-master-001', masterSchoolId]
     );
-    console.log('Default master account created: master / master123');
-  }
-
-  // Default demo school + admin
-  const demoSchoolId = 'sch-demo-admin';
-  const demoSchool = await pool.query(`SELECT id FROM schools WHERE id = $1`, [demoSchoolId]);
-  if (demoSchool.rows.length === 0) {
-    await pool.query(
-      `INSERT INTO schools (id, code, name, max_periods_per_day, operating_days, status)
-       VALUES ($1, 'SCH-DEMO', '데모학교', 7, 5, 'APPROVED')`,
-      [demoSchoolId]
-    );
-    await pool.query(
-      `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-       VALUES ($1, $2, 'admin', 'admin123', 'ADMIN', null, '관리자', 'APPROVED')`,
-      ['u-admin-001', demoSchoolId]
-    );
-    console.log('Default admin account created: admin / admin123');
+    console.log('Default master account initialized.');
   }
 
   console.log('Database schema initialized successfully (PostgreSQL).');
