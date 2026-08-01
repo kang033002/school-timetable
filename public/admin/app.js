@@ -1133,7 +1133,7 @@ async function initGeneratorTab() {
     if (!res.ok) return;
     generatorData = await res.json();
 
-    // 1. 학급 선택 체크박스 생성
+    // 1. 학급 선택 토글 버튼 칩 목록 생성
     const classContainer = document.getElementById('gen-class-checkboxes');
     const classesList = (generatorData && generatorData.classes && generatorData.classes.length > 0)
       ? generatorData.classes
@@ -1145,21 +1145,34 @@ async function initGeneratorTab() {
         classContainer.innerHTML = '<p style="color:var(--text-sub); font-size:0.85rem;">[⚙️ 학교/교사 설정] 패널에서 먼저 학년/반을 등록해주세요.</p>';
       } else {
         classesList.forEach(c => {
-          const label = document.createElement('label');
-          label.style.display = 'inline-flex';
-          label.style.alignItems = 'center';
-          label.style.gap = '0.35rem';
-          label.style.fontSize = '0.9rem';
-          label.style.cursor = 'pointer';
-          label.style.background = '#ffffff';
-          label.style.padding = '0.3rem 0.6rem';
-          label.style.borderRadius = '6px';
-          label.style.border = '1px solid var(--border-color)';
-          label.innerHTML = `
-            <input type="checkbox" class="gen-class-chk" value="${c.id}" checked>
-            <span><strong>${c.grade}학년 ${c.class_number || c.classNumber}반</strong></span>
-          `;
-          classContainer.appendChild(label);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-primary gen-class-chip active';
+          btn.dataset.classId = c.id;
+          btn.style.padding = '0.35rem 0.75rem';
+          btn.style.fontSize = '0.88rem';
+          btn.style.fontWeight = '700';
+          btn.style.cursor = 'pointer';
+          btn.innerHTML = `🏫 ${c.grade}학년 ${c.class_number || c.classNumber}반`;
+
+          // 개별 학급 버튼 클릭 시 켜짐/꺼짐 토글
+          btn.addEventListener('click', () => {
+            if (btn.classList.contains('active')) {
+              btn.classList.remove('active');
+              btn.classList.remove('btn-primary');
+              btn.classList.add('btn-outline');
+              btn.style.background = '#ffffff';
+              btn.style.color = '#64748b';
+            } else {
+              btn.classList.add('active');
+              btn.classList.add('btn-primary');
+              btn.classList.remove('btn-outline');
+              btn.style.background = '';
+              btn.style.color = '';
+            }
+          });
+
+          classContainer.appendChild(btn);
         });
       }
     }
@@ -1199,21 +1212,33 @@ async function initGeneratorTab() {
   }
 }
 
-// 전체 선택 / 해제
+// 전체 선택 / 해제 버튼 클릭 시 학급 칩 스타일 일괄 변경
 document.addEventListener('click', (e) => {
   if (e.target && (e.target.id === 'btn-gen-select-all' || e.target.closest('#btn-gen-select-all'))) {
-    document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = true);
+    document.querySelectorAll('.gen-class-chip').forEach(btn => {
+      btn.classList.add('active');
+      btn.classList.add('btn-primary');
+      btn.classList.remove('btn-outline');
+      btn.style.background = '';
+      btn.style.color = '';
+    });
   }
   if (e.target && (e.target.id === 'btn-gen-deselect-all' || e.target.closest('#btn-gen-deselect-all'))) {
-    document.querySelectorAll('.gen-class-chk').forEach(chk => chk.checked = false);
+    document.querySelectorAll('.gen-class-chip').forEach(btn => {
+      btn.classList.remove('active');
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-outline');
+      btn.style.background = '#ffffff';
+      btn.style.color = '#64748b';
+    });
   }
 });
 
 // 자동 생성 시작 버튼 클릭
 document.getElementById('btn-generate')?.addEventListener('click', async () => {
-  const selectedClassIds = Array.from(document.querySelectorAll('.gen-class-chk:checked')).map(c => c.value);
+  const selectedClassIds = Array.from(document.querySelectorAll('.gen-class-chip.active')).map(b => b.dataset.classId);
   if (selectedClassIds.length === 0) {
-    alert('시간표를 적용할 학급을 최소 1개 이상 선택해주세요!');
+    alert('시간표를 적용할 학급을 최소 1개 이상 클릭하여 선택해주세요!');
     return;
   }
 
