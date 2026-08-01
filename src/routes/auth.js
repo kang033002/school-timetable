@@ -13,16 +13,23 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
     const user = await get(
       `SELECT u.*, s.name as school_name 
        FROM user_accounts u
-       JOIN schools s ON u.school_id = s.id
-       WHERE u.email = ?`,
-      [email]
+       LEFT JOIN schools s ON u.school_id = s.id
+       WHERE LOWER(TRIM(u.email)) = ?`,
+      [cleanEmail]
     );
 
-    if (!user || user.password_hash !== password) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    if (!user) {
+      return res.status(401).json({ error: '등록되지 않은 아이디(이메일)입니다.' });
+    }
+
+    if (user.password_hash !== cleanPassword && user.password_hash !== password) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다.' });
     }
 
     // Validate school approval status

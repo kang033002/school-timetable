@@ -27,10 +27,15 @@
             <input type="password" id="login-password" required placeholder="••••••••">
           </div>
           <button type="submit" class="btn btn-primary btn-block">로그인</button>
-          <div style="text-align: center; margin-top: 1rem; display: flex; justify-content: center; gap: 1rem;">
+          <div style="text-align: center; margin-top: 1rem; display: flex; justify-content: center; align-items:center; gap: 0.75rem; flex-wrap:wrap;">
             <a href="#" id="link-show-student-signup" style="color: var(--primary-color); font-size: 0.85rem; text-decoration: none;">학생 가입 신청</a>
             <span style="color: var(--border-color); font-size: 0.85rem;">|</span>
             <a href="#" id="link-show-school-signup" style="color: var(--primary-color); font-size: 0.85rem; text-decoration: none;">우리 학교 등록 신청</a>
+          </div>
+          <div style="text-align:center; margin-top:0.75rem;">
+            <button type="button" onclick="localStorage.clear(); alert('로그인 세션이 깨끗하게 초기화되었습니다! 다시 로그인 해주세요.'); location.reload();" class="btn btn-sm btn-outline" style="font-size:0.78rem; padding:0.25rem 0.5rem; color:#64748b;">
+              🧹 로그인 세션 막힘 초기화
+            </button>
           </div>
         </form>
 
@@ -550,6 +555,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=14.0"></script>
+  <script src="app.js?v=15.0"></script>
 </body>
 </html>
