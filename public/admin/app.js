@@ -800,22 +800,26 @@ function renderGrid(weeklyData, mode) {
   });
 }
 
-// Open Change Modal (수동 셀 클릭 수정)
+// Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
 function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
-  if (!currentSchoolMeta || !currentSchoolMeta.gradeClasses || currentSchoolMeta.gradeClasses.length === 0) {
-    alert('등록된 학년/학급이 없습니다. 우측 상단의 [⚙️ 학교/교사 설정] 패널에서 먼저 학년/반을 생성해주세요!');
-    return;
+  let selectedGcId = null;
+  let gradeStr = '1';
+  let classNumStr = '1';
+
+  if (classSelect && classSelect.value) {
+    const parts = classSelect.value.split('-');
+    gradeStr = parts[0] || '1';
+    classNumStr = parts[1] || '1';
+    if (currentSchoolMeta && currentSchoolMeta.gradeClasses) {
+      const gcObj = currentSchoolMeta.gradeClasses.find(gc => gc.grade == gradeStr && gc.class_number == classNumStr);
+      if (gcObj) selectedGcId = gcObj.id;
+    }
   }
 
-  let selectedGcId = null;
-  if (classSelect.value) {
-    const [grade, classNum] = classSelect.value.split('-');
-    const gcObj = currentSchoolMeta.gradeClasses.find(gc => gc.grade == grade && gc.class_number == classNum);
-    if (gcObj) selectedGcId = gcObj.id;
-  }
-  
-  if (!selectedGcId && currentSchoolMeta.gradeClasses.length > 0) {
+  if (!selectedGcId && currentSchoolMeta && currentSchoolMeta.gradeClasses && currentSchoolMeta.gradeClasses.length > 0) {
     selectedGcId = currentSchoolMeta.gradeClasses[0].id;
+    gradeStr = currentSchoolMeta.gradeClasses[0].grade;
+    classNumStr = currentSchoolMeta.gradeClasses[0].class_number;
   }
 
   selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId };
@@ -824,28 +828,35 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   const dayName = daysKor[dayOfWeek] || '월';
   const headerStr = activeTab === 'BASE' 
     ? `학기 기본 시간표 원본 설정 (${dayName}요일 ${period}교시)` 
-    : `일자별 수업 조정 (${targetDate} ${period}교시)`;
+    : `일자별 수업 조정 (${targetDate || '기본주간'} ${period}교시)`;
 
-  slotInfoSummary.innerHTML = `
-    <strong>[선택 구분]</strong> ${headerStr} - ${grade}학년 ${classNum}반<br>
-    <strong>[현재 배정 상태]</strong> ${slot && slot.subjectName ? `${slot.subjectName} (${slot.teacherName} 선생님)` : '배정 없음'}
-  `;
-
-  // Reset form
-  conflictAlert.classList.add('hidden');
-  pendingForcePayload = null;
-
-  const btnSave = document.getElementById('btn-modal-save');
-  if (slot && slot.changeType === 'HOLIDAY') {
-    conflictList.innerHTML = '<li>해당 일자는 지정된 휴업일(휴일)이므로 시간표 수정이 불가능합니다.</li>';
-    conflictAlert.classList.remove('hidden');
-    btnSave.disabled = true;
-  } else {
-    btnSave.disabled = false;
+  if (slotInfoSummary) {
+    slotInfoSummary.innerHTML = `
+      <strong>[선택 교시]</strong> ${headerStr} - ${gradeStr}학년 ${classNumStr}반<br>
+      <strong>[현재 배정 수업]</strong> ${slot && slot.subjectName ? `${slot.subjectName} (${slot.teacherName || '교사미정'} 선생님)` : '배정 없음'}
+    `;
   }
 
-  changeModal.classList.remove('hidden');
+  // Reset form
+  if (conflictAlert) conflictAlert.classList.add('hidden');
+  pendingForcePayload = null;
+
+  // Show Modal
+  if (changeModal) changeModal.classList.remove('hidden');
+
+  const btnSave = document.getElementById('btn-modal-save');
+  if (btnSave) {
+    if (slot && slot.changeType === 'HOLIDAY') {
+      if (conflictList) conflictList.innerHTML = '<li>해당 일자는 지정된 휴업일(휴일)이므로 시간표 수정이 불가능합니다.</li>';
+      if (conflictAlert) conflictAlert.classList.remove('hidden');
+      btnSave.disabled = true;
+    } else {
+      btnSave.disabled = false;
+    }
+  }
 }
+
+
 
 // Handle Change Submit (with Conflict Pre-checking)
 async function handleApplyChange(e) {
