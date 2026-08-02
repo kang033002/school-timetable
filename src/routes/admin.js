@@ -42,7 +42,14 @@ router.get('/students/approved', async (req, res) => {
 // 1.6 DELETE /api/admin/users
 router.delete('/users', async (req, res) => {
   try {
-    const { ids } = req.query;
+    const { ids, schoolId } = req.query;
+    
+    if (ids === 'ALL_STUDENTS') {
+      if (!schoolId) return res.status(400).json({ error: 'schoolId is required for deleting all students' });
+      await run(`DELETE FROM user_accounts WHERE school_id = ? AND role = 'STUDENT'`, [schoolId]);
+      return res.json({ message: 'All students deleted successfully' });
+    }
+
     if (!ids) return res.status(400).json({ error: 'User IDs are required' });
     
     const idList = ids.split(',').map(id => id.trim());
@@ -58,6 +65,80 @@ router.delete('/users', async (req, res) => {
     res.json({ message: 'Users deleted successfully' });
   } catch (err) {
     console.error('Delete users error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bulk student registration by admin
+router.post('/users/register-students-bulk', async (req, res) => {
+  try {
+    const { schoolId, students } = req.body;
+    if (!schoolId || !Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ error: 'schoolId and students list are required' });
+    }
+
+    const results = [];
+    for (const student of students) {
+      const { grade, classNumber, name } = student;
+      if (!grade || !classNumber || !name) continue;
+
+      const paddedClass = String(classNumber).padStart(2, '0');
+      const prefix = `s${grade}${paddedClass}`;
+      
+      // Count existing students to generate sequential number
+      const countRow = await get(
+        `SELECT COUNT(*) as cnt FROM user_accounts WHERE school_id = ? AND email LIKE ?`,
+        [schoolId, `${prefix}%`]
+      );
+      const nextSeq = String(countRow.cnt + 1).padStart(2, '0');
+      const email = `${prefix}${nextSeq}`;
+      const password = '1234'; // Default password
+
+      const userId = `u-s-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const displayName = `${name} (${grade}학년 ${classNumber}반 학생)`;
+
+      await run(
+        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, name, status)
+         VALUES (?, ?, ?, ?, 'STUDENT', ?, 'APPROVED')`,
+        [userId, schoolId, email, password, displayName]
+      );
+
+      results.push({ id: userId, email, password, name, grade, classNumber });
+    }
+
+    res.json({ message: 'Students registered successfully', registered: results });
+  } catch (err) {
+    console.error('Bulk register students error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bulk delete teachers
+router.delete('/teachers', async (req, res) => {
+  try {
+    const { ids, schoolId } = req.query;
+    if (ids === 'ALL_TEACHERS') {
+      if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+      const teachers = await all(`SELECT id FROM teachers WHERE school_id = ?`, [schoolId]);
+      const teacherIds = teachers.map(t => t.id);
+      if (teacherIds.length > 0) {
+        const placeholders = teacherIds.map(() => '?').join(',');
+        await run(`DELETE FROM user_accounts WHERE teacher_id IN (${placeholders})`, teacherIds);
+      }
+      await run(`DELETE FROM teachers WHERE school_id = ?`, [schoolId]);
+      return res.json({ message: 'All teachers deleted successfully' });
+    }
+
+    if (!ids) return res.status(400).json({ error: 'ids is required' });
+    const idList = ids.split(',').map(id => id.trim());
+    if (idList.length === 0) return res.status(400).json({ error: 'No IDs provided' });
+
+    const placeholders = idList.map(() => '?').join(',');
+    await run(`DELETE FROM user_accounts WHERE teacher_id IN (${placeholders})`, idList);
+    await run(`DELETE FROM teachers WHERE id IN (${placeholders})`, idList);
+    res.json({ message: 'Teachers deleted successfully' });
+  } catch (err) {
+    console.error('Delete teachers error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
