@@ -1634,9 +1634,20 @@ async function initGeneratorTab() {
     // ① 학급 선택 - 드롭다운으로 추가 후 목록에서 선택
     const classListSelect = document.getElementById('gen-class-list-select');
     const btnAddClass = document.getElementById('btn-gen-add-class');
+
+    if (classListSelect) {
+      classListSelect.innerHTML = '<option value="">-- 학급을 선택하세요 --</option>';
+      classesList.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.textContent = `${c.grade}학년 ${c.class_number || c.classNumber}반`;
+        option.dataset.grade = c.grade;
+        option.dataset.classNum = c.class_number || c.classNumber;
+        classListSelect.appendChild(option);
+      });
+    }
     
     if (btnAddClass && classListSelect) {
-      // 기존 이벤트 제거를 위해 클론
       const newBtnAddClass = btnAddClass.cloneNode(true);
       btnAddClass.parentNode.replaceChild(newBtnAddClass, btnAddClass);
       
@@ -1651,22 +1662,6 @@ async function initGeneratorTab() {
           return;
         }
         
-        // 이미 추가된 학급인지 확인
-        const existing = classListSelect.querySelector(`option[value="${classObj.id}"]`);
-        if (existing) {
-          alert('이미 추가된 학급입니다.');
-          classListSelect.value = classObj.id;
-          return;
-        }
-        
-        const option = document.createElement('option');
-        option.value = classObj.id;
-        option.textContent = `${grade}학년 ${classNum}반`;
-        option.dataset.grade = grade;
-        option.dataset.classNum = classNum;
-        classListSelect.appendChild(option);
-        
-        // 방금 추가한 학급 자동 선택
         classListSelect.value = classObj.id;
       });
     }
@@ -2056,6 +2051,34 @@ document.getElementById('btn-apply-timetable')?.addEventListener('click', async 
   } catch (err) {
     console.error('Apply timetable error:', err);
     alert('적용 처리 중 오류가 발생했습니다.');
+  }
+});
+
+document.getElementById('btn-reset-timetable')?.addEventListener('click', async () => {
+  if (!confirm('⚠️ 경고: 시간표 초기화를 진행하시면 지금까지 입력 및 생성된 모든 학급의 시간표 데이터(학기 기본 시간표 및 일자별 시간표 변경 내역)가 완전히 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다. 정말로 초기화하시겠습니까?')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/reset-timetable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: currentUser.schoolId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('🎉 학교의 모든 시간표 데이터가 완전히 초기화되었습니다.');
+      window.sandboxChanges = [];
+      loadTimetable();
+      if (activeTab === 'GENERATOR') {
+        initGeneratorTab();
+      }
+    } else {
+      alert(data.error || '초기화 실패');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('서버 통신 오류가 발생했습니다.');
   }
 });
 

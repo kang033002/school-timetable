@@ -293,6 +293,24 @@ router.post('/change-credentials', async (req, res) => {
   }
 });
 
+// POST /api/admin/reset-timetable
+router.post('/reset-timetable', async (req, res) => {
+  try {
+    const { schoolId } = req.body;
+    if (!schoolId) {
+      return res.status(400).json({ error: 'schoolId is required' });
+    }
+
+    await run(`DELETE FROM base_timetable WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM timetable_changes WHERE school_id = ?`, [schoolId]);
+
+    res.json({ message: '학교의 모든 시간표 데이터가 완전히 초기화되었습니다.' });
+  } catch (err) {
+    console.error('Reset timetable error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 9. POST /api/admin/base-timetable (Upsert base timetable slot)
 router.post('/base-timetable', async (req, res) => {
   try {
