@@ -46,15 +46,15 @@
       <div id="tab-content-add" class="tab-content active" style="display: flex; flex-direction: column; gap: 1.2rem; height: 100%;">
         <div>
           <h4 style="margin:0 0 0.5rem 0;">👩‍🏫 교사 신규 직접 등록 (자동가입)</h4>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">담당 과목, 교사명을 입력하면 아이디가 자동 생성(t01, t02...)되며 임시 비밀번호(1234)가 부여됩니다.</p>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">교과, 이름을 입력하면 아이디가 자동 생성(t01번부터 이후 계속)되며 임시 비밀번호(1234)가 부여됩니다.</p>
         </div>
 
         <div class="table-responsive" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
           <table class="logs-table" style="margin:0;">
             <thead>
               <tr>
-                <th style="width: 140px;">담당 과목</th>
-                <th>교사명</th>
+                <th style="width: 140px;">교과</th>
+                <th>이름</th>
                 <th style="width: 50px; text-align:center;">삭제</th>
               </tr>
             </thead>
@@ -73,24 +73,24 @@
       <!-- Tab 2: Edit Selected Teacher -->
       <div id="tab-content-edit" class="tab-content" style="display: none;">
         <h4 style="margin:0 0 1rem 0;">✏️ 선택한 교사 정보 수정</h4>
-        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 아이디/비밀번호/담당 과목을 바로 수정할 수 있습니다.</p>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 아이디/비밀번호/교과를 바로 수정할 수 있습니다.</p>
         
         <form id="teacher-edit-form" onsubmit="updateTeacher(event)">
           <input type="hidden" id="edit-teacher-id">
           <div class="form-group">
-            <label>교사명</label>
-            <input type="text" id="edit-teacher-name" class="form-input" required>
+            <label>교과</label>
+            <input type="text" id="edit-teacher-subject" class="form-input" placeholder="예: 국어">
           </div>
           <div class="form-group">
-            <label>담당 과목명</label>
-            <input type="text" id="edit-teacher-subject" class="form-input" placeholder="예: 수학">
+            <label>이름</label>
+            <input type="text" id="edit-teacher-name" class="form-input" required placeholder="예: 김교사">
           </div>
           <div class="form-group">
-            <label>로그인 아이디 (아이디 수정 가능)</label>
+            <label>로그인 아이디 (수정 가능)</label>
             <input type="text" id="edit-teacher-email" class="form-input" required placeholder="예: t01">
           </div>
           <div class="form-group">
-            <label>비밀번호 (비밀번호 수정 가능)</label>
+            <label>비밀번호 (수정 가능)</label>
             <input type="text" id="edit-teacher-password" class="form-input" required placeholder="예: 1234">
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:1.5rem;">
@@ -117,7 +117,7 @@
           <thead>
             <tr>
               <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-teachers"></th>
-              <th>담당 과목</th>
+              <th>교과</th>
               <th>이름</th>
               <th>아이디</th>
               <th>비밀번호</th>
@@ -280,7 +280,7 @@
       const currentId = `trow-${rowIdCounter++}`;
       tr.id = currentId;
       tr.innerHTML = `
-        <td><input type="text" class="form-input row-subject" style="padding:0.3rem;" placeholder="수학"></td>
+        <td><input type="text" class="form-input row-subject" style="padding:0.3rem;" placeholder="국어"></td>
         <td><input type="text" class="form-input row-name" style="padding:0.3rem;" required placeholder="김교사"></td>
         <td style="text-align:center;"><button type="button" class="btn btn-sm btn-outline" onclick="removeInputRow('${currentId}')" style="color:var(--danger-color); padding:0.2rem 0.5rem; border:none; background:none; font-size:1.2rem;">&times;</button></td>
       `;
@@ -313,7 +313,7 @@
       }
 
       if (teachers.length === 0) {
-        alert('교사명을 올바르게 입력한 행이 최소 1개 이상 필요합니다.');
+        alert('이름을 올바르게 입력한 행이 최소 1개 이상 필요합니다.');
         return;
       }
 
