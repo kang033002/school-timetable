@@ -1709,10 +1709,26 @@ async function initGeneratorTab() {
     if (subjectBody) {
       subjectBody.innerHTML = '';
       
-      window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = 3) {
+      window.saveGeneratorRowsState = function() {
+        const rows = [];
+        document.querySelectorAll('.gen-row').forEach(row => {
+          const subjectId = row.querySelector('.gen-subject-select')?.value || '';
+          const teacherId = row.querySelector('.gen-teacher-select')?.value || '';
+          const hours = row.querySelector('.gen-hours-input')?.value || '';
+          rows.push({ subjectId, teacherId, hours });
+        });
+        localStorage.setItem('generator_rows_' + currentUser.schoolId, JSON.stringify(rows));
+      };
+
+      window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
         const tr = document.createElement('tr');
         tr.className = 'gen-row';
         
+        let valHours = defaultHours;
+        if (valHours === 3 || valHours === '3') {
+          valHours = '';
+        }
+
         const subjectOptions = (generatorData.subjects || []).map(s => {
           const isSelected = (s.id === defaultSubjectId) ? 'selected' : '';
           return `<option value="${s.id}" ${isSelected}>${s.name}</option>`;
@@ -1737,27 +1753,37 @@ async function initGeneratorTab() {
             </select>
           </td>
           <td>
-            <input type="number" class="form-input gen-hours-input" min="0" max="10" value="${defaultHours}" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
+            <input type="number" class="form-input gen-hours-input" min="0" max="10" value="${valHours}" placeholder="시수 입력" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
           </td>
           <td style="text-align:center;">
-            <button type="button" class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;" onclick="this.closest('tr').remove()">삭제</button>
+            <button type="button" class="btn btn-sm btn-outline btn-row-delete" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">삭제</button>
           </td>
         `;
         
-        // Auto-select teacher when subject changes
         const subjSelect = tr.querySelector('.gen-subject-select');
+        const teachSelect = tr.querySelector('.gen-teacher-select');
+        const hoursInput = tr.querySelector('.gen-hours-input');
+        const delBtn = tr.querySelector('.btn-row-delete');
+
         subjSelect.addEventListener('change', (e) => {
           const selectedSubjId = e.target.value;
           const sub = (generatorData.subjects || []).find(s => s.id === selectedSubjId);
           if (sub) {
             const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || '') === sub.name || (t.subjectName || '') === sub.name);
             if (matchingTeacher) {
-              const teachSelect = tr.querySelector('.gen-teacher-select');
               teachSelect.value = matchingTeacher.id;
-              const hoursInput = tr.querySelector('.gen-hours-input');
-              hoursInput.value = matchingTeacher.weekly_hours || 3;
+              hoursInput.value = '';
             }
           }
+          window.saveGeneratorRowsState();
+        });
+
+        teachSelect.addEventListener('change', window.saveGeneratorRowsState);
+        hoursInput.addEventListener('input', window.saveGeneratorRowsState);
+        
+        delBtn.addEventListener('click', () => {
+          tr.remove();
+          window.saveGeneratorRowsState();
         });
 
         subjectBody.appendChild(tr);
@@ -1767,21 +1793,40 @@ async function initGeneratorTab() {
       if (btnAddRow) {
         const newBtn = btnAddRow.cloneNode(true);
         btnAddRow.parentNode.replaceChild(newBtn, btnAddRow);
-        newBtn.addEventListener('click', () => window.addGenRow());
+        newBtn.addEventListener('click', () => {
+          window.addGenRow();
+          window.saveGeneratorRowsState();
+        });
       }
 
-      // Pre-populate rows based on teachers who have subjects assigned
-      const teachersWithSubjects = (generatorData.teachers || []).filter(t => t.subject_name || t.subjectName);
-      if (teachersWithSubjects.length === 0) {
-        window.addGenRow();
+      // Load rows state from localStorage
+      const savedRowsStr = localStorage.getItem('generator_rows_' + currentUser.schoolId);
+      if (savedRowsStr) {
+        try {
+          const savedRows = JSON.parse(savedRowsStr);
+          savedRows.forEach(r => {
+            window.addGenRow(r.subjectId, r.teacherId, r.hours);
+          });
+        } catch (err) {
+          console.error(err);
+          loadDefaultRows();
+        }
       } else {
-        teachersWithSubjects.forEach(t => {
-          const subName = t.subject_name || t.subjectName;
-          const sub = (generatorData.subjects || []).find(s => s.name === subName);
-          if (sub) {
-            window.addGenRow(sub.id, t.id, t.weekly_hours || 3);
-          }
-        });
+        loadDefaultRows();
+      }
+
+      function loadDefaultRows() {
+        const allTeachers = generatorData.teachers || [];
+        if (allTeachers.length === 0) {
+          window.addGenRow();
+        } else {
+          allTeachers.forEach(t => {
+            const subName = t.subject_name || t.subjectName;
+            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            window.addGenRow(sub ? sub.id : '', t.id, '');
+          });
+        }
+        window.saveGeneratorRowsState();
       }
     }
     
