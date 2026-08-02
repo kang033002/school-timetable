@@ -21,7 +21,7 @@ const btnRefresh = document.getElementById('btn-refresh');
 const btnLogs = document.getElementById('btn-logs');
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
 
-const timetableTitle = document.getElementById('timetable-title');
+const timetableTitle = null; // 탭별로 동적으로 사용 (아래 loadTimetable 참조)
 const weekDateSubtext = document.getElementById('week-date-subtext');
 const timetableBody = document.getElementById('timetable-body');
 
@@ -640,6 +640,8 @@ async function loadTimetable() {
 
   try {
     let url = '';
+    const titleElemDaily = document.getElementById('timetable-title-daily');
+    const titleElemBase = document.getElementById('timetable-title-base');
     if (mode === 'CLASS') {
       if (!classSelect.value) {
         weekDateSubtext.textContent = `기준주간 시작: -`;
@@ -648,9 +650,11 @@ async function loadTimetable() {
       }
       const [grade, classNum] = classSelect.value.split('-');
       url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
-      timetableTitle.textContent = activeTab === 'BASE'
+      const titleText = activeTab === 'BASE'
         ? `${grade}학년 ${classNum}반 학기 기본 시간표 (원본)`
         : `${grade}학년 ${classNum}반 주간 시간표`;
+      if (titleElemDaily) titleElemDaily.textContent = titleText;
+      if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
     } else {
       const teacherId = teacherSelect.value;
       if (!teacherId) {
@@ -660,9 +664,11 @@ async function loadTimetable() {
       }
       const teacherObj = currentSchoolMeta.teachers.find(t => t.id === teacherId);
       url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${teacherId}&date=${dateVal}${baseParam}`;
-      timetableTitle.textContent = activeTab === 'BASE'
+      const titleText = activeTab === 'BASE'
         ? `${teacherObj ? teacherObj.name : ''} 선생님 학기 기본 시간표 (원본)`
         : `${teacherObj ? teacherObj.name : ''} 선생님 주간 시간표`;
+      if (titleElemDaily) titleElemDaily.textContent = titleText;
+      if (titleElemBase) titleElemBase.textContent = `🏫 ${teacherObj ? teacherObj.name : ''} 선생님 기본 시간표 원본 설정`;
     }
 
     const res = await fetch(url);
@@ -791,15 +797,27 @@ function renderGrid(weeklyData, mode) {
           td.appendChild(badge);
         }
 
-        if (slot && (slot.subjectName || slot.gradeName)) {
+        // 수업 내용이 있거나(subjectName/gradeName), 변경/보강 이력이 있으면 표시
+        const hasContent = slot && (slot.subjectName || slot.gradeName || slot.teacherName);
+        const hasChange = slot && slot.isChanged;
+
+        if (hasContent || hasChange) {
           const subDiv = document.createElement('div');
           subDiv.className = 'cell-subject';
-          subDiv.textContent = mode === 'CLASS' ? (slot.subjectName || '수업없음') : (slot.gradeName || '빈교시');
+          if (mode === 'CLASS') {
+            subDiv.textContent = slot.subjectName || (slot.changeType === 'CANCEL' ? '결강' : slot.changeType === 'SUBSTITUTE' ? '보강' : '수업없음');
+          } else {
+            subDiv.textContent = slot.gradeName || slot.subjectName || (hasChange ? '변경됨' : '빈교시');
+          }
           td.appendChild(subDiv);
 
           const infoDiv = document.createElement('div');
           infoDiv.className = 'cell-subinfo';
-          infoDiv.textContent = mode === 'CLASS' ? (slot.teacherName || '') : (slot.subjectName || '');
+          if (mode === 'CLASS') {
+            infoDiv.textContent = slot.teacherName || (hasChange ? '변경' : '');
+          } else {
+            infoDiv.textContent = slot.subjectName || '';
+          }
           td.appendChild(infoDiv);
 
           if (slot.roomName && slot.roomName !== '일반교실') {
