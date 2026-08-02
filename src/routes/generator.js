@@ -141,8 +141,8 @@ router.post('/generate', async (req, res) => {
     const tchMap = Object.fromEntries(teachers.map(t => [t.id, t.name]));
 
     const school = await get(`SELECT max_periods_per_day, operating_days FROM schools WHERE id = ?`, [schoolId]);
-    const maxPeriodsPerDay = Math.max(school?.max_periods_per_day || 10, 10);
-    const operatingDays = school?.operating_days || 5;
+    const maxPeriodsPerDay = req.body.maxPeriodsPerDay || school?.max_periods_per_day || 10;
+    const operatingDays = req.body.operatingDays || school?.operating_days || 5;
 
     // 과목명/교사명 주입
     const enrichedAssignments = assignments.map(gc => ({

@@ -1173,8 +1173,10 @@ let genCurrentClassId = null; // 미리보기에서 현재 선택된 학급
 async function initGeneratorTab() {
   if (!currentUser || !currentUser.schoolId) return;
   try {
-    // 기본 빈 그리드 표출 (1~10교시)
-    renderGenGrid(null);
+    // 기본 빈 그리드 표출 (선택된 최대 교시 기준)
+    const maxPeriodSelect = document.getElementById('gen-max-period-select');
+    const defaultMaxPeriods = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
+    renderGenGrid(null, defaultMaxPeriods);
 
     let classesList = [];
     let subjectsList = [];
@@ -1386,13 +1388,16 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
   const assignments = selectedClassIds.map(gcId => ({ gradeClassId: gcId, subjects: subjectsList }));
 
   const btnGen = document.getElementById('btn-generate');
+  const maxPeriodSelect = document.getElementById('gen-max-period-select');
+  const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
+  
   try {
     if (btnGen) { btnGen.textContent = '⏳ AI가 배정 작업 중...'; btnGen.disabled = true; }
 
     const res = await fetch(`${API_BASE}/generator/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolId: currentUser.schoolId, assignments })
+      body: JSON.stringify({ schoolId: currentUser.schoolId, assignments, maxPeriodsPerDay })
     });
 
     if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
@@ -1463,7 +1468,12 @@ document.getElementById('btn-regen')?.addEventListener('click', () => {
 document.addEventListener('change', (e) => {
   if (e.target?.id === 'gen-preview-class-select') {
     genCurrentClassId = e.target.value;
-    renderGenGrid(genCurrentClassId);
+    const maxPeriodSelect = document.getElementById('gen-max-period-select');
+    const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
+    renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+  } else if (e.target?.id === 'gen-max-period-select') {
+    const maxPeriodsPerDay = parseInt(e.target.value) || 10;
+    renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
   }
 });
 

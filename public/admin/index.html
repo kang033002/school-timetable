@@ -418,9 +418,23 @@
 
               <!-- ③ 자동 생성 실행 -->
               <div class="gen-section" style="text-align:center;">
-                <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem; font-weight:700;">
-                  🤖 AI 시간표 자동 생성 시작
-                </button>
+                <div style="display:flex; justify-content:center; align-items:center; gap:1rem; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <label style="font-weight:600; font-size:0.95rem; color:var(--text-main);">하루 최대 교시:</label>
+                    <select id="gen-max-period-select" class="form-select" style="width:120px; font-weight:bold;">
+                      <option value="4">4교시</option>
+                      <option value="5">5교시</option>
+                      <option value="6">6교시</option>
+                      <option value="7">7교시</option>
+                      <option value="8">8교시</option>
+                      <option value="9">9교시</option>
+                      <option value="10" selected>10교시</option>
+                    </select>
+                  </div>
+                  <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem; font-weight:700;">
+                    🤖 AI 시간표 자동 생성 시작
+                  </button>
+                </div>
                 <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem;">생성 완료 후 아래 미리보기에서 확인 → 수정 → '전체 학년/반에 최종 적용'을 누르면 <strong>학기 기본 시간표</strong>로 자동 저장됩니다.</p>
               </div>
             </div>
