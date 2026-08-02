@@ -119,8 +119,8 @@ router.get('/data', async (req, res) => {
       operatingDays: school?.operating_days || 5
     });
   } catch (err) {
-    console.error('Generator data error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Generator error:', err);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
@@ -178,7 +178,7 @@ router.post('/generate', async (req, res) => {
     });
   } catch (err) {
     console.error('Generate error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
@@ -218,7 +218,7 @@ router.post('/apply', async (req, res) => {
     res.json({ success: true, applied: timetable.length });
   } catch (err) {
     console.error('Apply error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
