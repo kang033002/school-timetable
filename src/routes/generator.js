@@ -103,7 +103,7 @@ router.get('/data', async (req, res) => {
       [schoolId]
     );
     const teachers = await all(
-      `SELECT id, name FROM teachers WHERE school_id = ? ORDER BY name`,
+      `SELECT id, name, subject_name FROM teachers WHERE school_id = ? ORDER BY name`,
       [schoolId]
     );
     const school = await get(

@@ -153,13 +153,17 @@
           <h2>🛠️ 마스터 개발자 시스템 포털</h2>
           <p style="color: var(--text-sub); font-size: 0.85rem; margin-top: 0.25rem;">전체 가입 신청 학교 관리 및 승인 절차 제어</p>
         </div>
-        <button id="btn-logout" class="btn btn-danger btn-sm">마스터 로그아웃</button>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button id="btn-batch-delete" class="btn btn-danger btn-sm hidden">선택 일괄 삭제</button>
+          <button id="btn-logout" class="btn btn-danger btn-sm">마스터 로그아웃</button>
+        </div>
       </div>
 
       <h3 style="margin-bottom: 1rem;">🏫 가입 신청 학교 목록</h3>
       <table style="margin-bottom: 2rem;">
         <thead>
           <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all-schools"></th>
             <th>학교 고유 ID</th>
             <th>학교 코드</th>
             <th>학교명</th>

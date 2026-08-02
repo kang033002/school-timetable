@@ -130,7 +130,7 @@ async function loadSchools() {
 
     schoolsListUi.innerHTML = '';
     if (schools.length === 0) {
-      schoolsListUi.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-sub);">등록 신청된 학교가 없습니다.</td></tr>';
+      schoolsListUi.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-sub);">등록 신청된 학교가 없습니다.</td></tr>';
       return;
     }
 
@@ -144,14 +144,17 @@ async function loadSchools() {
         ? `<button class="btn btn-danger btn-sm" onclick="approveSchool('${s.id}', 'REJECTED')">비활성화</button>`
         : `<button class="btn btn-success btn-sm" onclick="approveSchool('${s.id}', 'APPROVED')">승인</button>`;
 
+      const deleteBtn = `<button class="btn btn-outline btn-sm" style="border:1px solid var(--danger-color); color:var(--danger-color); padding: 0.4rem 0.8rem; border-radius: 6px; background: transparent; cursor: pointer;" onclick="deleteSchool('${s.id}')">삭제</button>`;
+
       tr.innerHTML = `
+        <td style="text-align: center;"><input type="checkbox" class="school-cb" value="${s.id}"></td>
         <td>${s.id}</td>
         <td><code>${s.code}</code></td>
         <td><strong>${s.name}</strong></td>
         <td><code style="color:var(--primary-color);">${s.admin_username || '-'}</code></td>
         <td><code>${s.admin_password || '-'}</code></td>
         <td>${statusBadge}</td>
-        <td class="action-cell">${actions}</td>
+        <td class="action-cell">${actions} ${deleteBtn}</td>
       `;
       schoolsListUi.appendChild(tr);
     });
@@ -184,3 +187,86 @@ window.approveSchool = async function(schoolId, status) {
     console.error(err);
   }
 };
+
+window.deleteSchool = async function(schoolId) {
+  if (!confirm('정말로 이 학교를 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며 학교와 연관된 모든 데이터가 영구적으로 삭제됩니다.')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/master/schools/${schoolId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message);
+      loadSchools();
+      updateBatchDeleteBtn();
+    } else {
+      alert(data.error || '삭제 실패');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'check-all-schools') {
+    const isChecked = e.target.checked;
+    document.querySelectorAll('.school-cb').forEach(cb => cb.checked = isChecked);
+    updateBatchDeleteBtn();
+  } else if (e.target.classList.contains('school-cb')) {
+    updateBatchDeleteBtn();
+  }
+});
+
+function updateBatchDeleteBtn() {
+  const checked = document.querySelectorAll('.school-cb:checked');
+  const btn = document.getElementById('btn-batch-delete');
+  if (!btn) return;
+  
+  if (checked.length > 0) {
+    btn.classList.remove('hidden');
+    btn.textContent = `선택 일괄 삭제 (${checked.length})`;
+  } else {
+    btn.classList.add('hidden');
+  }
+  
+  const allCb = document.querySelectorAll('.school-cb');
+  const mainCb = document.getElementById('check-all-schools');
+  if (mainCb && allCb.length > 0) {
+    mainCb.checked = checked.length === allCb.length;
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target.id === 'btn-batch-delete') {
+    const checked = document.querySelectorAll('.school-cb:checked');
+    if (checked.length === 0) return;
+
+    if (!confirm(`정말로 선택한 ${checked.length}개의 학교를 삭제하시겠습니까? 연관된 모든 데이터가 영구적으로 삭제됩니다.`)) return;
+
+    const schoolIds = Array.from(checked).map(cb => cb.value);
+
+    try {
+      const res = await fetch(`${API_BASE}/master/schools/batch-delete`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ schoolIds })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        document.getElementById('check-all-schools').checked = false;
+        loadSchools();
+        updateBatchDeleteBtn();
+      } else {
+        alert(data.error || '삭제 실패');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+});

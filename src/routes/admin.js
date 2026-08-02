@@ -46,22 +46,32 @@ router.post('/teachers', async (req, res) => {
     const { id, schoolId, name, code, subjectName } = req.body;
     if (!schoolId || !name) return res.status(400).json({ error: 'schoolId and name are required' });
 
-    if (id) {
+    let teacherId = id;
+    if (teacherId) {
       // Update
       await run(
         `UPDATE teachers SET name = ?, code = ?, subject_name = ? WHERE id = ? AND school_id = ?`,
-        [name, code || null, subjectName || null, id, schoolId]
+        [name, code || null, subjectName || null, teacherId, schoolId]
       );
-      res.json({ message: 'Teacher updated successfully' });
     } else {
       // Create
-      const newId = `t-${Date.now()}`;
+      teacherId = `t-${Date.now()}`;
       await run(
         `INSERT INTO teachers (id, school_id, name, code, subject_name) VALUES (?, ?, ?, ?, ?)`,
-        [newId, schoolId, name, code || null, subjectName || null]
+        [teacherId, schoolId, name, code || null, subjectName || null]
       );
-      res.status(201).json({ message: 'Teacher created successfully', id: newId });
     }
+
+    // Auto-create subject if it doesn't exist
+    if (subjectName) {
+      const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, subjectName]);
+      if (!existingSub) {
+        const subId = `s-${Date.now()}`;
+        await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [subId, schoolId, subjectName, subjectName]);
+      }
+    }
+
+    res.status(200).json({ message: 'Teacher saved successfully', id: teacherId });
   } catch (err) {
     console.error('Teacher setup error:', err);
     res.status(500).json({ error: 'Internal server error' });

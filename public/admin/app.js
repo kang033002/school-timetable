@@ -1254,9 +1254,11 @@ async function initGeneratorTab() {
       }
       generatorData.subjects.forEach(sub => {
         const tr = document.createElement('tr');
-        const teacherOptions = (generatorData.teachers || []).map(t =>
-          `<option value="${t.id}">${t.name} 선생님</option>`
-        ).join('');
+        const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || '') === sub.name || (t.subjectName || '') === sub.name);
+        const teacherOptions = (generatorData.teachers || []).map(t => {
+          const isSelected = (matchingTeacher && matchingTeacher.id === t.id) ? 'selected' : '';
+          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님</option>`;
+        }).join('');
         tr.innerHTML = `
           <td><strong>📚 ${sub.name}</strong></td>
           <td>

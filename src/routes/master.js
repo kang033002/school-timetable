@@ -58,4 +58,56 @@ router.post('/change-credentials', async (req, res) => {
   }
 });
 
+// DELETE /api/master/schools/:id
+router.delete('/schools/:id', async (req, res) => {
+  try {
+    const schoolId = req.params.id;
+    if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+
+    // Ensure we don't delete SYSTEM
+    if (schoolId === 'SYSTEM') return res.status(400).json({ error: 'Cannot delete SYSTEM school' });
+
+    await run(`DELETE FROM user_accounts WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM grade_classes WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM teachers WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM subjects WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM base_timetable WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM timetable_changes WHERE school_id = ?`, [schoolId]);
+    await run(`DELETE FROM schools WHERE id = ?`, [schoolId]);
+    
+    res.json({ message: '학교가 삭제되었습니다.' });
+  } catch (err) {
+    console.error('Delete school error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/master/schools/batch-delete
+router.post('/schools/batch-delete', async (req, res) => {
+  try {
+    const { schoolIds } = req.body;
+    if (!Array.isArray(schoolIds) || schoolIds.length === 0) {
+      return res.status(400).json({ error: 'schoolIds array is required' });
+    }
+
+    // Filter out SYSTEM just in case
+    const validIds = schoolIds.filter(id => id !== 'SYSTEM');
+
+    for (const schoolId of validIds) {
+      await run(`DELETE FROM user_accounts WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM grade_classes WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM teachers WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM subjects WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM base_timetable WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM timetable_changes WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM schools WHERE id = ?`, [schoolId]);
+    }
+
+    res.json({ message: `${validIds.length}개의 학교가 일괄 삭제되었습니다.` });
+  } catch (err) {
+    console.error('Batch delete schools error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
