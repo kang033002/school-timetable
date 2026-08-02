@@ -38,7 +38,7 @@
       
       <!-- Form Navigation Tabs -->
       <div class="form-tabs">
-        <button class="form-tab-btn active" id="tab-btn-add" onclick="switchLeftTab('add')">➕ 신규 직접 등록</button>
+        <button class="form-tab-btn active" id="tab-btn-add" onclick="switchLeftTab('add')">➕ 교사 신규 직접 등록</button>
         <button class="form-tab-btn" id="tab-btn-edit" onclick="switchLeftTab('edit')">✏️ 교사 정보 수정</button>
       </div>
 
@@ -46,15 +46,15 @@
       <div id="tab-content-add" class="tab-content active" style="display: flex; flex-direction: column; gap: 1.2rem; height: 100%;">
         <div>
           <h4 style="margin:0 0 0.5rem 0;">👩‍🏫 교사 신규 직접 등록 (자동가입)</h4>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">교사명과 담당 과목을 입력하면 아이디가 자동 생성(t시리얼번호)되며 임시 비밀번호(1234)가 부여됩니다.</p>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">담당과목, 교사명을 입력하면 아이디가 자동 생성(t01, t02...)되며 임시 비밀번호(1234)가 부여됩니다.</p>
         </div>
 
         <div class="table-responsive" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
           <table class="logs-table" style="margin:0;">
             <thead>
               <tr>
-                <th>담당과목</th>
-                <th>이름</th>
+                <th style="width: 120px;">담당 과목</th>
+                <th>교사명</th>
                 <th style="width: 50px; text-align:center;">삭제</th>
               </tr>
             </thead>
@@ -73,7 +73,7 @@
       <!-- Tab 2: Edit Selected Teacher -->
       <div id="tab-content-edit" class="tab-content" style="display: none;">
         <h4 style="margin:0 0 1rem 0;">✏️ 선택한 교사 정보 수정</h4>
-        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 바로 수정이 가능합니다.</p>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 아이디/비밀번호/과목을 바로 수정할 수 있습니다.</p>
         
         <form id="teacher-edit-form" onsubmit="updateTeacher(event)">
           <input type="hidden" id="edit-teacher-id">
@@ -83,15 +83,15 @@
           </div>
           <div class="form-group">
             <label>담당 과목명</label>
-            <input type="text" id="edit-teacher-subject" class="form-input" required placeholder="예: 수학">
+            <input type="text" id="edit-teacher-subject" class="form-input" placeholder="예: 수학">
           </div>
           <div class="form-group">
-            <label>로그인 아이디 (수정 가능)</label>
-            <input type="text" id="edit-teacher-email" class="form-input" required>
+            <label>로그인 아이디 (아이디 수정 가능)</label>
+            <input type="text" id="edit-teacher-email" class="form-input" required placeholder="예: teacher1">
           </div>
           <div class="form-group">
-            <label>비밀번호</label>
-            <input type="text" id="edit-teacher-password" class="form-input" required>
+            <label>비밀번호 (비밀번호 수정 가능)</label>
+            <input type="text" id="edit-teacher-password" class="form-input" required placeholder="예: 1234">
           </div>
           <div style="display:flex; gap:0.5rem; margin-top:1.5rem;">
             <button type="submit" class="btn btn-primary" style="flex:2;">정보 수정 저장</button>
@@ -117,7 +117,7 @@
           <thead>
             <tr>
               <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-teachers"></th>
-              <th>담당과목</th>
+              <th>담당 과목</th>
               <th>이름</th>
               <th>아이디</th>
               <th>비밀번호</th>
@@ -172,7 +172,7 @@
         tbody.innerHTML = '';
 
         if (!teachers || teachers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">등록된 교사가 없습니다.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">가입 완료된 교사가 없습니다.</td></tr>';
           return;
         }
 
@@ -180,23 +180,26 @@
           const tr = document.createElement('tr');
           tr.className = 'clickable-row';
           
-          // Click to Edit
+          const subject = t.subject_name || t.subjectName || '미지정';
+          const email = t.email || '-';
+          const password = t.password_plain || '-';
+
+          // Click row to Edit
           tr.addEventListener('click', (e) => {
             if (e.target.type === 'checkbox') return;
             
-            // Remove previous selections
             document.querySelectorAll('.clickable-row').forEach(row => row.classList.remove('selected-row'));
             tr.classList.add('selected-row');
             
-            selectTeacherForEdit(t.id, t.name, t.subject_name || t.subjectName || '', t.email, t.password_plain);
+            selectTeacherForEdit(t.id, t.name, subject, email, password);
           });
 
           tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="teacher-checkbox" value="${t.id}"></td>
-            <td><span class="badge" style="background:var(--bg-card); color:var(--primary-color);">${t.subject_name || t.subjectName || '미지정'}</span></td>
+            <td><span class="badge" style="background:var(--bg-card); color:var(--primary-color); font-weight:600;">${subject}</span></td>
             <td><strong>${t.name}</strong></td>
-            <td><span style="color:var(--text-muted); font-size:0.88rem;">${t.email || '-'}</span></td>
-            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${t.password_plain || '-'}</code></td>
+            <td><span style="color:var(--text-muted); font-size:0.88rem;">${email}</span></td>
+            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${password}</code></td>
           `;
           tbody.appendChild(tr);
         });
@@ -210,9 +213,9 @@
     function selectTeacherForEdit(id, name, subject, email, password) {
       document.getElementById('edit-teacher-id').value = id;
       document.getElementById('edit-teacher-name').value = name;
-      document.getElementById('edit-teacher-subject').value = subject;
-      document.getElementById('edit-teacher-email').value = email || '';
-      document.getElementById('edit-teacher-password').value = password || '';
+      document.getElementById('edit-teacher-subject').value = subject === '미지정' ? '' : subject;
+      document.getElementById('edit-teacher-email').value = email === '-' ? '' : email;
+      document.getElementById('edit-teacher-password').value = password === '-' ? '' : password;
 
       switchLeftTab('edit');
     }
@@ -225,7 +228,7 @@
       switchLeftTab('add');
     };
 
-    // Submit teacher edit form
+    // Submit teacher edit form to backend
     window.updateTeacher = async function(event) {
       event.preventDefault();
       
@@ -274,11 +277,11 @@
     window.addTeacherInputRow = function() {
       const tbody = document.getElementById('teacher-input-rows');
       const tr = document.createElement('tr');
-      const currentId = `row-${rowIdCounter++}`;
+      const currentId = `trow-${rowIdCounter++}`;
       tr.id = currentId;
       tr.innerHTML = `
-        <td><input type="text" class="form-input row-subject" style="padding:0.3rem;" required placeholder="예: 수학"></td>
-        <td><input type="text" class="form-input row-name" style="padding:0.3rem;" required placeholder="예: 김교사"></td>
+        <td><input type="text" class="form-input row-subject" style="padding:0.3rem;" placeholder="수학"></td>
+        <td><input type="text" class="form-input row-name" style="padding:0.3rem;" required placeholder="김교사"></td>
         <td style="text-align:center;"><button type="button" class="btn btn-sm btn-outline" onclick="removeInputRow('${currentId}')" style="color:var(--danger-color); padding:0.2rem 0.5rem; border:none; background:none; font-size:1.2rem;">&times;</button></td>
       `;
       tbody.appendChild(tr);
@@ -304,13 +307,13 @@
         const subjectName = subjects[i].value.trim();
         const name = names[i].value.trim();
 
-        if (name && subjectName) {
-          teachers.push({ name, subjectName });
+        if (name) {
+          teachers.push({ subjectName, name });
         }
       }
 
       if (teachers.length === 0) {
-        alert('이름과 담당 과목을 모두 올바르게 입력한 행이 최소 1개 이상 필요합니다.');
+        alert('교사명을 올바르게 입력한 행이 최소 1개 이상 필요합니다.');
         return;
       }
 
@@ -328,11 +331,13 @@
           const data = await res.json();
           alert(`${data.registered.length}명의 교사가 성공적으로 등록 및 자동 가입되었습니다.`);
           
+          // Clear input table and recreate 3 clean rows
           document.getElementById('teacher-input-rows').innerHTML = '';
           for(let i=0; i<3; i++) {
             addTeacherInputRow();
           }
 
+          // Reload and update
           await loadTeachers();
           opener.loadSchoolMetadata();
         } else {
@@ -360,7 +365,7 @@
         return;
       }
 
-      if (!confirm(`선택한 ${selected.length}명의 교사 정보 및 계정을 정말로 삭제하시겠습니까?`)) {
+      if (!confirm(`선택한 ${selected.length}명의 교사 계정 및 데이터를 정말로 삭제하시겠습니까?`)) {
         return;
       }
 
@@ -369,11 +374,11 @@
           method: 'DELETE'
         });
         if (res.ok) {
-          alert('선택한 교사 정보가 삭제되었습니다.');
+          alert('선택한 교사 계정이 삭제되었습니다.');
           loadTeachers();
           opener.loadSchoolMetadata();
         } else {
-          alert('교사 삭제에 실패했습니다.');
+          alert('삭제 처리에 실패했습니다.');
         }
       } catch (err) {
         console.error(err);
@@ -383,7 +388,7 @@
 
     // Delete All Teachers
     document.getElementById('btn-delete-all-teachers').addEventListener('click', async () => {
-      if (!confirm('🚨 경고: 학교의 모든 교사 정보 및 연결된 계정이 영구 삭제됩니다. 정말로 전체 삭제하시겠습니까?')) {
+      if (!confirm('🚨 경고: 학교의 모든 교사 계정 및 데이터가 영구 삭제됩니다. 정말로 전체 삭제하시겠습니까?')) {
         return;
       }
 
@@ -392,7 +397,7 @@
           method: 'DELETE'
         });
         if (res.ok) {
-          alert('학교의 모든 교사 정보가 삭제되었습니다.');
+          alert('학교의 모든 교사 계정이 삭제되었습니다.');
           loadTeachers();
           opener.loadSchoolMetadata();
         } else {
