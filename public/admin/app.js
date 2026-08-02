@@ -1355,54 +1355,44 @@ async function initGeneratorTab() {
       };
     }
 
-    // ① 학급 선택 칩 버튼 목록 생성 (등록된 학급 자동 표시)
-    const classContainer = document.getElementById('gen-class-checkboxes');
-    if (classContainer) {
-      classContainer.innerHTML = '';
+    // ① 학급 선택 - 드롭다운으로 추가 후 목록에서 선택
+    const classListSelect = document.getElementById('gen-class-list-select');
+    const btnAddClass = document.getElementById('btn-gen-add-class');
+    
+    if (btnAddClass && classListSelect) {
+      // 기존 이벤트 제거를 위해 클론
+      const newBtnAddClass = btnAddClass.cloneNode(true);
+      btnAddClass.parentNode.replaceChild(newBtnAddClass, btnAddClass);
       
-      // 등록된 학급을 학년/반 순서로 정렬
-      const sortedClasses = [...classesList].sort((a, b) => {
-        const gradeA = parseInt(a.grade);
-        const gradeB = parseInt(b.grade);
-        if (gradeA !== gradeB) return gradeA - gradeB;
-        const classA = parseInt(a.class_number || a.classNumber);
-        const classB = parseInt(b.class_number || b.classNumber);
-        return classA - classB;
+      newBtnAddClass.addEventListener('click', () => {
+        const grade = document.getElementById('gen-grade-select').value;
+        const classNum = document.getElementById('gen-class-select').value;
+        
+        const classObj = classesList.find(c => String(c.grade) === String(grade) && (String(c.class_number) === String(classNum) || String(c.classNumber) === String(classNum)));
+        
+        if (!classObj) {
+          alert(`${grade}학년 ${classNum}반은 학교 설정에 등록되어 있지 않습니다. [⚙️ 학교/교사 설정] 탭에서 먼저 반을 등록해주세요.`);
+          return;
+        }
+        
+        // 이미 추가된 학급인지 확인
+        const existing = classListSelect.querySelector(`option[value="${classObj.id}"]`);
+        if (existing) {
+          alert('이미 추가된 학급입니다.');
+          classListSelect.value = classObj.id;
+          return;
+        }
+        
+        const option = document.createElement('option');
+        option.value = classObj.id;
+        option.textContent = `${grade}학년 ${classNum}반`;
+        option.dataset.grade = grade;
+        option.dataset.classNum = classNum;
+        classListSelect.appendChild(option);
+        
+        // 방금 추가한 학급 자동 선택
+        classListSelect.value = classObj.id;
       });
-
-      if (sortedClasses.length === 0) {
-        classContainer.innerHTML = '<p style="color:var(--text-sub); font-size:0.9rem;">등록된 학급이 없습니다. [⚙️ 학교/교사 설정] 탭에서 학급을 먼저 등록해주세요.</p>';
-      } else {
-        sortedClasses.forEach(classObj => {
-          const grade = classObj.grade;
-          const classNum = classObj.class_number || classObj.classNumber;
-          
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn btn-sm btn-outline gen-class-chip';
-          btn.dataset.classId = classObj.id;
-          btn.style.cssText = 'padding:0.45rem 1rem; font-size:0.9rem; font-weight:700; background:#ffffff; color:#64748b; border-radius:8px; border:2px solid #e2e8f0; cursor:pointer; transition: all 0.2s ease;';
-          btn.textContent = `${grade}학년 ${classNum}반`;
-          
-          btn.addEventListener('click', () => {
-            if (btn.classList.contains('active')) {
-              btn.classList.remove('active', 'btn-primary');
-              btn.classList.add('btn-outline');
-              btn.style.background = '#ffffff';
-              btn.style.color = '#64748b';
-              btn.style.borderColor = '#e2e8f0';
-            } else {
-              btn.classList.add('active', 'btn-primary');
-              btn.classList.remove('btn-outline');
-              btn.style.background = 'var(--primary-color)';
-              btn.style.color = '#ffffff';
-              btn.style.borderColor = 'var(--primary-color)';
-            }
-          });
-          
-          classContainer.appendChild(btn);
-        });
-      }
     }
 
     // ② 과목/교사/시수 입력표 생성
@@ -1518,9 +1508,10 @@ async function initGeneratorTab() {
 // AI 자동 생성 시작
 // ────────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-generate')?.addEventListener('click', async () => {
-  const selectedClassIds = Array.from(document.querySelectorAll('#gen-class-checkboxes .gen-class-chip.active')).map(b => b.dataset.classId);
+  const classListSelect = document.getElementById('gen-class-list-select');
+  const selectedClassIds = classListSelect ? Array.from(classListSelect.options).filter(o => o.value).map(o => o.value) : [];
   if (selectedClassIds.length === 0) {
-    alert('시간표를 적용할 학급을 최소 1개 이상 선택해주세요!');
+    alert('시간표를 적용할 학급을 최소 1개 이상 생성해주세요!');
     return;
   }
 
