@@ -176,31 +176,6 @@
 
 
 
-            <!-- 2. Teacher Edit -->
-            <div class="settings-card" id="card-teacher-setup">
-              <h4>👩‍🏫 교사 등록</h4>
-              <form id="teacher-setup-form">
-                <input type="hidden" id="teacher-edit-id">
-                <div class="form-group">
-                  <label>교사명</label>
-                  <input type="text" id="teacher-setup-name" class="form-input" required>
-                </div>
-                <div class="form-group">
-                  <label>담당 과목명</label>
-                  <input type="text" id="teacher-setup-subject" class="form-input" placeholder="예: 국어">
-                </div>
-                <div class="form-group">
-                  <label>로그인 아이디 (아이디)</label>
-                  <input type="text" id="teacher-setup-email" class="form-input" required placeholder="예: teacher1">
-                </div>
-                <div class="form-group">
-                  <label>비밀번호</label>
-                  <input type="password" id="teacher-setup-password" class="form-input" required placeholder="예: 1234">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">교사 등록 정보 저장</button>
-              </form>
-            </div>
-
             <!-- 4. Class Setup -->
             <div class="settings-card" id="card-class-setup">
               <h4>🏫 학년/학급 생성 및 담임 지정</h4>
@@ -221,51 +196,18 @@
               </form>
             </div>
 
-            <!-- 1.5 Approved Students List (Full Width) -->
-            <div class="settings-card" id="card-approved-students" style="grid-column: 1 / -1;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h4 style="margin: 0;">🎓 가입 완료 학생 관리</h4>
-                <button class="btn btn-sm" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none;">선택 삭제</button>
-              </div>
-              <div class="table-responsive">
-                <table class="logs-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-students"></th>
-                      <th>학년</th>
-                      <th>반</th>
-                      <th>이름</th>
-                      <th>아이디</th>
-                      <th>비밀번호</th>
-                      <th style="text-align: center;">작업</th>
-                    </tr>
-                  </thead>
-                  <tbody id="approved-students-list">
-                    <!-- Dynamic -->
-                  </tbody>
-                </table>
-              </div>
+            <!-- 1.5 Approved Students Shortcut -->
+            <div class="settings-card" style="cursor:pointer;" onclick="openStudentMgmtOverlay()">
+              <h4 style="margin-bottom:0.5rem; color:var(--primary-color);">🎓 가입 완료 학생 관리</h4>
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">가입 완료된 학생들의 아이디/비밀번호 조회 및 개별/선택 일괄 삭제 관리를 새 창으로 엽니다.</p>
+              <button type="button" class="btn btn-outline btn-block">관리 창 열기</button>
             </div>
-
-            <!-- 2.5 Teacher Management (Full Width) -->
-            <div class="settings-card" id="card-teacher-management" style="grid-column: 1 / -1;">
-              <h4 style="margin-bottom: 1rem;">👩‍🏫 교사 관리</h4>
-              <div class="table-responsive">
-                <table class="logs-table">
-                  <thead>
-                    <tr>
-                      <th>이름</th>
-                      <th>과목</th>
-                      <th>아이디</th>
-                      <th>비밀번호</th>
-                      <th style="text-align: center;">작업</th>
-                    </tr>
-                  </thead>
-                  <tbody id="admin-teachers-table-body">
-                    <!-- Dynamic -->
-                  </tbody>
-                </table>
-              </div>
+            
+            <!-- 2.5 Teacher Management Shortcut -->
+            <div class="settings-card" style="cursor:pointer;" onclick="openTeacherMgmtOverlay()">
+              <h4 style="margin-bottom:0.5rem; color:var(--primary-color);">👩‍🏫 교사 등록 및 관리</h4>
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">신규 교사 등록, 과목 변경, 계정 및 비밀번호 설정, 교사 목록 조회를 새 창으로 엽니다.</p>
+              <button type="button" class="btn btn-outline btn-block">관리 창 열기</button>
             </div>
 
             <!-- 4.5 Class Management (Full Width) -->
@@ -658,6 +600,95 @@
                 </tr>
               </thead>
               <tbody id="logs-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 학생 관리 모달 (새 창) -->
+  <div id="overlay-student-mgmt" class="modal hidden" style="z-index: 1000;">
+    <div class="modal-card modal-lg" style="max-width: 90%; width: 1000px; padding: 2rem;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        <h3 style="margin:0;">🎓 가입 완료 학생 관리</h3>
+        <button type="button" class="modal-close" onclick="closeStudentMgmtOverlay()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
+          <button class="btn btn-sm" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none; padding:0.5rem 1rem;">선택 삭제</button>
+        </div>
+        <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-students"></th>
+                <th>학년</th>
+                <th>반</th>
+                <th>이름</th>
+                <th>아이디</th>
+                <th>비밀번호</th>
+                <th style="text-align: center;">작업</th>
+              </tr>
+            </thead>
+            <tbody id="approved-students-list">
+              <!-- Dynamic -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 교사 관리 모달 (새 창) -->
+  <div id="overlay-teacher-mgmt" class="modal hidden" style="z-index: 1000;">
+    <div class="modal-card modal-lg" style="max-width: 95%; width: 1200px; padding: 2rem;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        <h3 style="margin:0;">👩‍🏫 교사 등록 및 관리</h3>
+        <button type="button" class="modal-close" onclick="closeTeacherMgmtOverlay()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+        <!-- Left: Teacher Edit/Create Form -->
+        <div class="settings-card" id="card-teacher-setup" style="margin:0; box-shadow:none; border:1px solid var(--border-color);">
+          <h4>👩‍🏫 교사 등록 / 정보 수정</h4>
+          <form id="teacher-setup-form">
+            <input type="hidden" id="teacher-edit-id">
+            <div class="form-group">
+              <label>교사명</label>
+              <input type="text" id="teacher-setup-name" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>담당 과목명</label>
+              <input type="text" id="teacher-setup-subject" class="form-input" placeholder="예: 국어">
+            </div>
+            <div class="form-group">
+              <label>로그인 아이디 (아이디)</label>
+              <input type="text" id="teacher-setup-email" class="form-input" required placeholder="예: teacher1">
+            </div>
+            <div class="form-group">
+              <label>비밀번호</label>
+              <input type="password" id="teacher-setup-password" class="form-input" required placeholder="예: 1234">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">교사 등록 정보 저장</button>
+          </form>
+        </div>
+        <!-- Right: Teacher List -->
+        <div class="settings-card" id="card-teacher-management" style="margin:0; box-shadow:none; border:1px solid var(--border-color); overflow-y:auto; max-height:480px;">
+          <h4>👩‍🏫 등록 교사 목록</h4>
+          <div class="table-responsive">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>과목</th>
+                  <th>아이디</th>
+                  <th>비밀번호</th>
+                  <th style="text-align: center;">작업</th>
+                </tr>
+              </thead>
+              <tbody id="admin-teachers-table-body">
+                <!-- Dynamic -->
+              </tbody>
             </table>
           </div>
         </div>

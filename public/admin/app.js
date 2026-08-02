@@ -2208,3 +2208,16 @@ document.querySelectorAll('.btn-main-reset').forEach(btn => {
   });
 });
 
+window.openStudentMgmtOverlay = () => {
+  document.getElementById('overlay-student-mgmt').classList.remove('hidden');
+};
+window.closeStudentMgmtOverlay = () => {
+  document.getElementById('overlay-student-mgmt').classList.add('hidden');
+};
+window.openTeacherMgmtOverlay = () => {
+  document.getElementById('overlay-teacher-mgmt').classList.remove('hidden');
+};
+window.closeTeacherMgmtOverlay = () => {
+  document.getElementById('overlay-teacher-mgmt').classList.add('hidden');
+};
+
