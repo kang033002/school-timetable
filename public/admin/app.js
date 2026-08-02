@@ -13,9 +13,8 @@ const btnLogout = document.getElementById('btn-logout');
 
 const viewModeSelect = document.getElementById('view-mode-select');
 const classFilterGroup = document.getElementById('class-filter-group');
-const teacherFilterGroup = document.getElementById('teacher-filter-group');
 const classSelect = document.getElementById('class-select');
-const teacherSelect = document.getElementById('teacher-select');
+const teacherTitleSelect = document.getElementById('teacher-title-select');
 const datePicker = document.getElementById('date-picker');
 const btnRefresh = document.getElementById('btn-refresh');
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
@@ -68,7 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const today = new Date(todayObj.getTime() - kstOffset).toISOString().split('T')[0];
   if (datePicker) datePicker.value = today;
 
-  // Check stored auth
+  async function init() {
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+  if (emailInput) emailInput.value = '';
+  if (passwordInput) passwordInput.value = '';
+
+  const savedUser = localStorage.getItem('timetable_user');
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   if (token && userStr) {
@@ -87,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('user');
     }
   }
+}
+init();
 
   // Event Listeners
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
@@ -99,6 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnRefresh) btnRefresh.addEventListener('click', loadTimetable);
   if (btnSettingsToggle) btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
+
+teacherTitleSelect.addEventListener('change', () => {
+  if (activeTab !== 'TEACHER') switchTab('TEACHER');
+  loadTimetable();
+});
 
   if (tabBtnBase) tabBtnBase.addEventListener('click', () => switchTab('BASE'));
   if (tabBtnDaily) tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
@@ -333,9 +345,19 @@ async function loadSchoolMetadata() {
       });
     }
 
-    // Populate Teacher Select
-    teacherSelect.innerHTML = '';
-    classSetupHomeroom.innerHTML = '';
+    // Populate Teacher Title Dropdown
+    teacherTitleSelect.innerHTML = '';
+    const defTeacherOpt = document.createElement('option');
+    defTeacherOpt.value = '';
+    defTeacherOpt.textContent = '교사 선택';
+    teacherTitleSelect.appendChild(defTeacherOpt);
+
+    currentSchoolMeta.teachers.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = `${t.name} (${t.subject_name || t.subjectName})`;
+      teacherTitleSelect.appendChild(opt);
+    });    classSetupHomeroom.innerHTML = '';
     
     // Add default empty option for homeroom selection
     const optNone = document.createElement('option');
@@ -582,12 +604,10 @@ async function handleClassSetup(e) {
 }
 
 function updateFiltersForTab(tabName) {
-  if (tabName === 'TEACHER') {
+  if (tabName === 'TEACHER' || tabName === 'GENERATOR') {
     classFilterGroup.classList.add('hidden');
-    teacherFilterGroup.classList.remove('hidden');
   } else {
     classFilterGroup.classList.remove('hidden');
-    teacherFilterGroup.classList.add('hidden');
   }
 }
 
@@ -596,7 +616,8 @@ async function loadTimetable() {
   if (!currentSchoolMeta) return;
 
   const dateVal = datePicker.value;
-  const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
+  const baseParam = (activeTab === 'BASE' || activeTab === 'TEACHER') ? '&baseOnly=true' : '';
+
 
   try {
     let url = '';
@@ -608,15 +629,14 @@ async function loadTimetable() {
 
     if (activeTab === 'TEACHER') {
       mode = 'TEACHER';
-      const teacherId = teacherSelect.value;
+      const teacherId = teacherTitleSelect.value;
       if (!teacherId) {
         weekDateSubtext.textContent = `기준주간 시작: -`;
         renderGrid([], mode);
         return;
       }
-      const teacherObj = currentSchoolMeta.teachers.find(t => t.id === teacherId);
+      const teacherObj = currentSchoolMeta.teachers.find(t => String(t.id) === String(teacherId));
       url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${teacherId}&date=${dateVal}${baseParam}`;
-      if (titleElemTeacher) titleElemTeacher.textContent = `👩‍🏫 ${teacherObj ? teacherObj.name : ''} 선생님 시간표`;
     } else {
       mode = 'CLASS';
       if (!classSelect.value) {
@@ -744,6 +764,21 @@ function renderGrid(weeklyData, mode) {
 
   if (!targetBody) return;
   targetBody.innerHTML = '';
+  
+  // Update table headers with dates
+  const theadThs = targetBody.parentElement.querySelectorAll('thead th');
+  if (theadThs.length === 6) {
+    for (let d = 0; d < 5; d++) {
+      if (weeklyData && weeklyData[d] && weeklyData[d].date) {
+        const parts = weeklyData[d].date.split('-');
+        const dateStr = `${parts[0]}년 ${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일`;
+        theadThs[d + 1].innerHTML = `${['월요일', '화요일', '수요일', '목요일', '금요일'][d]}<br><span style="font-size:0.85em;font-weight:normal;">(${dateStr})</span>`;
+      } else {
+        theadThs[d + 1].textContent = ['월', '화', '수', '목', '금'][d];
+      }
+    }
+  }
+
   const maxPeriods = 10; // 고등학교 표준 10교시 고정 표출
 
     for (let p = 1; p <= maxPeriods; p++) {
@@ -1346,6 +1381,27 @@ async function initGeneratorTab() {
         });
       }
     }
+    
+    // 로컬 스토리지에서 이전 상태 복원
+    const savedClassIds = localStorage.getItem('genSelectedClassIds');
+    const savedClassMap = localStorage.getItem('genClassMap');
+    const savedResult = localStorage.getItem('genResult');
+    if (savedClassIds && savedClassMap && savedResult) {
+      try {
+        const parsedIds = JSON.parse(savedClassIds);
+        genClassMap = JSON.parse(savedClassMap);
+        generatedResult = JSON.parse(savedResult);
+        
+        // 미리보기 칩 및 표 렌더링
+        if (parsedIds.length > 0) {
+          if (!genCurrentClassId) genCurrentClassId = parsedIds[0];
+          buildPreviewChips(parsedIds);
+          renderGenGrid(genCurrentClassId, defaultMaxPeriods);
+        }
+      } catch (e) {
+        console.error('Failed to parse generator state from localStorage', e);
+      }
+    }
 
   } catch (err) {
     console.error('Init generator tab error:', err);
@@ -1358,7 +1414,7 @@ async function initGeneratorTab() {
 // AI 자동 생성 시작
 // ────────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-generate')?.addEventListener('click', async () => {
-  const selectedClassIds = Array.from(document.querySelectorAll('.gen-class-chip.active')).map(b => b.dataset.classId);
+  const selectedClassIds = Array.from(document.querySelectorAll('#gen-class-checkboxes .gen-class-chip.active')).map(b => b.dataset.classId);
   if (selectedClassIds.length === 0) {
     alert('시간표를 적용할 학급을 최소 1개 이상 선택해주세요!');
     return;
@@ -1433,21 +1489,17 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
       if (unassignedAlert) unassignedAlert.classList.add('hidden');
     }
 
-    // 학급 선택 드롭다운 채우기
-    const classSel = document.getElementById('gen-preview-class-select');
-    if (classSel) {
-      classSel.innerHTML = '';
-      selectedClassIds.forEach(gcId => {
-        const gc = (generatorData?.classes || []).find(c => c.id === gcId);
-        const opt = document.createElement('option');
-        opt.value = gcId;
-        opt.textContent = gc ? `${gc.grade}학년 ${gc.class_number}반` : gcId;
-        classSel.appendChild(opt);
-      });
-      // 첫 번째 학급 미리보기
+    // 학급 칩 채우기 및 로컬 스토리지 저장
+    localStorage.setItem('genSelectedClassIds', JSON.stringify(selectedClassIds));
+    localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+    localStorage.setItem('genResult', JSON.stringify(generatedResult));
+
+    buildPreviewChips(selectedClassIds);
+    if (selectedClassIds.length > 0) {
       genCurrentClassId = selectedClassIds[0];
-      classSel.value = genCurrentClassId;
-      renderGenGrid(genCurrentClassId, data.maxPeriodsPerDay || 10);
+      const maxPeriodSelect = document.getElementById('gen-max-period-select');
+      const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
+      renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
     }
 
     alert(`🎉 AI 시간표 자동 생성 완료!\n${selectedClassIds.length}개 학급 × ${subjectsList.length}개 과목\n아래 미리보기를 확인 후 수정하세요.`);
@@ -1464,18 +1516,43 @@ document.getElementById('btn-regen')?.addEventListener('click', () => {
   document.getElementById('btn-generate')?.click();
 });
 
-// 학급 드롭다운 변경 시 미리보기 전환
+// 버튼 클릭시 칩 변경 로직은 buildPreviewChips 내부에 포함됨
 document.addEventListener('change', (e) => {
-  if (e.target?.id === 'gen-preview-class-select') {
-    genCurrentClassId = e.target.value;
-    const maxPeriodSelect = document.getElementById('gen-max-period-select');
-    const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
-    renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-  } else if (e.target?.id === 'gen-max-period-select') {
+  if (e.target?.id === 'gen-max-period-select') {
     const maxPeriodsPerDay = parseInt(e.target.value) || 10;
     renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
   }
 });
+
+function buildPreviewChips(classIds) {
+  const container = document.getElementById('gen-preview-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (!classIds || classIds.length === 0) {
+    container.innerHTML = '<span style="font-size:0.9rem; font-weight:600; color:var(--text-sub);">AI 시간표를 생성해주세요.</span>';
+    return;
+  }
+  
+  classIds.forEach(gcId => {
+    const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
+    const chip = document.createElement('div');
+    chip.className = 'gen-preview-chip gen-class-chip' + (gcId === genCurrentClassId ? ' active' : '');
+    chip.textContent = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber || ''}반` : gcId;
+    chip.dataset.classId = gcId;
+    chip.style.cursor = 'pointer';
+    
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      genCurrentClassId = gcId;
+      const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+      renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+    });
+    
+    container.appendChild(chip);
+  });
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // 자동 생성 탭 미리보기 그리드 렌더링 (timetable-body-gen 사용)

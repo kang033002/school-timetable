@@ -108,13 +108,6 @@
             </select>
           </div>
 
-          <div class="filter-group hidden" id="teacher-filter-group">
-            <label>교사 선택</label>
-            <select id="teacher-select" class="form-select">
-              <!-- Dynamically populated -->
-            </select>
-          </div>
-
           <div class="filter-group">
             <label>기준 일자</label>
             <input type="date" id="date-picker" class="form-input">
@@ -328,7 +321,13 @@
           <div id="tab-content-teacher" class="tab-content hidden">
             <div class="timetable-header">
               <div>
-                <h3 id="timetable-title-teacher">👩‍🏫 교사 시간표</h3>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                  <h3 style="margin: 0;">👩‍🏫</h3>
+                  <select id="teacher-title-select" class="form-select" style="font-size: 1.25rem; font-weight: 700; width: auto; color: var(--text-main); border-color: #cbd5e1; height: auto; padding: 0.2rem 2rem 0.2rem 0.5rem;">
+                    <option value="">교사 선택</option>
+                  </select>
+                  <h3 style="margin: 0;">선생님 시간표</h3>
+                </div>
                 <span class="subtext">교사별 주간 시간표(결강 및 보강 내역 포함)를 조회합니다.</span>
               </div>
               <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 시간표 인쇄</button>
@@ -381,6 +380,9 @@
                     </tbody>
                   </table>
                 </div>
+                <div style="margin-top: 0.5rem; text-align: right;">
+                  <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
+                </div>
               </div>
 
               <!-- ② 적용할 학급 선택 -->
@@ -422,6 +424,9 @@
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <label style="font-weight:600; font-size:0.95rem; color:var(--text-main);">하루 최대 교시:</label>
                     <select id="gen-max-period-select" class="form-select" style="width:120px; font-weight:bold;">
+                      <option value="1">1교시</option>
+                      <option value="2">2교시</option>
+                      <option value="3">3교시</option>
                       <option value="4">4교시</option>
                       <option value="5">5교시</option>
                       <option value="6">6교시</option>
@@ -451,18 +456,15 @@
               <div class="timetable-header" style="margin-bottom:1rem;">
                 <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
                   <h3 style="margin:0;">📋 시간표 미리보기 및 수동 수정</h3>
-                  <!-- 학급 선택 드롭다운 -->
-                  <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <label style="font-size:0.9rem; font-weight:600; color:var(--text-sub);">학급:</label>
-                    <select id="gen-preview-class-select" class="form-select" style="min-width:160px; padding:0.4rem 0.6rem; font-size:0.9rem;">
-                      <option value="">-- AI 생성 후 선택 --</option>
-                    </select>
+                  <!-- 학급 칩 리스트 -->
+                  <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;" id="gen-preview-chips">
+                    <span style="font-size:0.9rem; font-weight:600; color:var(--text-sub);">AI 시간표를 생성해주세요.</span>
                   </div>
                 </div>
                 <div style="display:flex; gap:0.75rem; align-items:center;">
                   <button type="button" id="btn-regen" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.88rem;">🔄 다시 생성</button>
-                  <button type="button" id="btn-apply-timetable" class="btn btn-success" style="padding:0.6rem 1.5rem; font-weight:700;">
-                    ✅ 전체 학년/반에 최종 적용
+                  <button type="button" id="btn-apply-timetable" class="btn" style="padding:0.6rem 1.5rem; font-weight:700; background-color:#ffffff; color:#10b981; border:1px solid #10b981; transition:all 0.2s;">
+                    ✔ 시간표 적용
                   </button>
                 </div>
               </div>

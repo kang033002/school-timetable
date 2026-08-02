@@ -127,19 +127,30 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'School ID and Name are required' });
     }
 
+    let actualSchoolId = schoolId;
+    const schoolRow = await get(`SELECT id FROM schools WHERE id = ?`, [actualSchoolId]);
+    if (!schoolRow) {
+      const firstSchool = await get(`SELECT id FROM schools LIMIT 1`);
+      if (firstSchool) {
+        actualSchoolId = firstSchool.id;
+      } else {
+        return res.status(400).json({ error: 'School not found. Please register a school first.' });
+      }
+    }
+
     const userId = `u-${Date.now()}`;
 
     if (role === 'STUDENT') {
       if (!grade || !classNumber) {
         return res.status(400).json({ error: 'Grade and Class number are required for student registration' });
       }
-      const studentEmail = `std_${schoolId}_g${grade}c${classNumber}_${name}_${Date.now()}`;
+      const studentEmail = `std_${actualSchoolId}_g${grade}c${classNumber}_${name}_${Date.now()}`;
       const displayName = `${name} (${grade}학년 ${classNumber}반 학생)`;
       
       await run(
         `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
          VALUES (?, ?, ?, 'student123', 'STUDENT', null, ?, 'PENDING')`,
-        [userId, schoolId, studentEmail, displayName]
+        [userId, actualSchoolId, studentEmail, displayName]
       );
       
       return res.status(201).json({ message: '학생 가입 신청 완료. 관리자 승인 대기 중.' });
@@ -158,7 +169,7 @@ router.post('/register', async (req, res) => {
     await run(
       `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
        VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'PENDING')`,
-      [userId, schoolId, email, password, teacherId || null, name]
+      [userId, actualSchoolId, email, password, teacherId || null, name]
     );
 
     res.status(201).json({ message: '선생님 가입 신청이 성공적으로 접수되었습니다. 관리자 승인 완료 후 로그인할 수 있습니다.' });

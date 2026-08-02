@@ -201,6 +201,11 @@ router.post('/apply', async (req, res) => {
         `DELETE FROM base_timetable WHERE school_id = ? AND grade_class_id = ?`,
         [schoolId, gcId]
       );
+      // Clear old changes for these classes as well to ensure a clean slate
+      await run(
+        `DELETE FROM timetable_changes WHERE school_id = ? AND grade_class_id = ?`,
+        [schoolId, gcId]
+      );
     }
 
     // 새 시간표 삽입

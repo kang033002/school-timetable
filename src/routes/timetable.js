@@ -65,7 +65,7 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     );
 
     const subjects = await all(
-      `SELECT * FROM subjects WHERE school_id = ? ORDER BY name`,
+      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? GROUP BY name ORDER BY name`,
       [school.id]
     );
 
@@ -322,19 +322,127 @@ router.get('/timetable/teacher', async (req, res) => {
     const refDate = date || new Date().toISOString().split('T')[0];
     const mondayStr = getMonday(refDate);
     const monday = new Date(mondayStr);
+    
+    // Friday
+    const fridayDate = new Date(monday);
+    fridayDate.setDate(monday.getDate() + 4);
+    const fridayStr = fridayDate.toISOString().split('T')[0];
 
     const teacher = await get(`SELECT * FROM teachers WHERE id = ?`, [teacherId]);
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
 
-    const allClasses = await all(`SELECT * FROM grade_classes WHERE school_id = ?`, [schoolId]);
-    const timetable = [];
-
     const baseOnly = req.query.baseOnly === 'true';
 
-    // Get school to find max_periods_per_day
     const school = await get(`SELECT max_periods_per_day FROM schools WHERE id = ?`, [schoolId]);
     const maxPeriods = school ? school.max_periods_per_day : 9;
 
+    // Bulk fetch ALL grade_classes
+    const classes = await all(`SELECT * FROM grade_classes WHERE school_id = ?`, [schoolId]);
+    const classMap = {};
+    classes.forEach(c => classMap[c.id] = c);
+
+    // Bulk fetch ALL base_timetable for school
+    const baseRows = await all(`
+      SELECT bt.*, 
+             sub.name as subject_name, sub.short_name as short_subject_name,
+             t.name as teacher_name, t.code as teacher_code,
+             r.name as room_name, r.is_special_room
+      FROM base_timetable bt
+      JOIN subjects sub ON bt.subject_id = sub.id
+      JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN rooms r ON bt.room_id = r.id
+      WHERE bt.school_id = ?
+    `, [schoolId]);
+
+    // Bulk fetch ALL timetable_changes for the week
+    let changeRows = [];
+    if (!baseOnly) {
+      changeRows = await all(`
+        SELECT tc.*, 
+               sub.name as subject_name, sub.short_name as short_subject_name,
+               t.name as teacher_name, t.code as teacher_code,
+               r.name as room_name, r.is_special_room
+        FROM timetable_changes tc
+        LEFT JOIN subjects sub ON tc.changed_subject_id = sub.id
+        LEFT JOIN teachers t ON tc.changed_teacher_id = t.id
+        LEFT JOIN rooms r ON tc.changed_room_id = r.id
+        WHERE tc.school_id = ? AND tc.target_date >= ? AND tc.target_date <= ?
+      `, [schoolId, mondayStr, fridayStr]);
+    }
+
+    // Build effective memory map: classId -> dayOfWeek -> period -> slot
+    const effectiveMap = {}; 
+
+    for (const b of baseRows) {
+      const key = `${b.grade_class_id}_${b.day_of_week}_${b.period}`;
+      const gc = classMap[b.grade_class_id];
+      if (!gc) continue;
+      effectiveMap[key] = {
+        gradeClassId: b.grade_class_id,
+        gradeName: `${gc.grade}학년 ${gc.class_number}반`,
+        dayOfWeek: b.day_of_week,
+        period: b.period,
+        subjectId: b.subject_id,
+        subjectName: b.subject_name,
+        shortSubjectName: b.short_subject_name,
+        teacherId: b.teacher_id,
+        teacherName: b.teacher_name,
+        roomId: b.room_id,
+        roomName: b.room_name || '일반교실',
+        isChanged: false,
+        changeType: null
+      };
+    }
+
+    // Overlay changes
+    if (!baseOnly) {
+      for (const ch of changeRows) {
+        // getDayOfWeek equivalent inline
+        const chDate = new Date(ch.target_date);
+        const dayOfWeek = chDate.getDay(); 
+        const key = `${ch.grade_class_id}_${dayOfWeek}_${ch.period}`;
+        const gc = classMap[ch.grade_class_id];
+        if (!gc) continue;
+        
+        if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
+          if (effectiveMap[key]) {
+            effectiveMap[key].teacherId = null;
+            effectiveMap[key].isChanged = true;
+            effectiveMap[key].changeType = ch.change_type;
+          }
+        } else {
+          if (effectiveMap[key]) {
+            effectiveMap[key].subjectId = ch.changed_subject_id;
+            effectiveMap[key].subjectName = ch.subject_name;
+            effectiveMap[key].shortSubjectName = ch.short_subject_name;
+            effectiveMap[key].teacherId = ch.changed_teacher_id;
+            effectiveMap[key].teacherName = ch.teacher_name;
+            effectiveMap[key].roomId = ch.changed_room_id;
+            effectiveMap[key].roomName = ch.room_name || '일반교실';
+            effectiveMap[key].isChanged = true;
+            effectiveMap[key].changeType = ch.change_type;
+          } else {
+            effectiveMap[key] = {
+              gradeClassId: ch.grade_class_id,
+              gradeName: `${gc.grade}학년 ${gc.class_number}반`,
+              dayOfWeek,
+              period: ch.period,
+              subjectId: ch.changed_subject_id,
+              subjectName: ch.subject_name,
+              shortSubjectName: ch.short_subject_name,
+              teacherId: ch.changed_teacher_id,
+              teacherName: ch.teacher_name,
+              roomId: ch.changed_room_id,
+              roomName: ch.room_name || '일반교실',
+              isChanged: true,
+              changeType: ch.change_type
+            };
+          }
+        }
+      }
+    }
+
+    const timetable = [];
     for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
       const curDate = new Date(monday);
       curDate.setDate(monday.getDate() + dayOffset);
@@ -344,47 +452,14 @@ router.get('/timetable/teacher', async (req, res) => {
       const daySlots = [];
       for (let period = 1; period <= maxPeriods; period++) {
         let assignedSlot = null;
-
-        for (const gc of allClasses) {
-          let slot = null;
-          if (baseOnly) {
-            const base = await get(
-              `SELECT bt.*, 
-                      sub.name as subject_name, sub.short_name as short_subject_name,
-                      t.name as teacher_name, t.code as teacher_code,
-                      r.name as room_name, r.is_special_room
-               FROM base_timetable bt
-               JOIN subjects sub ON bt.subject_id = sub.id
-               JOIN teachers t ON bt.teacher_id = t.id
-               LEFT JOIN rooms r ON bt.room_id = r.id
-               WHERE bt.school_id = ? AND bt.grade_class_id = ? AND bt.day_of_week = ? AND bt.period = ?`,
-              [schoolId, gc.id, dayOfWeek, period]
-            );
-            if (base) {
-              slot = {
-                dayOfWeek,
-                period,
-                targetDate: curDateStr,
-                gradeClassId: gc.id,
-                subjectId: base.subject_id,
-                subjectName: base.subject_name,
-                shortSubjectName: base.short_subject_name,
-                teacherId: base.teacher_id,
-                teacherName: base.teacher_name,
-                roomId: base.room_id,
-                roomName: base.room_name || '일반교실',
-                isChanged: false,
-                changeType: null
-              };
-            }
-          } else {
-            slot = await getEffectiveSlot(schoolId, gc.id, curDateStr, dayOfWeek, period);
-          }
-
-          if (slot && slot.teacherId === teacherId && slot.changeType !== 'CANCEL' && slot.changeType !== 'HOLIDAY') {
+        
+        for (const gcId in classMap) {
+          const key = `${gcId}_${dayOfWeek}_${period}`;
+          const slot = effectiveMap[key];
+          if (slot && String(slot.teacherId) === String(teacherId)) {
             assignedSlot = {
               ...slot,
-              gradeName: `${gc.grade}학년 ${gc.class_number}반`
+              targetDate: curDateStr
             };
             break;
           }
