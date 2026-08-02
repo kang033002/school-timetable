@@ -1212,20 +1212,39 @@ async function initGeneratorTab() {
       };
     }
 
-    // ① 학급 선택 칩 버튼 목록 생성
+    // ① 학급 선택 칩 버튼 목록 생성 (동적 추가 방식)
     const classContainer = document.getElementById('gen-class-checkboxes');
     if (classContainer) {
       classContainer.innerHTML = '';
-      if (classesList.length === 0) {
-        classContainer.innerHTML = '<p style="color:var(--text-sub); font-size:0.85rem;">[⚙️ 학교/교사 설정]에서 먼저 학년/반을 등록해주세요.</p>';
-      } else {
-        classesList.forEach(c => {
+      
+      const btnAddClass = document.getElementById('btn-gen-add-class');
+      if (btnAddClass) {
+        const newBtnAddClass = btnAddClass.cloneNode(true);
+        btnAddClass.parentNode.replaceChild(newBtnAddClass, btnAddClass);
+        
+        newBtnAddClass.addEventListener('click', () => {
+          const grade = document.getElementById('gen-grade-select').value;
+          const classNum = document.getElementById('gen-class-select').value;
+          
+          const classObj = classesList.find(c => String(c.grade) === String(grade) && (String(c.class_number) === String(classNum) || String(c.classNumber) === String(classNum)));
+          
+          if (!classObj) {
+            alert(`${grade}학년 ${classNum}반은 학교 설정에 등록되어 있지 않습니다. [⚙️ 학교/교사 설정] 탭에서 먼저 반을 등록해주세요.`);
+            return;
+          }
+          
+          if (classContainer.querySelector(`.gen-class-chip[data-class-id="${classObj.id}"]`)) {
+            alert('이미 추가된 학급입니다.');
+            return;
+          }
+          
           const btn = document.createElement('button');
           btn.type = 'button';
-          btn.className = 'btn btn-sm btn-primary gen-class-chip active';
-          btn.dataset.classId = c.id;
-          btn.style.cssText = 'padding:0.35rem 0.75rem; font-size:0.88rem; font-weight:700;';
-          btn.innerHTML = `🏫 ${c.grade}학년 ${c.class_number || c.classNumber}반`;
+          btn.className = 'btn btn-sm btn-outline gen-class-chip';
+          btn.dataset.classId = classObj.id;
+          btn.style.cssText = 'padding:0.35rem 0.75rem; font-size:0.88rem; font-weight:700; background:#ffffff; color:#64748b;';
+          btn.innerHTML = `🏫 ${grade}학년 ${classNum}반`;
+          
           btn.addEventListener('click', () => {
             if (btn.classList.contains('active')) {
               btn.classList.remove('active', 'btn-primary');
@@ -1239,6 +1258,7 @@ async function initGeneratorTab() {
               btn.style.color = '';
             }
           });
+          
           classContainer.appendChild(btn);
         });
       }
@@ -1330,25 +1350,7 @@ async function initGeneratorTab() {
   }
 }
 
-// 전체 선택 / 해제 버튼
-document.addEventListener('click', (e) => {
-  if (e.target?.id === 'btn-gen-select-all' || e.target?.closest('#btn-gen-select-all')) {
-    document.querySelectorAll('.gen-class-chip').forEach(btn => {
-      btn.classList.add('active', 'btn-primary');
-      btn.classList.remove('btn-outline');
-      btn.style.background = '';
-      btn.style.color = '';
-    });
-  }
-  if (e.target?.id === 'btn-gen-deselect-all' || e.target?.closest('#btn-gen-deselect-all')) {
-    document.querySelectorAll('.gen-class-chip').forEach(btn => {
-      btn.classList.remove('active', 'btn-primary');
-      btn.classList.add('btn-outline');
-      btn.style.background = '#ffffff';
-      btn.style.color = '#64748b';
-    });
-  }
-});
+// (전체 선택/해제 기능 제거됨)
 
 // ────────────────────────────────────────────────────────────────────────────
 // AI 자동 생성 시작
