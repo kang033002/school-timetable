@@ -110,4 +110,41 @@ router.post('/schools/batch-delete', async (req, res) => {
   }
 });
 
+// POST /api/master/schools/update-admin
+router.post('/schools/update-admin', async (req, res) => {
+  try {
+    const { schoolId, adminUsername, adminPassword } = req.body;
+    if (!schoolId || !adminUsername || !adminPassword) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const adminAccount = await get(
+      `SELECT id FROM user_accounts WHERE school_id = ? AND role = 'ADMIN'`,
+      [schoolId]
+    );
+
+    if (!adminAccount) {
+      return res.status(404).json({ error: 'School admin account not found' });
+    }
+
+    const existing = await get(
+      `SELECT id FROM user_accounts WHERE email = ? AND id != ?`,
+      [adminUsername, adminAccount.id]
+    );
+    if (existing) {
+      return res.status(400).json({ error: 'Username/Email already in use' });
+    }
+
+    await run(
+      `UPDATE user_accounts SET email = ?, password_hash = ? WHERE id = ?`,
+      [adminUsername, adminPassword, adminAccount.id]
+    );
+
+    res.json({ message: '학교 관리자 계정 정보가 성공적으로 변경되었습니다.' });
+  } catch (err) {
+    console.error('Update school admin error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

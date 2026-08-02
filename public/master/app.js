@@ -140,6 +140,8 @@ async function loadSchools() {
         ? '<span class="badge badge-approved">승인 완료</span>' 
         : '<span class="badge badge-pending">대기 중</span>';
 
+      const updateBtn = `<button class="btn btn-primary btn-sm" onclick="updateSchoolAdmin('${s.id}')">수정</button>`;
+
       const actions = s.status === 'APPROVED'
         ? `<button class="btn btn-danger btn-sm" onclick="approveSchool('${s.id}', 'REJECTED')">비활성화</button>`
         : `<button class="btn btn-success btn-sm" onclick="approveSchool('${s.id}', 'APPROVED')">승인</button>`;
@@ -151,10 +153,10 @@ async function loadSchools() {
         <td>${s.id}</td>
         <td><code>${s.code}</code></td>
         <td><strong>${s.name}</strong></td>
-        <td><code style="color:var(--primary-color);">${s.admin_username || '-'}</code></td>
-        <td><code>${s.admin_password || '-'}</code></td>
+        <td><input type="text" class="form-input" id="admin-username-${s.id}" value="${s.admin_username || ''}" style="padding: 4px; font-size: 0.85em; width: 140px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
+        <td><input type="text" class="form-input" id="admin-password-${s.id}" value="${s.admin_password || ''}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td>${statusBadge}</td>
-        <td class="action-cell">${actions} ${deleteBtn}</td>
+        <td class="action-cell">${updateBtn} ${actions} ${deleteBtn}</td>
       `;
       schoolsListUi.appendChild(tr);
     });
@@ -270,3 +272,34 @@ document.addEventListener('click', async (e) => {
     }
   }
 });
+
+window.updateSchoolAdmin = async function(schoolId) {
+  const adminUsername = document.getElementById(`admin-username-${schoolId}`).value.trim();
+  const adminPassword = document.getElementById(`admin-password-${schoolId}`).value.trim();
+
+  if (!adminUsername || !adminPassword) {
+    alert('관리자 ID와 비밀번호를 모두 입력해주세요.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/master/schools/update-admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ schoolId, adminUsername, adminPassword })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('🎉 관리자 계정 정보가 성공적으로 변경되었습니다!');
+      loadSchools();
+    } else {
+      alert(data.error || '정보 수정 실패');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('서버 통신 중 오류가 발생했습니다.');
+  }
+};
