@@ -107,23 +107,56 @@ router.post('/users/approve', async (req, res) => {
 // 3. POST /api/admin/teachers (Create/Update teacher)
 router.post('/teachers', async (req, res) => {
   try {
-    const { id, schoolId, name, code, subjectName } = req.body;
+    const { id, schoolId, name, code, subjectName, email, password } = req.body;
     if (!schoolId || !name) return res.status(400).json({ error: 'schoolId and name are required' });
 
     let teacherId = id;
     if (teacherId) {
-      // Update
+      // Update teacher
       await run(
         `UPDATE teachers SET name = ?, code = ?, subject_name = ? WHERE id = ? AND school_id = ?`,
         [name, code || null, subjectName || null, teacherId, schoolId]
       );
+      // Update user_account
+      if (email && password) {
+        const existing = await get(`SELECT id FROM user_accounts WHERE email = ? AND (teacher_id != ? OR teacher_id IS NULL)`, [email, teacherId]);
+        if (existing) {
+          return res.status(400).json({ error: '이미 사용 중인 교사 아이디입니다.' });
+        }
+        const userAcc = await get(`SELECT id FROM user_accounts WHERE teacher_id = ?`, [teacherId]);
+        if (userAcc) {
+          await run(
+            `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
+            [email, password, name, teacherId]
+          );
+        } else {
+          const userId = `u-t-${Date.now()}`;
+          await run(
+            `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+             VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+            [userId, schoolId, email, password, teacherId, name]
+          );
+        }
+      }
     } else {
-      // Create
+      // Create teacher
       teacherId = `t-${Date.now()}`;
       await run(
         `INSERT INTO teachers (id, school_id, name, code, subject_name) VALUES (?, ?, ?, ?, ?)`,
         [teacherId, schoolId, name, code || null, subjectName || null]
       );
+      if (email && password) {
+        const existing = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
+        if (existing) {
+          return res.status(400).json({ error: '이미 사용 중인 교사 아이디입니다.' });
+        }
+        const userId = `u-t-${Date.now()}`;
+        await run(
+          `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+           VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+          [userId, schoolId, email, password, teacherId, name]
+        );
+      }
     }
 
     // Auto-create subject if it doesn't exist
@@ -213,6 +246,7 @@ router.post('/classes', async (req, res) => {
 router.delete('/teachers/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    await run(`DELETE FROM user_accounts WHERE teacher_id = ?`, [id]);
     await run(`DELETE FROM teachers WHERE id = ?`, [id]);
     res.json({ message: 'Teacher deleted successfully' });
   } catch (err) {

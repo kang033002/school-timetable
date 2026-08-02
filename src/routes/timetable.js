@@ -60,7 +60,11 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     );
 
     const teachers = await all(
-      `SELECT * FROM teachers WHERE school_id = ? ORDER BY name`,
+      `SELECT t.*, u.email, u.password_hash 
+       FROM teachers t
+       LEFT JOIN user_accounts u ON u.teacher_id = t.id AND u.role = 'TEACHER'
+       WHERE t.school_id = ? 
+       ORDER BY t.name`,
       [school.id]
     );
 

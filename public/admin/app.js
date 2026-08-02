@@ -345,19 +345,52 @@ async function showDashboard() {
       }
     }
 
+    const tabDaily = document.getElementById('tab-btn-daily');
     const tabBase = document.getElementById('tab-btn-base');
     const tabTeacher = document.getElementById('tab-btn-teacher');
     const tabGen = document.getElementById('tab-btn-generator');
     const btnSettings = document.getElementById('btn-settings-toggle');
     
-    if (currentUser?.role === 'STUDENT') {
+    if (currentUser?.role === 'TEACHER') {
+      if (tabDaily) {
+        tabDaily.style.display = 'inline-block';
+        tabDaily.textContent = '📅 학급 시간표';
+      }
+      if (tabBase) tabBase.style.display = 'none';
+      if (tabTeacher) {
+        tabTeacher.style.display = 'inline-block';
+        tabTeacher.textContent = '👩‍🏫 자기 수업 시간표';
+      }
+      if (tabGen) tabGen.style.display = 'none';
+      if (btnSettings) btnSettings.style.display = 'none';
+      
+      // Default to Teacher timetable or class timetable if active tab is restricted
+      if (activeTab === 'BASE' || activeTab === 'GENERATOR') {
+        switchTab('DAILY');
+      }
+    } else if (currentUser?.role === 'STUDENT') {
+      if (tabDaily) {
+        tabDaily.style.display = 'inline-block';
+        tabDaily.textContent = '📅 학급 시간표';
+      }
       if (tabBase) tabBase.style.display = 'none';
       if (tabTeacher) tabTeacher.style.display = 'none';
       if (tabGen) tabGen.style.display = 'none';
       if (btnSettings) btnSettings.style.display = 'none';
+      
+      if (activeTab !== 'DAILY') {
+        switchTab('DAILY');
+      }
     } else {
+      if (tabDaily) {
+        tabDaily.style.display = 'inline-block';
+        tabDaily.textContent = '📅 일자별 시간표';
+      }
       if (tabBase) tabBase.style.display = 'inline-block';
-      if (tabTeacher) tabTeacher.style.display = 'inline-block';
+      if (tabTeacher) {
+        tabTeacher.style.display = 'inline-block';
+        tabTeacher.textContent = '👩‍🏫 교사 시간표 (교사별 주간 조회)';
+      }
       if (tabGen) tabGen.style.display = 'inline-block';
       if (btnSettings) btnSettings.style.display = 'inline-block';
     }
@@ -405,7 +438,13 @@ async function loadSchoolMetadata() {
       opt.value = t.id;
       opt.textContent = `${t.name} (${t.subject_name || t.subjectName})`;
       teacherTitleSelect.appendChild(opt);
-    });    classSetupHomeroom.innerHTML = '';
+    });
+
+    if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
+      teacherTitleSelect.value = currentUser.teacherId;
+    }
+
+    classSetupHomeroom.innerHTML = '';
     
     // Add default empty option for homeroom selection
     const optNone = document.createElement('option');
@@ -449,41 +488,60 @@ async function loadSchoolMetadata() {
       loadAdminHolidaysList();
     }
 
-    // Render Teachers List for Deletion
-    const tListUi = document.getElementById('admin-teachers-list-ui');
-    tListUi.innerHTML = '';
-    currentSchoolMeta.teachers.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'settings-list-item';
-      div.innerHTML = `
-        <span>${t.name} (${t.subject_name || '과목없음'})</span>
-        <button onclick="deleteTeacher('${t.id}')">삭제</button>
-      `;
-      tListUi.appendChild(div);
-    });
+    // Render Teachers Table
+    const tTableBody = document.getElementById('admin-teachers-table-body');
+    if (tTableBody) {
+      tTableBody.innerHTML = '';
+      if (!currentSchoolMeta.teachers || currentSchoolMeta.teachers.length === 0) {
+        tTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 교사가 없습니다.</td></tr>`;
+      } else {
+        currentSchoolMeta.teachers.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="text" class="form-input" id="teacher-name-${t.id}" value="${t.name}" style="padding: 4px; font-size: 0.9em;"></td>
+            <td><input type="text" class="form-input" id="teacher-subject-${t.id}" value="${t.subject_name || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="과목 입력"></td>
+            <td><input type="text" class="form-input" id="teacher-email-${t.id}" value="${t.email || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="아이디 생성"></td>
+            <td><input type="text" class="form-input" id="teacher-pwd-${t.id}" value="${t.password_hash || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="비밀번호 설정"></td>
+            <td style="text-align:center; white-space: nowrap;">
+              <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateTeacherCredentials('${t.id}', '${t.code || ''}')">수정</button>
+              <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteTeacher('${t.id}')">삭제</button>
+            </td>
+          `;
+          tTableBody.appendChild(tr);
+        });
+      }
+    }
 
-    // Render Classes List with Homeroom Teacher Info for Deletion/View
-    const cListUi = document.getElementById('admin-classes-list-ui');
-    if (cListUi) {
-      cListUi.innerHTML = '';
+    // Render Classes Table
+    const cTableBody = document.getElementById('admin-classes-table-body');
+    if (cTableBody) {
+      cTableBody.innerHTML = '';
       if (!currentSchoolMeta.gradeClasses || currentSchoolMeta.gradeClasses.length === 0) {
-        cListUi.innerHTML = '<p class="text-center text-muted" style="font-size:0.85rem;">등록된 학년/학급이 없습니다.</p>';
+        cTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다.</td></tr>`;
       } else {
         currentSchoolMeta.gradeClasses.forEach(c => {
-          const homeroomTeacher = currentSchoolMeta.teachers.find(t => t.id === c.homeroom_teacher_id);
-          const div = document.createElement('div');
-          div.className = 'settings-list-item';
-          div.style.display = 'flex';
-          div.style.justifyContent = 'space-between';
-          div.style.alignItems = 'center';
-          div.style.padding = '0.4rem 0.6rem';
-          div.style.borderBottom = '1px solid var(--border-color)';
-          div.style.fontSize = '0.88rem';
-          div.innerHTML = `
-            <span>🏫 <strong>${c.grade}학년 ${c.class_number}반</strong> ${homeroomTeacher ? `<span style="color:var(--primary-color); font-weight:600;">(담임: ${homeroomTeacher.name})</span>` : '<span style="color:var(--text-sub);">(담임 미지정)</span>'}</span>
-            <button class="btn btn-danger btn-xs" onclick="deleteClass('${c.id}')" style="padding:2px 6px; font-size:11px; background:#ef4444; color:#fff; border-radius:4px;">삭제</button>
+          const tr = document.createElement('tr');
+          
+          let optionsHtml = '<option value="">담임 미지정</option>';
+          currentSchoolMeta.teachers.forEach(t => {
+            const isSelected = t.id === c.homeroom_teacher_id ? 'selected' : '';
+            optionsHtml += `<option value="${t.id}" ${isSelected}>${t.name} (${t.subject_name || '과목없음'})</option>`;
+          });
+
+          tr.innerHTML = `
+            <td><strong>${c.grade}학년</strong></td>
+            <td><strong>${c.class_number}반</strong></td>
+            <td>
+              <select id="class-homeroom-${c.id}" class="form-select" style="padding: 4px; font-size: 0.9em; height: auto;">
+                ${optionsHtml}
+              </select>
+            </td>
+            <td style="text-align:center; white-space: nowrap;">
+              <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateClassHomeroom('${c.id}', ${c.grade}, ${c.class_number})">수정</button>
+              <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteClass('${c.id}')">삭제</button>
+            </td>
           `;
-          cListUi.appendChild(div);
+          cTableBody.appendChild(tr);
         });
       }
     }
@@ -499,7 +557,7 @@ window.deleteClass = async function(id) {
     const res = await fetch(`${API_BASE}/admin/classes/${id}`, { method: 'DELETE' });
     if (res.ok) {
       alert('학급이 삭제되었습니다.');
-      loadMetadata();
+      await loadSchoolMetadata();
     } else {
       alert('학급 삭제 실패');
     }
@@ -508,7 +566,6 @@ window.deleteClass = async function(id) {
   }
 };
 
-// Global scope deletion methods
 window.deleteTeacher = async function(id) {
   if (!confirm('정말로 이 교사를 삭제하시겠습니까? 관련 시간표 데이터가 소실되거나 초기화될 수 있습니다.')) return;
   try {
@@ -518,6 +575,77 @@ window.deleteTeacher = async function(id) {
       await loadSchoolMetadata();
     } else {
       alert('교사 삭제 실패');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.updateTeacherCredentials = async function(teacherId, code) {
+  const nameVal = document.getElementById(`teacher-name-${teacherId}`).value.trim();
+  const subVal = document.getElementById(`teacher-subject-${teacherId}`).value.trim();
+  const emailVal = document.getElementById(`teacher-email-${teacherId}`).value.trim();
+  const pwdVal = document.getElementById(`teacher-pwd-${teacherId}`).value.trim();
+
+  if (!nameVal) {
+    alert('교사명을 입력해주세요.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/teachers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: teacherId,
+        schoolId: currentUser.schoolId,
+        name: nameVal,
+        code: code || nameVal.slice(0, 2),
+        subjectName: subVal,
+        email: emailVal,
+        password: pwdVal
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('성공적으로 수정되었습니다.');
+      await loadSchoolMetadata();
+    } else {
+      alert(data.error || '수정 실패');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('수정 중 오류 발생');
+  }
+};
+
+window.updateClassHomeroom = async function(classId, grade, classNumber) {
+  const selectElem = document.getElementById(`class-homeroom-${classId}`);
+  const homeroomTeacherId = selectElem.value || null;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/classes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: classId,
+        schoolId: currentUser.schoolId,
+        grade,
+        classNumber,
+        homeroomTeacherId
+      })
+    });
+    if (res.ok) {
+      alert('담임 교사가 성공적으로 수정되었습니다.');
+      await loadSchoolMetadata();
+    } else {
+      alert('담임 교사 수정 실패');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('수정 중 오류 발생');
+  }
+};
     }
   } catch (err) {
     console.error(err);
@@ -703,7 +831,9 @@ async function handleTeacherSetup(e) {
     schoolId: currentUser.schoolId,
     name: teacherSetupName.value,
     code: teacherSetupName.value.slice(0, 2),
-    subjectName: teacherSetupSubject.value
+    subjectName: teacherSetupSubject.value,
+    email: document.getElementById('teacher-setup-email').value.trim(),
+    password: document.getElementById('teacher-setup-password').value.trim()
   };
   try {
     const res = await fetch(`${API_BASE}/admin/teachers`, {
@@ -711,12 +841,13 @@ async function handleTeacherSetup(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    const data = await res.json();
     if (res.ok) {
       alert('선생님 정보가 정상적으로 저장되었습니다.');
       teacherSetupForm.reset();
       await loadSchoolMetadata();
     } else {
-      alert('선생님 등록 실패');
+      alert(data.error || '선생님 등록 실패');
     }
   } catch (err) {
     console.error(err);
