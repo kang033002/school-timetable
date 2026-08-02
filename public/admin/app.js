@@ -100,18 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
   if (btnLogout) btnLogout.addEventListener('click', handleLogout);
 
-  viewModeSelect.addEventListener('change', handleViewModeChange);
-  btnRefresh.addEventListener('click', loadTimetable);
-
-  btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
-
   const tabBtnBase = document.getElementById('tab-btn-base');
   const tabBtnDaily = document.getElementById('tab-btn-daily');
+  const tabBtnTeacher = document.getElementById('tab-btn-teacher');
   const tabBtnGenerator = document.getElementById('tab-btn-generator');
 
-  tabBtnBase.addEventListener('click', () => switchTab('BASE'));
-  tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
-  tabBtnGenerator.addEventListener('click', () => switchTab('GENERATOR'));
+  if (btnRefresh) btnRefresh.addEventListener('click', loadTimetable);
+  if (btnSettingsToggle) btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
+
+  if (tabBtnBase) tabBtnBase.addEventListener('click', () => switchTab('BASE'));
+  if (tabBtnDaily) tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
+  if (tabBtnTeacher) tabBtnTeacher.addEventListener('click', () => switchTab('TEACHER'));
+  if (tabBtnGenerator) tabBtnGenerator.addEventListener('click', () => switchTab('GENERATOR'));
 
   // Default tab (1st tab: DAILY)
   switchTab('DAILY');
@@ -618,13 +618,13 @@ async function handleClassSetup(e) {
   }
 }
 
-function handleViewModeChange() {
-  if (viewModeSelect.value === 'CLASS') {
-    classFilterGroup.classList.remove('hidden');
-    teacherFilterGroup.classList.add('hidden');
-  } else {
+function updateFiltersForTab(tabName) {
+  if (tabName === 'TEACHER') {
     classFilterGroup.classList.add('hidden');
     teacherFilterGroup.classList.remove('hidden');
+  } else {
+    classFilterGroup.classList.remove('hidden');
+    teacherFilterGroup.classList.add('hidden');
   }
 }
 
@@ -632,7 +632,6 @@ function handleViewModeChange() {
 async function loadTimetable() {
   if (!currentSchoolMeta) return;
 
-  const mode = viewModeSelect.value;
   const dateVal = datePicker.value;
   const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
 
@@ -640,20 +639,12 @@ async function loadTimetable() {
     let url = '';
     const titleElemDaily = document.getElementById('timetable-title-daily');
     const titleElemBase = document.getElementById('timetable-title-base');
-    if (mode === 'CLASS') {
-      if (!classSelect.value) {
-        weekDateSubtext.textContent = `기준주간 시작: -`;
-        renderGrid([], mode);
-        return;
-      }
-      const [grade, classNum] = classSelect.value.split('-');
-      url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
-      const titleText = activeTab === 'BASE'
-        ? `${grade}학년 ${classNum}반 학기 기본 시간표 (원본)`
-        : `${grade}학년 ${classNum}반 주간 시간표`;
-      if (titleElemDaily) titleElemDaily.textContent = titleText;
-      if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
-    } else {
+    const titleElemTeacher = document.getElementById('timetable-title-teacher');
+    
+    let mode = 'CLASS';
+
+    if (activeTab === 'TEACHER') {
+      mode = 'TEACHER';
       const teacherId = teacherSelect.value;
       if (!teacherId) {
         weekDateSubtext.textContent = `기준주간 시작: -`;
@@ -662,11 +653,21 @@ async function loadTimetable() {
       }
       const teacherObj = currentSchoolMeta.teachers.find(t => t.id === teacherId);
       url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${teacherId}&date=${dateVal}${baseParam}`;
-      const titleText = activeTab === 'BASE'
-        ? `${teacherObj ? teacherObj.name : ''} 선생님 학기 기본 시간표 (원본)`
-        : `${teacherObj ? teacherObj.name : ''} 선생님 주간 시간표`;
-      if (titleElemDaily) titleElemDaily.textContent = titleText;
-      if (titleElemBase) titleElemBase.textContent = `🏫 ${teacherObj ? teacherObj.name : ''} 선생님 기본 시간표 원본 설정`;
+      if (titleElemTeacher) titleElemTeacher.textContent = `👩‍🏫 ${teacherObj ? teacherObj.name : ''} 선생님 시간표`;
+    } else {
+      mode = 'CLASS';
+      if (!classSelect.value) {
+        weekDateSubtext.textContent = `기준주간 시작: -`;
+        renderGrid([], mode);
+        return;
+      }
+      const [grade, classNum] = classSelect.value.split('-');
+      url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
+      if (activeTab === 'BASE') {
+        if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
+      } else {
+        if (titleElemDaily) titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 주간 시간표 (변동 내역 포함)`;
+      }
     }
 
     const res = await fetch(url);
@@ -681,17 +682,20 @@ async function loadTimetable() {
 
 function switchTab(tabName) {
   activeTab = tabName;
+  updateFiltersForTab(tabName);
 
   const tabBtnBase = document.getElementById('tab-btn-base');
   const tabBtnDaily = document.getElementById('tab-btn-daily');
+  const tabBtnTeacher = document.getElementById('tab-btn-teacher');
   const tabBtnGenerator = document.getElementById('tab-btn-generator');
 
   const contentBase = document.getElementById('tab-content-base');
   const contentDaily = document.getElementById('tab-content-daily');
+  const contentTeacher = document.getElementById('tab-content-teacher');
   const contentGenerator = document.getElementById('tab-content-generator');
 
-  [tabBtnBase, tabBtnDaily, tabBtnGenerator].forEach(btn => btn && btn.classList.remove('active'));
-  [contentBase, contentDaily, contentGenerator].forEach(cnt => cnt && cnt.classList.add('hidden'));
+  [tabBtnBase, tabBtnDaily, tabBtnTeacher, tabBtnGenerator].forEach(btn => btn && btn.classList.remove('active'));
+  [contentBase, contentDaily, contentTeacher, contentGenerator].forEach(cnt => cnt && cnt.classList.add('hidden'));
 
   if (tabName === 'BASE') {
     if (tabBtnBase) tabBtnBase.classList.add('active');
@@ -702,6 +706,11 @@ function switchTab(tabName) {
   } else if (tabName === 'DAILY') {
     if (tabBtnDaily) tabBtnDaily.classList.add('active');
     if (contentDaily) contentDaily.classList.remove('hidden');
+    datePicker.parentElement.style.display = 'block';
+    loadTimetable();
+  } else if (tabName === 'TEACHER') {
+    if (tabBtnTeacher) tabBtnTeacher.classList.add('active');
+    if (contentTeacher) contentTeacher.classList.remove('hidden');
     datePicker.parentElement.style.display = 'block';
     loadTimetable();
   } else if (tabName === 'GENERATOR') {
@@ -764,6 +773,8 @@ function renderGrid(weeklyData, mode) {
     targetBody = document.getElementById('timetable-body-daily');
   } else if (activeTab === 'BASE') {
     targetBody = document.getElementById('timetable-body-base');
+  } else if (activeTab === 'TEACHER') {
+    targetBody = document.getElementById('timetable-body-teacher');
   } else if (activeTab === 'GENERATOR') {
     targetBody = document.getElementById('timetable-body-gen');
   }
@@ -845,6 +856,11 @@ function renderGrid(weeklyData, mode) {
 
 // Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
 function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
+  if (activeTab === 'TEACHER') {
+    alert('👩‍🏫 교사 시간표 탭은 조회 전용입니다. 시간표 변경은 [일자별 시간표] 또는 [학기 기본 시간표] 탭에서 진행해주세요.');
+    return;
+  }
+
   let selectedGcId = null;
   let gradeStr = '1';
   let classNumStr = '1';
