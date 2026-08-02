@@ -347,47 +347,24 @@
           <div id="tab-content-generator" class="tab-content hidden">
             <div class="timetable-header">
               <div>
-                <h3>🤖 학기초 시간표 자동 생성 및 수동 작성</h3>
-                <span class="subtext">AI 자동 생성 버튼을 눌러 1~10교시 시간표를 자동 완성하거나, 수동 작성 모드로 직접 매핑하여 전체 적용할 수 있습니다.</span>
+                <h3>🤖 학기초 시간표 자동 생성</h3>
+                <span class="subtext">과목별 주간 시수와 담당 교사를 설정 후 AI 자동 생성 → 미리보기 확인 → 전체 적용하면 <strong>학기 기본 시간표가 자동 완성</strong>됩니다.</span>
               </div>
               <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 시간표 인쇄</button>
             </div>
 
-            <!-- 자동 vs 수동 선택 모드 컨트롤러 -->
-            <div style="display:flex; gap:1rem; margin-bottom:1.25rem; background:#f1f5f9; padding:0.75rem; border-radius:10px; border:1px solid var(--border-color);">
-              <button type="button" id="btn-mode-auto" class="btn btn-primary" style="flex:1; padding:0.75rem; font-weight:700;">
-                🤖 AI 시간표 자동 생성 방식
-              </button>
-              <button type="button" id="btn-mode-manual" class="btn btn-outline" style="flex:1; padding:0.75rem; font-weight:700; background:#ffffff;">
-                ✍️ 수동 시간표 직접 작성 방식
-              </button>
-            </div>
-
+            <!-- ① 과목별 주간 시수 및 담당 교사 설정 -->
             <div id="gen-auto-section" class="generator-setup">
-              <!-- 학급 선택 -->
               <div class="gen-section">
-                <h4>① 적용할 학급 선택 (생성된 학년/반 목록)</h4>
-                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
-                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-select-all" style="background:#ffffff; font-weight:700;">✅ 전체 선택</button>
-                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-deselect-all" style="background:#ffffff; color:#ef4444;">❌ 전체 해제</button>
-                  <span style="color:#cbd5e1;">|</span>
-                  <div id="gen-class-checkboxes" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-                    <!-- 동적 생성되는 학년/반 선택 개별 버튼 칩들 -->
-                  </div>
-                </div>
-              </div>
-
-              <!-- 과목/시수/교사 입력 -->
-              <div class="gen-section">
-                <h4>② 과목별 주간 시수 및 담당 교사 설정</h4>
-                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수(시간)와 담당 교사를 선택하세요. 시수가 0이면 제외됩니다.</p>
+                <h4>① 과목별 주간 시수 및 담당 교사 설정</h4>
+                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 시수가 0이면 자동 생성에서 제외됩니다.</p>
                 <div class="table-responsive">
                   <table class="logs-table" id="gen-subject-table">
                     <thead>
                       <tr>
                         <th>과목명</th>
                         <th>담당 교사</th>
-                        <th>주간 시수</th>
+                        <th>주간 시수 (시간/주)</th>
                       </tr>
                     </thead>
                     <tbody id="gen-subject-body">
@@ -397,39 +374,59 @@
                 </div>
               </div>
 
-              <!-- 생성 실행 버튼 -->
+              <!-- ② 적용할 학급 선택 -->
+              <div class="gen-section">
+                <h4>② 시간표를 생성할 학급 선택</h4>
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-select-all" style="background:#ffffff; font-weight:700;">✅ 전체 선택</button>
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-gen-deselect-all" style="background:#ffffff; color:#ef4444;">❌ 전체 해제</button>
+                  <span style="color:#cbd5e1;">|</span>
+                  <div id="gen-class-checkboxes" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                    <!-- 동적 생성 -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- ③ 자동 생성 실행 -->
               <div class="gen-section" style="text-align:center;">
-                <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem;">
+                <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem; font-weight:700;">
                   🤖 AI 시간표 자동 생성 시작
                 </button>
-                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem;">생성 완료 후 아래 미리보기 테이블에서 수정 후 '전체 학년/반에 적용'을 누르면 기본 시간표로 배정됩니다.</p>
+                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem;">생성 완료 후 아래 미리보기에서 확인 → 수정 → '전체 학년/반에 최종 적용'을 누르면 <strong>학기 기본 시간표</strong>로 자동 저장됩니다.</p>
               </div>
             </div>
 
-            <!-- 수동 입력 안내 메시지 -->
-            <div id="gen-manual-notice" class="alert hidden" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:1rem;">
-              💡 <strong>수동 직접 작성 모드:</strong> 아래 1~10교시 테이블 셀을 자유롭게 클릭하여 과목과 교사를 직접 입력하세요. 작성 후 '전체 학년/반에 자동 적용' 버튼을 누르면 학기 기본 시간표로 등록됩니다.
+            <!-- 미배정 경고 -->
+            <div id="gen-unassigned-alert" class="alert alert-danger hidden" style="margin:1rem 0;">
+              <strong>⚠️ 미배정 슬롯 발생</strong>
+              <ul id="gen-unassigned-list"></ul>
+              <p style="font-size:0.85rem; margin-top:0.5rem;">위 슬롯은 시수 과다 또는 교사 충돌로 배정되지 못했습니다. 아래 테이블에서 수동으로 클릭하여 수정하세요.</p>
             </div>
 
-            <!-- 생성 및 작성 결과 테이블 (1~10교시 항시 표출) -->
+            <!-- ④ 학급별 미리보기 테이블 + 전체 적용 버튼 -->
             <div id="gen-preview" style="margin-top:1.5rem;">
-              <div class="timetable-header">
-                <h3 id="gen-preview-title">📋 1~10교시 시간표 작도 및 미리보기 (수동 클릭 수정 가능)</h3>
+              <div class="timetable-header" style="margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                  <h3 style="margin:0;">📋 시간표 미리보기 및 수동 수정</h3>
+                  <!-- 학급 선택 드롭다운 -->
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <label style="font-size:0.9rem; font-weight:600; color:var(--text-sub);">학급:</label>
+                    <select id="gen-preview-class-select" class="form-select" style="min-width:160px; padding:0.4rem 0.6rem; font-size:0.9rem;">
+                      <option value="">-- AI 생성 후 선택 --</option>
+                    </select>
+                  </div>
+                </div>
                 <div style="display:flex; gap:0.75rem; align-items:center;">
-                  <button type="button" id="btn-apply-timetable" class="btn btn-success" style="padding:0.6rem 1.5rem;">
+                  <button type="button" id="btn-regen" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.88rem;">🔄 다시 생성</button>
+                  <button type="button" id="btn-apply-timetable" class="btn btn-success" style="padding:0.6rem 1.5rem; font-weight:700;">
                     ✅ 전체 학년/반에 최종 적용
                   </button>
                 </div>
               </div>
-              <div id="gen-unassigned-alert" class="alert alert-danger hidden" style="margin-bottom:1rem;">
-                <strong>⚠️ 미배정 슬롯 발생</strong>
-                <ul id="gen-unassigned-list"></ul>
-                <p style="font-size:0.85rem; margin-top:0.5rem;">위 슬롯은 시수 과다 또는 교사 충돌로 인해 자동 배정되지 못했습니다. 아래 테이블에서 수동으로 셀을 클릭하여 수정할 수 있습니다.</p>
-              </div>
-              
-              <!-- 1~10교시 항시 렌더링 물리적 태그 -->
-              <div id="gen-preview-tables" class="table-responsive">
-                <table class="timetable-grid">
+
+              <!-- 미리보기 시간표 테이블 (항시 1~10교시 그리드) -->
+              <div class="table-responsive">
+                <table class="timetable-grid" id="gen-preview-table">
                   <thead>
                     <tr>
                       <th class="th-period">교시</th>
@@ -441,13 +438,16 @@
                     </tr>
                   </thead>
                   <tbody id="timetable-body-gen">
-                    <!-- Always 1 to 10 period grid -->
+                    <!-- 항시 1~10교시 렌더링 -->
                   </tbody>
                 </table>
               </div>
+              <p id="gen-preview-hint" style="text-align:center; color:var(--text-sub); font-size:0.82rem; margin-top:0.75rem;">
+                💡 셀을 클릭하면 해당 교시의 과목과 교사를 직접 수정할 수 있습니다.
+              </p>
             </div>
 
-            <!-- 자동 생성 탭 내 교사 시수 통계 -->
+            <!-- 교사별 시수 통계 -->
             <div class="stats-section mt-5">
               <div class="timetable-header">
                 <div>
@@ -473,6 +473,7 @@
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
