@@ -152,9 +152,9 @@ router.post('/register', async (req, res) => {
       const displayName = `${name} (${grade}학년 ${classNumber}반 학생)`;
       
       await run(
-        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-         VALUES (?, ?, ?, ?, 'STUDENT', null, ?, 'PENDING')`,
-        [userId, actualSchoolId, email, password, displayName]
+        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status, grade, class_number)
+         VALUES (?, ?, ?, ?, 'STUDENT', null, ?, 'PENDING', ?, ?)`,
+        [userId, actualSchoolId, email, password, displayName, grade, classNumber]
       );
       
       return res.status(201).json({ message: '학생 가입 신청 완료. 관리자 승인 대기 중.' });

@@ -21,8 +21,11 @@
     <table class="logs-table">
       <thead>
         <tr>
+          <th>구분(학년)</th>
+          <th>반</th>
           <th>이름</th>
-          <th>이메일</th>
+          <th>아이디</th>
+          <th>비밀번호</th>
           <th>작업</th>
         </tr>
       </thead>
@@ -41,22 +44,45 @@
     
     async function loadPendingUsers() {
       const listEl = document.getElementById('pending-users-list');
-      listEl.innerHTML = '<tr><td colspan="3" style="text-align:center;">불러오는 중...</td></tr>';
+      listEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">불러오는 중...</td></tr>';
       
       try {
         const res = await fetch(`${opener.API_BASE}/admin/users/pending?schoolId=${opener.currentUser.schoolId}`);
+        if (!res.ok) throw new Error('API return error');
         const users = await res.json();
         listEl.innerHTML = '';
         if (!users || users.length === 0) {
-          listEl.innerHTML = '<tr><td colspan="3" style="text-align:center;">대기 중인 승인 요청이 없습니다.</td></tr>';
+          listEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">대기 중인 승인 요청이 없습니다.</td></tr>';
           return;
         }
         
         users.forEach(u => {
+          let gradeText = '';
+          let classText = '';
+          let nameText = u.name || '';
+          
+          if (u.role === 'TEACHER') {
+            gradeText = '<span class="badge" style="background:var(--primary-light); color:var(--primary-color);">교사</span>';
+            classText = '-';
+          } else if (u.role === 'STUDENT') {
+            gradeText = u.grade ? `${u.grade}학년` : '-';
+            classText = u.class_number ? `${u.class_number}반` : '-';
+            // Parse actual name if stored as display name
+            if (nameText.includes(' (')) {
+              nameText = nameText.split(' (')[0];
+            }
+          } else {
+            gradeText = u.role || '-';
+            classText = '-';
+          }
+
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${u.name}</strong></td>
-            <td><span style="color:var(--text-muted);">${u.email}</span></td>
+            <td><strong>${gradeText}</strong></td>
+            <td><strong>${classText}</strong></td>
+            <td><strong>${nameText}</strong></td>
+            <td><span style="color:var(--text-muted); font-size:0.88rem;">${u.email}</span></td>
+            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${u.password_hash}</code></td>
             <td>
               <div style="display:flex; gap:0.5rem;">
                 <button class="btn btn-sm" style="background:#22c55e; color:white; border:none; padding:0.35rem 0.8rem; border-radius:4px;" onclick="approveUser('${u.id}')">승인</button>
@@ -68,7 +94,7 @@
         });
       } catch (err) {
         console.error(err);
-        listEl.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">불러오기 실패</td></tr>';
+        listEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">불러오기 실패</td></tr>';
       }
     }
 

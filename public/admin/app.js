@@ -1,6 +1,11 @@
 const API_BASE = '/api';
+window.API_BASE = API_BASE;
 
 let currentUser = null;
+Object.defineProperty(window, 'currentUser', {
+  get: () => currentUser,
+  set: (val) => { currentUser = val; }
+});
 let currentSchoolMeta = null;
 let selectedSlotData = null;
 let activeTab = 'DAILY'; // 'DAILY' or 'BASE'

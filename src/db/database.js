@@ -162,10 +162,20 @@ async function initSchema() {
       teacher_id TEXT,
       name TEXT NOT NULL,
       status TEXT DEFAULT 'PENDING',
+      grade INTEGER,
+      class_number INTEGER,
       FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
       FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
     )
   `);
+
+  // Ensure columns exist in case table was created earlier
+  try {
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS grade INTEGER`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS class_number INTEGER`);
+  } catch (err) {
+    console.log('Altering user_accounts columns error or already exists:', err.message);
+  }
 
   // 9. Holidays
   await pool.query(`

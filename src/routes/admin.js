@@ -98,9 +98,9 @@ router.post('/users/register-students-bulk', async (req, res) => {
       const displayName = `${name} (${grade}학년 ${classNumber}반 학생)`;
 
       await run(
-        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, name, status)
-         VALUES (?, ?, ?, ?, 'STUDENT', ?, 'APPROVED')`,
-        [userId, schoolId, email, password, displayName]
+        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, name, status, grade, class_number)
+         VALUES (?, ?, ?, ?, 'STUDENT', ?, 'APPROVED', ?, ?)`,
+        [userId, schoolId, email, password, displayName, grade, classNumber]
       );
 
       results.push({ id: userId, email, password, name, grade, classNumber });
@@ -147,7 +147,7 @@ router.delete('/teachers', async (req, res) => {
 router.put('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { email, password } = req.body;
+    const { email, password, name, grade, classNumber } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
     // Check if email is already taken by another user
@@ -156,9 +156,22 @@ router.put('/users/:userId', async (req, res) => {
       return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });
     }
 
+    const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let finalName = name || user.name;
+    if (user.role === 'STUDENT' && name && grade && classNumber) {
+      // Reconstruct display name for students
+      finalName = `${name} (${grade}학년 ${classNumber}반 학생)`;
+    }
+
     await run(
-      `UPDATE user_accounts SET email = ?, password_hash = ? WHERE id = ?`,
-      [email, password, userId]
+      `UPDATE user_accounts 
+       SET email = ?, password_hash = ?, name = ?, grade = ?, class_number = ? 
+       WHERE id = ?`,
+      [email, password, finalName, grade || null, classNumber || null, userId]
     );
     res.json({ message: 'User updated successfully' });
   } catch (err) {
