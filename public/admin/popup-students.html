@@ -206,7 +206,7 @@
           
           // Click to Edit
           tr.addEventListener('click', (e) => {
-            if (e.target.type === 'checkbox') return;
+            if (e.target.tagName === 'INPUT' || e.target.type === 'checkbox') return;
             
             // Remove previous selections
             document.querySelectorAll('.clickable-row').forEach(row => row.classList.remove('selected-row'));
@@ -217,11 +217,11 @@
 
           tr.innerHTML = `
             <td style="text-align: center;"><input type="checkbox" class="student-checkbox" value="${s.id}"></td>
-            <td><strong>${gradeVal || '-'}학년</strong></td>
-            <td><strong>${classVal || '-'}반</strong></td>
-            <td><strong>${actualName}</strong></td>
-            <td><span style="color:var(--text-muted); font-size:0.88rem;">${s.email}</span></td>
-            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${s.password_hash}</code></td>
+            <td><strong class="student-grade-text" data-id="${s.id}" data-grade="${gradeVal || ''}">${gradeVal || '-'}학년</strong></td>
+            <td><strong class="student-class-text" data-id="${s.id}" data-class="${classVal || ''}">${classVal || '-'}반</strong></td>
+            <td><strong class="student-name-text" data-id="${s.id}">${actualName}</strong></td>
+            <td><input type="text" class="form-input student-email-input" data-id="${s.id}" value="${s.email}" style="padding:0.25rem 0.5rem; font-size:0.85rem; width:120px; margin:0;" onchange="updateStudentInline('${s.id}')"></td>
+            <td><input type="text" class="form-input student-password-input" data-id="${s.id}" value="${s.password_hash}" style="padding:0.25rem 0.5rem; font-size:0.85rem; width:100px; margin:0;" onchange="updateStudentInline('${s.id}')"></td>
           `;
           listEl.appendChild(tr);
         });
@@ -230,6 +230,56 @@
         listEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">불러오기 실패</td></tr>';
       }
     }
+
+    window.updateStudentInline = async function(id) {
+      const emailInput = document.querySelector(`.student-email-input[data-id="${id}"]`);
+      const passwordInput = document.querySelector(`.student-password-input[data-id="${id}"]`);
+      const name = document.querySelector(`.student-name-text[data-id="${id}"]`).innerText;
+      const grade = parseInt(document.querySelector(`.student-grade-text[data-id="${id}"]`).dataset.grade) || null;
+      const classNumber = parseInt(document.querySelector(`.student-class-text[data-id="${id}"]`).dataset.class) || null;
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!email || !password) {
+        alert('아이디와 비밀번호는 필수 입력 항목입니다.');
+        loadApprovedStudents();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            grade,
+            classNumber,
+            email,
+            password
+          })
+        });
+
+        if (res.ok) {
+          // Visual feedback
+          emailInput.style.borderColor = '#22c55e';
+          passwordInput.style.borderColor = '#22c55e';
+          setTimeout(() => {
+            emailInput.style.borderColor = '';
+            passwordInput.style.borderColor = '';
+          }, 1000);
+          opener.loadSchoolMetadata();
+        } else {
+          const data = await res.json();
+          alert(data.error || '정보 수정에 실패했습니다.');
+          loadApprovedStudents();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('서버 통신 오류가 발생했습니다.');
+        loadApprovedStudents();
+      }
+    };
 
     // Select student and populate edit form
     function selectStudentForEdit(id, name, grade, classNum, email, password) {
