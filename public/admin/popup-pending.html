@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>👥 가입 승인 대기 목록</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
+  <style>
+    body { padding: 2rem; background: var(--bg-main); color: var(--text-main); font-family: 'Pretendard', sans-serif; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+    h2 { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>👥 가입 승인 대기 목록</h2>
+    <button class="btn btn-outline" onclick="window.close()">창 닫기</button>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th>이름</th>
+          <th>이메일</th>
+          <th>작업</th>
+        </tr>
+      </thead>
+      <tbody id="pending-users-list">
+        <!-- Loaded via js -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const opener = window.opener;
+    if (!opener) {
+      alert('올바르지 않은 접근입니다.');
+      window.close();
+    }
+    
+    async function loadPendingUsers() {
+      const listEl = document.getElementById('pending-users-list');
+      listEl.innerHTML = '<tr><td colspan="3" style="text-align:center;">불러오는 중...</td></tr>';
+      
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/pending?schoolId=${opener.currentUser.schoolId}`);
+        const users = await res.json();
+        listEl.innerHTML = '';
+        if (!users || users.length === 0) {
+          listEl.innerHTML = '<tr><td colspan="3" style="text-align:center;">대기 중인 승인 요청이 없습니다.</td></tr>';
+          return;
+        }
+        
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${u.name}</strong></td>
+            <td><span style="color:var(--text-muted);">${u.email}</span></td>
+            <td>
+              <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-sm" style="background:#22c55e; color:white; border:none; padding:0.35rem 0.8rem; border-radius:4px;" onclick="approveUser('${u.id}')">승인</button>
+                <button class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.35rem 0.8rem; border-radius:4px;" onclick="rejectUser('${u.id}')">반려</button>
+              </div>
+            </td>
+          `;
+          listEl.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">불러오기 실패</td></tr>';
+      }
+    }
+
+    async function approveUser(id) {
+      if (!confirm('승인하시겠습니까?')) return;
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: id, status: 'APPROVED' })
+        });
+        if (res.ok) {
+          alert('승인되었습니다.');
+          loadPendingUsers();
+          opener.loadSchoolMetadata();
+        } else {
+          alert('승인 처리 실패');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function rejectUser(id) {
+      if (!confirm('반려(삭제)하시겠습니까?')) return;
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: id, status: 'REJECTED' })
+        });
+        if (res.ok) {
+          alert('반려되었습니다.');
+          loadPendingUsers();
+          opener.loadSchoolMetadata();
+        } else {
+          alert('반려 처리 실패');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    window.onload = loadPendingUsers;
+  </script>
+</body>
+</html>

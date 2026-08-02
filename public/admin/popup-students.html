@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>🎓 가입 완료 학생 관리</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
+  <style>
+    body { padding: 2rem; background: var(--bg-main); color: var(--text-main); font-family: 'Pretendard', sans-serif; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+    h2 { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>🎓 가입 완료 학생 관리</h2>
+    <div style="display:flex; gap:0.5rem;">
+      <button class="btn btn-outline" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none; padding: 0.5rem 1rem;">선택 삭제</button>
+      <button class="btn btn-outline" onclick="window.close()">창 닫기</button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-students"></th>
+          <th>학년</th>
+          <th>반</th>
+          <th>이름</th>
+          <th>아이디</th>
+          <th>비밀번호</th>
+          <th style="text-align: center;">작업</th>
+        </tr>
+      </thead>
+      <tbody id="approved-students-list">
+        <!-- Loaded via js -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const opener = window.opener;
+    if (!opener) {
+      alert('올바르지 않은 접근입니다.');
+      window.close();
+    }
+
+    async function loadApprovedStudents() {
+      const listEl = document.getElementById('approved-students-list');
+      listEl.innerHTML = '<tr><td colspan="7" style="text-align:center;">불러오는 중...</td></tr>';
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/approved-students?schoolId=${opener.currentUser.schoolId}`);
+        const students = await res.json();
+        listEl.innerHTML = '';
+
+        if (!students || students.length === 0) {
+          listEl.innerHTML = '<tr><td colspan="7" style="text-align:center;">가입 완료된 학생이 없습니다.</td></tr>';
+          return;
+        }
+
+        students.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="student-checkbox" value="${s.id}"></td>
+            <td><strong>${s.grade}학년</strong></td>
+            <td><strong>${s.class_number}반</strong></td>
+            <td>${s.name}</td>
+            <td><span style="color:var(--text-muted); font-size:0.88rem;">${s.email}</span></td>
+            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${s.password_plain || '비밀번호 없음'}</code></td>
+            <td style="text-align: center;">
+              <button class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding: 0.35rem 0.8rem; border-radius: 4px;" onclick="deleteStudent('${s.id}')">삭제</button>
+            </td>
+          `;
+          listEl.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">불러오기 실패</td></tr>';
+      }
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm('정말로 이 학생을 탈퇴/삭제 처리하시겠습니까?')) return;
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/delete-student?id=${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          alert('삭제되었습니다.');
+          loadApprovedStudents();
+          opener.loadSchoolMetadata();
+        } else {
+          alert('삭제 처리 실패');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.getElementById('chk-select-all-students').addEventListener('change', (e) => {
+      document.querySelectorAll('.student-checkbox').forEach(chk => {
+        chk.checked = e.target.checked;
+      });
+    });
+
+    document.getElementById('btn-delete-selected-students').addEventListener('click', async () => {
+      const selected = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(chk => chk.value);
+      if (selected.length === 0) {
+        alert('삭제할 학생을 먼저 선택해주세요.');
+        return;
+      }
+
+      if (!confirm(`선택한 ${selected.length}명의 학생을 정말로 일괄 삭제하시겠습니까?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/delete-students-bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: selected })
+        });
+        if (res.ok) {
+          alert('선택한 학생들이 모두 삭제되었습니다.');
+          loadApprovedStudents();
+          opener.loadSchoolMetadata();
+        } else {
+          const data = await res.json();
+          alert(data.error || '일괄 삭제 실패');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('서버 통신 오류가 발생했습니다.');
+      }
+    });
+
+    window.onload = loadApprovedStudents;
+  </script>
+</body>
+</html>

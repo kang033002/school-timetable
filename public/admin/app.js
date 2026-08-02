@@ -2209,21 +2209,24 @@ document.querySelectorAll('.btn-main-reset').forEach(btn => {
 });
 
 window.openStudentMgmtOverlay = () => {
-  document.getElementById('overlay-student-mgmt').classList.remove('hidden');
+  window.open('popup-students.html', 'student_mgmt', 'width=1000,height=600,scrollbars=yes,resizable=yes');
 };
 window.closeStudentMgmtOverlay = () => {
-  document.getElementById('overlay-student-mgmt').classList.add('hidden');
+  const el = document.getElementById('overlay-student-mgmt');
+  if (el) el.classList.add('hidden');
 };
 window.openTeacherMgmtOverlay = () => {
-  document.getElementById('overlay-teacher-mgmt').classList.remove('hidden');
+  window.open('popup-teachers.html', 'teacher_mgmt', 'width=1200,height=700,scrollbars=yes,resizable=yes');
 };
 window.closeTeacherMgmtOverlay = () => {
-  document.getElementById('overlay-teacher-mgmt').classList.add('hidden');
+  const el = document.getElementById('overlay-teacher-mgmt');
+  if (el) el.classList.add('hidden');
 };
 window.openPendingApprovalsOverlay = () => {
-  document.getElementById('overlay-pending-approvals').classList.remove('hidden');
+  window.open('popup-pending.html', 'pending_approvals', 'width=1000,height=600,scrollbars=yes,resizable=yes');
 };
 window.closePendingApprovalsOverlay = () => {
-  document.getElementById('overlay-pending-approvals').classList.add('hidden');
+  const el = document.getElementById('overlay-pending-approvals');
+  if (el) el.classList.add('hidden');
 };
 

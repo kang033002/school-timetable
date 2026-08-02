@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>👩‍🏫 교사 등록 및 관리</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
+  <style>
+    body { padding: 2rem; background: var(--bg-main); color: var(--text-main); font-family: 'Pretendard', sans-serif; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+    h2 { margin: 0; }
+    .grid-container { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>👩‍🏫 교사 등록 및 관리</h2>
+    <button class="btn btn-outline" onclick="window.close()">창 닫기</button>
+  </div>
+
+  <div class="grid-container">
+    <!-- Left Column: Form -->
+    <div class="settings-card" style="margin: 0; box-shadow: none; border: 1px solid var(--border-color);">
+      <h4 id="form-title">👩‍🏫 교사 등록 / 정보 수정</h4>
+      <form id="teacher-setup-form">
+        <input type="hidden" id="teacher-edit-id">
+        <div class="form-group">
+          <label>교사명</label>
+          <input type="text" id="teacher-setup-name" class="form-input" required placeholder="예: 김교사">
+        </div>
+        <div class="form-group">
+          <label>담당 과목명</label>
+          <input type="text" id="teacher-setup-subject" class="form-input" placeholder="예: 수학">
+        </div>
+        <div class="form-group">
+          <label>로그인 아이디 (아이디)</label>
+          <input type="text" id="teacher-setup-email" class="form-input" required placeholder="예: teacher1">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="teacher-setup-password" class="form-input" required placeholder="예: 1234">
+        </div>
+        <div style="display:flex; gap:0.5rem; margin-top:1.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">정보 저장</button>
+          <button type="button" class="btn btn-outline" id="btn-reset-form" style="display:none;">수정 취소</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Teachers Table -->
+    <div class="settings-card" style="margin: 0; box-shadow: none; border: 1px solid var(--border-color); max-height: 550px; overflow-y: auto;">
+      <h4>👩‍🏫 등록 교사 목록</h4>
+      <div class="table-responsive">
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>과목</th>
+              <th>아이디</th>
+              <th>비밀번호</th>
+              <th style="text-align: center;">작업</th>
+            </tr>
+          </thead>
+          <tbody id="admin-teachers-table-body">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const opener = window.opener;
+    if (!opener) {
+      alert('올바르지 않은 접근입니다.');
+      window.close();
+    }
+
+    async function loadTeachers() {
+      const tbody = document.getElementById('admin-teachers-table-body');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">불러오는 중...</td></tr>';
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/teachers?schoolId=${opener.currentUser.schoolId}`);
+        const teachers = await res.json();
+        tbody.innerHTML = '';
+
+        if (!teachers || teachers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">등록된 교사가 없습니다.</td></tr>';
+          return;
+        }
+
+        teachers.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${t.name}</strong></td>
+            <td><span class="badge" style="background:var(--bg-card); color:var(--primary-color);">${t.subject_name || t.subjectName || '미지정'}</span></td>
+            <td><span style="color:var(--text-muted); font-size:0.88rem;">${t.email || '-'}</span></td>
+            <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${t.password_plain || '-'}</code></td>
+            <td style="text-align: center;">
+              <div style="display:flex; gap:0.3rem; justify-content:center;">
+                <button class="btn btn-sm btn-outline" style="padding: 0.25rem 0.5rem; font-size:0.8rem;" onclick="editTeacher('${t.id}', '${t.name}', '${t.subject_name || t.subjectName || ''}', '${t.email || ''}', '${t.password_plain || ''}')">수정</button>
+                <button class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding: 0.25rem 0.5rem; font-size:0.8rem;" onclick="deleteTeacher('${t.id}')">삭제</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">불러오기 실패</td></tr>';
+      }
+    }
+
+    window.editTeacher = function(id, name, subject, email, password) {
+      document.getElementById('teacher-edit-id').value = id;
+      document.getElementById('teacher-setup-name').value = name;
+      document.getElementById('teacher-setup-subject').value = subject;
+      document.getElementById('teacher-setup-email').value = email;
+      document.getElementById('teacher-setup-password').value = password;
+      
+      document.getElementById('form-title').textContent = '👩‍🏫 교사 정보 수정';
+      document.getElementById('btn-reset-form').style.display = 'inline-block';
+    };
+
+    document.getElementById('btn-reset-form').addEventListener('click', () => {
+      resetForm();
+    });
+
+    function resetForm() {
+      document.getElementById('teacher-setup-form').reset();
+      document.getElementById('teacher-edit-id').value = '';
+      document.getElementById('form-title').textContent = '👩‍🏫 교사 등록 / 정보 수정';
+      document.getElementById('btn-reset-form').style.display = 'none';
+    }
+
+    document.getElementById('teacher-setup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('teacher-edit-id').value;
+      const name = document.getElementById('teacher-setup-name').value;
+      const subjectName = document.getElementById('teacher-setup-subject').value;
+      const email = document.getElementById('teacher-setup-email').value;
+      const password = document.getElementById('teacher-setup-password').value;
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/teachers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id || null,
+            schoolId: opener.currentUser.schoolId,
+            name,
+            subjectName,
+            email,
+            password
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert('교사 정보가 성공적으로 저장되었습니다.');
+          resetForm();
+          loadTeachers();
+          opener.loadSchoolMetadata();
+        } else {
+          alert(data.error || '교사 정보 저장 실패');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('서버 통신 중 오류가 발생했습니다.');
+      }
+    });
+
+    async function deleteTeacher(id) {
+      if (!confirm('정말로 이 교사를 삭제하시겠습니까?\n해당 교사 계정 및 연결된 담임/수업 정보가 함께 해제되거나 삭제됩니다.')) return;
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/teachers/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          alert('삭제되었습니다.');
+          loadTeachers();
+          opener.loadSchoolMetadata();
+        } else {
+          alert('교사 삭제 실패');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    window.onload = loadTeachers;
+  </script>
+</body>
+</html>
