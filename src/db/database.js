@@ -173,6 +173,7 @@ async function initSchema() {
   try {
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS grade INTEGER`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS class_number INTEGER`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS subject_name TEXT`);
   } catch (err) {
     console.log('Altering user_accounts columns error or already exists:', err.message);
   }

@@ -249,6 +249,7 @@ teacherTitleSelect.addEventListener('change', () => {
   // Teacher signup form submit
   teacherSignupFormPublic?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const subjectName = document.getElementById('teacher-signup-subject')?.value.trim() || '';
     const name = document.getElementById('teacher-signup-name').value.trim();
     const email = document.getElementById('teacher-signup-email').value.trim();
     const password = document.getElementById('teacher-signup-password').value.trim();
@@ -261,6 +262,7 @@ teacherTitleSelect.addEventListener('change', () => {
           schoolId: 'sch-1',
           role: 'TEACHER',
           name,
+          subjectName,
           email,
           password
         })

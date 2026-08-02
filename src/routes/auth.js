@@ -121,7 +121,7 @@ router.post('/register-school', async (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { schoolId, email, password, name, teacherId, role, grade, classNumber } = req.body;
+    const { schoolId, email, password, name, subjectName, teacherId, role, grade, classNumber } = req.body;
     
     if (!schoolId || !name || !email || !password) {
       return res.status(400).json({ error: 'School ID, Name, ID, and Password are required' });
@@ -162,9 +162,9 @@ router.post('/register', async (req, res) => {
 
     // Teacher signup
     await run(
-      `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-       VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'PENDING')`,
-      [userId, actualSchoolId, email, password, teacherId || null, name]
+      `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status, subject_name)
+       VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'PENDING', ?)`,
+      [userId, actualSchoolId, email, password, teacherId || null, name, subjectName || '미지정']
     );
 
     res.status(201).json({ message: '선생님 가입 신청이 성공적으로 접수되었습니다. 관리자 승인 완료 후 로그인할 수 있습니다.' });

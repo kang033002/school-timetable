@@ -183,17 +183,31 @@ router.put('/users/:userId', async (req, res) => {
 // 2. POST /api/admin/users/approve
 router.post('/users/approve', async (req, res) => {
   try {
-    const { userId, userIds, status } = req.body; // status: 'APPROVED' or 'REJECTED'
+    const { userId, userIds, status, updates } = req.body; // status: 'APPROVED' or 'REJECTED', updates: [{id, email, password_hash}]
     if (!status) return res.status(400).json({ error: 'status is required' });
 
     const targetIds = userIds && Array.isArray(userIds) ? userIds : (userId ? [userId] : []);
     if (targetIds.length === 0) return res.status(400).json({ error: 'userId or userIds required' });
 
+    const updatesMap = {};
+    if (Array.isArray(updates)) {
+      updates.forEach(u => {
+        if (u.id) updatesMap[u.id] = u;
+      });
+    }
+
     for (const id of targetIds) {
       const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [id]);
       if (!user) continue;
 
-      await run(`UPDATE user_accounts SET status = ? WHERE id = ?`, [status, id]);
+      let newEmail = user.email;
+      let newPwd = user.password_hash;
+      if (updatesMap[id]) {
+        if (updatesMap[id].email) newEmail = updatesMap[id].email.trim();
+        if (updatesMap[id].password_hash) newPwd = updatesMap[id].password_hash.trim();
+      }
+
+      await run(`UPDATE user_accounts SET status = ?, email = ?, password_hash = ? WHERE id = ?`, [status, newEmail, newPwd, id]);
 
       if (user.role === 'TEACHER' && status === 'APPROVED') {
         const existingTeacher = await get(
@@ -201,13 +215,16 @@ router.post('/users/approve', async (req, res) => {
           [user.school_id, user.name]
         );
 
+        const subject = user.subject_name || '미지정';
+
         if (existingTeacher) {
+          await run(`UPDATE teachers SET subject_name = ? WHERE id = ?`, [subject, existingTeacher.id]);
           await run(`UPDATE user_accounts SET teacher_id = ? WHERE id = ?`, [existingTeacher.id, id]);
         } else {
           const newTeacherId = `tch-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           await run(
             `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
-            [newTeacherId, user.school_id, user.name, '미지정']
+            [newTeacherId, user.school_id, user.name, subject]
           );
           await run(`UPDATE user_accounts SET teacher_id = ? WHERE id = ?`, [newTeacherId, id]);
         }
