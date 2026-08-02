@@ -1184,9 +1184,14 @@ function renderGrid(weeklyData, mode) {
           td.appendChild(emptyDiv);
         }
 
-        // Click event for editing slot
-        const targetDate = dayData ? dayData.date : null;
-        td.addEventListener('click', () => openChangeModal(targetDate, dayOfWeek, p, slot, mode));
+        // Click event for editing slot (Disabled for STUDENTS)
+        if (currentUser?.role === 'STUDENT') {
+          td.style.cursor = 'default';
+        } else {
+          td.style.cursor = 'pointer';
+          const targetDate = dayData ? dayData.date : null;
+          td.addEventListener('click', () => openChangeModal(targetDate, dayOfWeek, p, slot, mode));
+        }
 
         tr.appendChild(td);
       }
@@ -1196,6 +1201,9 @@ function renderGrid(weeklyData, mode) {
 
 // Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
 function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
+  if (currentUser?.role === 'STUDENT') {
+    return;
+  }
   if (activeTab === 'TEACHER') {
     alert('👩‍🏫 교사 시간표 탭은 조회 전용입니다. 시간표 변경은 [일자별 시간표] 또는 [학기 기본 시간표] 탭에서 진행해주세요.');
     return;
