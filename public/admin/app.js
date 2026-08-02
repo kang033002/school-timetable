@@ -793,7 +793,7 @@ function renderGrid(weeklyData, mode) {
           td.classList.add('is-changed');
           const badge = document.createElement('span');
           badge.className = 'change-badge';
-          badge.textContent = slot.changeType === 'SUBSTITUTE' ? '보강' : '결강';
+          badge.textContent = slot.changeType === 'SUBSTITUTE' ? '변동' : '결강';
           td.appendChild(badge);
         }
 
@@ -914,6 +914,43 @@ async function handleApplyChange(e) {
 
   const changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
   const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
+
+  if (activeTab === 'GENERATOR') {
+    if (!changedSubjectId || !changedTeacherId) {
+      alert('과목과 교사를 선택해주세요.');
+      return;
+    }
+    const subjectName = currentSchoolMeta?.subjects?.find(s => s.id === changedSubjectId)?.name || '';
+    const teacherName = currentSchoolMeta?.teachers?.find(t => t.id === changedTeacherId)?.name || '';
+    const gradeClassId = selectedSlotData.gradeClassId;
+    const dayOfWeek = selectedSlotData.dayOfWeek;
+    const period = selectedSlotData.period;
+
+    if (!genClassMap[gradeClassId]) genClassMap[gradeClassId] = {};
+    if (!genClassMap[gradeClassId][dayOfWeek]) genClassMap[gradeClassId][dayOfWeek] = {};
+    genClassMap[gradeClassId][dayOfWeek][period] = {
+      gradeClassId,
+      dayOfWeek,
+      period,
+      subjectId: changedSubjectId,
+      teacherId: changedTeacherId,
+      subjectName,
+      teacherName
+    };
+
+    const newSlot = { gradeClassId, dayOfWeek, period, subjectId: changedSubjectId, teacherId: changedTeacherId, subjectName, teacherName };
+    if (generatedResult) {
+      const idx = generatedResult.findIndex(r => r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period);
+      if (idx >= 0) generatedResult[idx] = newSlot;
+      else generatedResult.push(newSlot);
+    } else {
+      generatedResult = [newSlot];
+    }
+
+    if (changeModal) changeModal.classList.add('hidden');
+    renderGenGrid(genCurrentClassId);
+    return;
+  }
 
   if (activeTab === 'BASE') {
     const payload = {
@@ -1478,40 +1515,20 @@ function openGenCellModal(gradeClassId, dayOfWeek, period, slot, gc) {
     ).join('');
   }
 
-  // 저장 버튼 오버라이드: genClassMap에 저장 후 그리드 재렌더링
+  // selectedSlotData 및 activeTab 바인딩
+  activeTab = 'GENERATOR';
+  selectedSlotData = {
+    gradeClassId,
+    dayOfWeek,
+    period,
+    slot,
+    mode: 'CLASS',
+    targetDate: null
+  };
+
   const btnSave = document.getElementById('btn-modal-save');
   if (btnSave) {
     btnSave.disabled = false;
-    // 기존 이벤트 리스너 교체를 위해 복제
-    const newBtn = btnSave.cloneNode(true);
-    btnSave.parentNode.replaceChild(newBtn, btnSave);
-    newBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const subjectId = changeSubjectSelect?.value;
-      const teacherId = changeTeacherSelect?.value;
-      if (!subjectId || !teacherId) { alert('과목과 교사를 선택해주세요.'); return; }
-
-      const subjectName = currentSchoolMeta?.subjects?.find(s => s.id === subjectId)?.name || '';
-      const teacherName = currentSchoolMeta?.teachers?.find(t => t.id === teacherId)?.name || '';
-
-      // genClassMap 업데이트
-      if (!genClassMap[gradeClassId]) genClassMap[gradeClassId] = {};
-      if (!genClassMap[gradeClassId][dayOfWeek]) genClassMap[gradeClassId][dayOfWeek] = {};
-      genClassMap[gradeClassId][dayOfWeek][period] = { gradeClassId, dayOfWeek, period, subjectId, teacherId, subjectName, teacherName };
-
-      // generatedResult 동기화
-      if (generatedResult) {
-        const idx = generatedResult.findIndex(r => r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period);
-        const newSlot = { gradeClassId, dayOfWeek, period, subjectId, teacherId, subjectName, teacherName };
-        if (idx >= 0) generatedResult[idx] = newSlot;
-        else generatedResult.push(newSlot);
-      } else {
-        generatedResult = [{ gradeClassId, dayOfWeek, period, subjectId, teacherId, subjectName, teacherName }];
-      }
-
-      if (changeModal) changeModal.classList.add('hidden');
-      renderGenGrid(genCurrentClassId);
-    });
   }
 
   if (changeModal) changeModal.classList.remove('hidden');
