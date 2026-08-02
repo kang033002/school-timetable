@@ -111,6 +111,56 @@ router.post('/users/register-students-bulk', async (req, res) => {
     console.error('Bulk register students error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+// Bulk teacher registration by admin
+router.post('/teachers/register-teachers-bulk', async (req, res) => {
+  try {
+    const { schoolId, teachers } = req.body;
+    if (!schoolId || !Array.isArray(teachers) || teachers.length === 0) {
+      return res.status(400).json({ error: 'schoolId and teachers list are required' });
+    }
+
+    const results = [];
+    for (const t of teachers) {
+      const { name, subjectName } = t;
+      if (!name) continue;
+
+      const teacherId = `t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      await run(
+        `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
+        [teacherId, schoolId, name, subjectName || '미지정']
+      );
+
+      if (subjectName) {
+        const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, subjectName]);
+        if (!existingSub) {
+          const subId = `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [subId, schoolId, subjectName, subjectName]);
+        }
+      }
+
+      const countRow = await get(
+        `SELECT COUNT(*) as cnt FROM user_accounts WHERE school_id = ? AND role = 'TEACHER'`,
+        [schoolId]
+      );
+      const nextSeq = String(countRow.cnt + 1).padStart(2, '0');
+      const email = `t${nextSeq}`;
+      const password = '1234'; 
+      const userId = `u-t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      await run(
+        `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+         VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+        [userId, schoolId, email, password, teacherId, name]
+      );
+
+      results.push({ id: teacherId, name, subjectName, email, password });
+    }
+
+    res.json({ message: 'Teachers registered successfully', registered: results });
+  } catch (err) {
+    console.error('Bulk register teachers error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Bulk delete teachers
