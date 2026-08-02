@@ -636,7 +636,8 @@ async function loadTimetable() {
 
   const mode = viewModeSelect.value;
   const dateVal = datePicker.value;
-  const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
+  const cacheBust = `&_=${Date.now()}`;
+  const baseParam = activeTab === 'BASE' ? `&baseOnly=true${cacheBust}` : cacheBust;
 
   try {
     let url = '';
@@ -867,7 +868,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
     classNumStr = currentSchoolMeta.gradeClasses[0].class_number;
   }
 
-  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId };
+  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId, savedTab: activeTab };
 
   const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
   const dayName = daysKor[dayOfWeek] || '월';
@@ -915,7 +916,7 @@ async function handleApplyChange(e) {
   const changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
   const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
 
-  if (activeTab === 'GENERATOR') {
+  if (selectedSlotData.savedTab === 'GENERATOR') {
     if (!changedSubjectId || !changedTeacherId) {
       alert('과목과 교사를 선택해주세요.');
       return;
@@ -952,7 +953,7 @@ async function handleApplyChange(e) {
     return;
   }
 
-  if (activeTab === 'BASE') {
+  if (selectedSlotData.savedTab === 'BASE') {
     const payload = {
       schoolId: currentUser.schoolId,
       gradeClassId: selectedSlotData.gradeClassId,
