@@ -2,20 +2,30 @@ const express = require('express');
 const router = express.Router();
 const { run, get, all } = require('../db/database');
 
+// Helper to safely parse YYYY-MM-DD string to local Date object (avoids timezone shift)
+function parseKstDate(dateStr) {
+  const parts = dateStr.split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
 // Helper to convert date YYYY-MM-DD to DayOfWeek (1: Mon, 2: Tue ... 5: Fri)
 function getDayOfWeek(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseKstDate(dateStr);
   const day = d.getDay(); // 0: Sun, 1: Mon ... 6: Sat
   return day === 0 ? 7 : day;
 }
 
 // Helper to get week start (Monday) date string
 function getMonday(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseKstDate(dateStr);
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d.setDate(diff));
-  return mon.toISOString().split('T')[0];
+  const mon = new Date(d.getFullYear(), d.getMonth(), diff);
+  
+  const yyyy = mon.getFullYear();
+  const mm = String(mon.getMonth() + 1).padStart(2, '0');
+  const dd = String(mon.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 // 1. GET /api/schools/search?q=...

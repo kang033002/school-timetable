@@ -70,8 +70,10 @@ const logsBody = document.getElementById('logs-body');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  // Set default date to today
-  const today = new Date().toISOString().split('T')[0];
+  // Set default date to today in local KST timezone
+  const todayObj = new Date();
+  const kstOffset = todayObj.getTimezoneOffset() * 60000;
+  const today = new Date(todayObj.getTime() - kstOffset).toISOString().split('T')[0];
   if (datePicker) datePicker.value = today;
 
   // Check stored auth
@@ -99,9 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnLogout) btnLogout.addEventListener('click', handleLogout);
 
   viewModeSelect.addEventListener('change', handleViewModeChange);
-  classSelect.addEventListener('change', loadTimetable);
-  teacherSelect.addEventListener('change', loadTimetable);
-  datePicker.addEventListener('change', loadTimetable);
   btnRefresh.addEventListener('click', loadTimetable);
 
   btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
@@ -627,7 +626,6 @@ function handleViewModeChange() {
     classFilterGroup.classList.add('hidden');
     teacherFilterGroup.classList.remove('hidden');
   }
-  loadTimetable();
 }
 
 // Load Timetable Grid
@@ -636,8 +634,7 @@ async function loadTimetable() {
 
   const mode = viewModeSelect.value;
   const dateVal = datePicker.value;
-  const cacheBust = `&_=${Date.now()}`;
-  const baseParam = activeTab === 'BASE' ? `&baseOnly=true${cacheBust}` : cacheBust;
+  const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
 
   try {
     let url = '';
@@ -761,17 +758,19 @@ async function loadTeacherStats() {
   }
 }
 
-// Render Grid (3개 탭 모든 테이블에 1~10교시 무조건 동시 렌더링)
 function renderGrid(weeklyData, mode) {
-  const bodies = [
-    document.getElementById('timetable-body-daily'),
-    document.getElementById('timetable-body-base'),
-    document.getElementById('timetable-body-gen')
-  ].filter(Boolean);
+  let targetBody = null;
+  if (activeTab === 'DAILY') {
+    targetBody = document.getElementById('timetable-body-daily');
+  } else if (activeTab === 'BASE') {
+    targetBody = document.getElementById('timetable-body-base');
+  } else if (activeTab === 'GENERATOR') {
+    targetBody = document.getElementById('timetable-body-gen');
+  }
 
-  bodies.forEach(targetBody => {
-    targetBody.innerHTML = '';
-    const maxPeriods = 10; // 고등학교 표준 10교시 고정 표출
+  if (!targetBody) return;
+  targetBody.innerHTML = '';
+  const maxPeriods = 10; // 고등학교 표준 10교시 고정 표출
 
     for (let p = 1; p <= maxPeriods; p++) {
       const tr = document.createElement('tr');
@@ -840,10 +839,8 @@ function renderGrid(weeklyData, mode) {
 
         tr.appendChild(td);
       }
-
       targetBody.appendChild(tr);
     }
-  });
 }
 
 // Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
@@ -868,7 +865,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
     classNumStr = currentSchoolMeta.gradeClasses[0].class_number;
   }
 
-  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId, savedTab: activeTab };
+  selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId };
 
   const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
   const dayName = daysKor[dayOfWeek] || '월';
@@ -916,7 +913,7 @@ async function handleApplyChange(e) {
   const changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
   const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
 
-  if (selectedSlotData.savedTab === 'GENERATOR') {
+  if (activeTab === 'GENERATOR') {
     if (!changedSubjectId || !changedTeacherId) {
       alert('과목과 교사를 선택해주세요.');
       return;
@@ -953,7 +950,7 @@ async function handleApplyChange(e) {
     return;
   }
 
-  if (selectedSlotData.savedTab === 'BASE') {
+  if (activeTab === 'BASE') {
     const payload = {
       schoolId: currentUser.schoolId,
       gradeClassId: selectedSlotData.gradeClassId,
