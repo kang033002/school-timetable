@@ -1666,6 +1666,44 @@ async function initGeneratorTab() {
       });
     }
 
+    const btnDeleteClass = document.getElementById('btn-gen-delete-class');
+    if (btnDeleteClass && classListSelect) {
+      const newBtnDeleteClass = btnDeleteClass.cloneNode(true);
+      btnDeleteClass.parentNode.replaceChild(newBtnDeleteClass, btnDeleteClass);
+      
+      newBtnDeleteClass.addEventListener('click', async () => {
+        const classId = classListSelect.value;
+        if (!classId) {
+          alert('삭제할 학급을 선택해주세요.');
+          return;
+        }
+        
+        const selectedOption = classListSelect.options[classListSelect.selectedIndex];
+        const classNameText = selectedOption ? selectedOption.textContent : '해당 학급';
+        
+        if (!confirm(`⚠️ 경고: [${classNameText}]을(를) 정말로 삭제하시겠습니까?\n이 학급과 연관된 모든 시간표 데이터가 함께 삭제되며 되돌릴 수 없습니다.`)) {
+          return;
+        }
+        
+        try {
+          const res = await fetch(`${API_BASE}/admin/classes/${classId}`, {
+            method: 'DELETE'
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert('🎉 학급이 성공적으로 삭제되었습니다.');
+            await loadSchoolMetadata();
+            await initGeneratorTab();
+          } else {
+            alert(data.error || '학급 삭제 실패');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('서버 통신 오류가 발생했습니다.');
+        }
+      });
+    }
+
     // ② 과목/교사/시수 입력표 생성
     const subjectBody = document.getElementById('gen-subject-body');
     if (subjectBody) {

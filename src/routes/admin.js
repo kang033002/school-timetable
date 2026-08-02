@@ -267,6 +267,23 @@ router.delete('/subjects/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/admin/classes/:id
+router.delete('/classes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'id is required' });
+
+    await run(`DELETE FROM base_timetable WHERE grade_class_id = ?`, [id]);
+    await run(`DELETE FROM timetable_changes WHERE grade_class_id = ?`, [id]);
+    await run(`DELETE FROM grade_classes WHERE id = ?`, [id]);
+
+    res.json({ message: 'Class deleted successfully' });
+  } catch (err) {
+    console.error('Delete class error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 8. POST /api/admin/change-credentials
 router.post('/change-credentials', async (req, res) => {
   try {
