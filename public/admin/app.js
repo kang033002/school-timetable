@@ -991,39 +991,6 @@ async function handleApplyChange(e) {
     alert('저장 처리 중 오류가 발생했습니다.');
   }
 }
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (res.status === 409) {
-      // 충돌 감지!
-      conflictList.innerHTML = '';
-      data.conflicts.forEach(c => {
-        const li = document.createElement('li');
-        li.textContent = c.message;
-        conflictList.appendChild(li);
-      });
-      // 강제 저장 시 사용할 페이로드 저장
-      pendingForcePayload = { ...payload, force: true };
-      conflictAlert.classList.remove('hidden');
-      return;
-    }
-
-    if (!res.ok) {
-      alert(data.error || '수정 실패');
-      return;
-    }
-
-    alert('시간표 변경이 성공적으로 적용되었습니다!');
-    changeModal.classList.add('hidden');
-    loadTimetable();
-  } catch (err) {
-    console.error('Apply change error:', err);
-    alert('서버통신 중 오류가 발생했습니다.');
-  }
-}
 
 // ── 충돌 발생 시 OK/취소 버튼 처리 ───────────────────────────────────────────
 document.getElementById('btn-force-ok').addEventListener('click', async () => {
