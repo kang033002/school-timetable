@@ -9,6 +9,10 @@
     body { padding: 2rem; background: var(--bg-main); color: var(--text-main); font-family: 'Pretendard', sans-serif; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
     h2 { margin: 0; }
+    .btn-danger { background: var(--danger-color, #dc2626); color: white; border: none; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-success { background: #22c55e; color: white; border: none; }
+    .btn-success:hover { background: #16a34a; }
   </style>
 </head>
 <body>
@@ -17,22 +21,32 @@
     <button class="btn btn-outline" onclick="window.close()">창 닫기</button>
   </div>
   
-  <div class="table-responsive">
-    <table class="logs-table">
-      <thead>
-        <tr>
-          <th>구분(학년)</th>
-          <th>반</th>
-          <th>이름</th>
-          <th>아이디</th>
-          <th>비밀번호</th>
-          <th>작업</th>
-        </tr>
-      </thead>
-      <tbody id="pending-users-list">
-        <!-- Loaded via js -->
-      </tbody>
-    </table>
+  <div class="settings-card" style="margin: 0; box-shadow: none; border: 1px solid var(--border-color); display:flex; flex-direction:column; gap:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h4 style="margin:0;">👥 가입 신청 대기자</h4>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-sm btn-success" id="btn-approve-selected" style="padding:0.4rem 0.8rem; border-radius:4px;">선택 승인</button>
+        <button class="btn btn-sm btn-outline btn-danger" id="btn-reject-selected" style="padding:0.4rem 0.8rem; border-radius:4px;">선택 반려</button>
+      </div>
+    </div>
+
+    <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-pending"></th>
+            <th>구분(학년)</th>
+            <th>반</th>
+            <th>이름</th>
+            <th>아이디</th>
+            <th>비밀번호</th>
+          </tr>
+        </thead>
+        <tbody id="pending-users-list">
+          <!-- Loaded via js -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -67,7 +81,6 @@
           } else if (u.role === 'STUDENT') {
             gradeText = u.grade ? `${u.grade}학년` : '-';
             classText = u.class_number ? `${u.class_number}반` : '-';
-            // Parse actual name if stored as display name
             if (nameText.includes(' (')) {
               nameText = nameText.split(' (')[0];
             }
@@ -78,17 +91,12 @@
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="pending-checkbox" value="${u.id}"></td>
             <td><strong>${gradeText}</strong></td>
             <td><strong>${classText}</strong></td>
             <td><strong>${nameText}</strong></td>
             <td><span style="color:var(--text-muted); font-size:0.88rem;">${u.email}</span></td>
             <td><code style="background:var(--bg-card); padding:2px 5px; border-radius:3px;">${u.password_hash}</code></td>
-            <td>
-              <div style="display:flex; gap:0.5rem;">
-                <button class="btn btn-sm" style="background:#22c55e; color:white; border:none; padding:0.35rem 0.8rem; border-radius:4px;" onclick="approveUser('${u.id}')">승인</button>
-                <button class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.35rem 0.8rem; border-radius:4px;" onclick="rejectUser('${u.id}')">반려</button>
-              </div>
-            </td>
           `;
           listEl.appendChild(tr);
         });
@@ -98,45 +106,74 @@
       }
     }
 
-    async function approveUser(id) {
-      if (!confirm('승인하시겠습니까?')) return;
-      try {
-        const res = await fetch(`${opener.API_BASE}/admin/users/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: id, status: 'APPROVED' })
-        });
-        if (res.ok) {
-          alert('승인되었습니다.');
-          loadPendingUsers();
-          opener.loadSchoolMetadata();
-        } else {
-          alert('승인 처리 실패');
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    // Select all checkboxes
+    document.getElementById('chk-select-all-pending').addEventListener('change', (e) => {
+      document.querySelectorAll('.pending-checkbox').forEach(chk => {
+        chk.checked = e.target.checked;
+      });
+    });
 
-    async function rejectUser(id) {
-      if (!confirm('반려(삭제)하시겠습니까?')) return;
+    // Approve Selected Users
+    document.getElementById('btn-approve-selected').addEventListener('click', async () => {
+      const selected = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(chk => chk.value);
+      if (selected.length === 0) {
+        alert('승인할 대기자를 먼저 선택해주세요.');
+        return;
+      }
+
+      if (!confirm(`선택한 ${selected.length}명의 가입 요청을 승인하시겠습니까?`)) {
+        return;
+      }
+
       try {
         const res = await fetch(`${opener.API_BASE}/admin/users/approve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: id, status: 'REJECTED' })
+          body: JSON.stringify({ userIds: selected, status: 'APPROVED' })
         });
         if (res.ok) {
-          alert('반려되었습니다.');
+          alert('선택한 사용자의 가입이 승인되었습니다.');
           loadPendingUsers();
           opener.loadSchoolMetadata();
         } else {
-          alert('반려 처리 실패');
+          alert('승인 처리에 실패했습니다.');
         }
       } catch (err) {
         console.error(err);
+        alert('서버 통신 오류가 발생했습니다.');
       }
-    }
+    });
+
+    // Reject Selected Users
+    document.getElementById('btn-reject-selected').addEventListener('click', async () => {
+      const selected = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(chk => chk.value);
+      if (selected.length === 0) {
+        alert('반려할 대기자를 먼저 선택해주세요.');
+        return;
+      }
+
+      if (!confirm(`선택한 ${selected.length}명의 가입 요청을 반려(삭제)하시겠습니까?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${opener.API_BASE}/admin/users/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: selected, status: 'REJECTED' })
+        });
+        if (res.ok) {
+          alert('선택한 사용자의 가입 신청이 반려되었습니다.');
+          loadPendingUsers();
+          opener.loadSchoolMetadata();
+        } else {
+          alert('반려 처리에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('서버 통신 오류가 발생했습니다.');
+      }
+    });
 
     window.onload = loadPendingUsers;
   </script>

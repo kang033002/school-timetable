@@ -183,45 +183,34 @@ router.put('/users/:userId', async (req, res) => {
 // 2. POST /api/admin/users/approve
 router.post('/users/approve', async (req, res) => {
   try {
-    const { userId, status } = req.body; // status: 'APPROVED' or 'REJECTED'
-    if (!userId || !status) return res.status(400).json({ error: 'userId and status are required' });
+    const { userId, userIds, status } = req.body; // status: 'APPROVED' or 'REJECTED'
+    if (!status) return res.status(400).json({ error: 'status is required' });
 
-    // Fetch user account info first
-    const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [userId]);
-    if (!user) {
-      return res.status(404).json({ error: 'User account not found' });
-    }
+    const targetIds = userIds && Array.isArray(userIds) ? userIds : (userId ? [userId] : []);
+    if (targetIds.length === 0) return res.status(400).json({ error: 'userId or userIds required' });
 
-    await run(
-      `UPDATE user_accounts SET status = ? WHERE id = ?`,
-      [status, userId]
-    );
+    for (const id of targetIds) {
+      const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [id]);
+      if (!user) continue;
 
-    // If teacher approval and status is APPROVED, link or auto-provision in teachers table
-    if (user.role === 'TEACHER' && status === 'APPROVED') {
-      // Check if a teacher with the same name already exists in this school
-      const existingTeacher = await get(
-        `SELECT * FROM teachers WHERE school_id = ? AND name = ?`,
-        [user.school_id, user.name]
-      );
+      await run(`UPDATE user_accounts SET status = ? WHERE id = ?`, [status, id]);
 
-      if (existingTeacher) {
-        // Link user account to the existing teacher profile to avoid duplication
-        await run(
-          `UPDATE user_accounts SET teacher_id = ? WHERE id = ?`,
-          [existingTeacher.id, userId]
+      if (user.role === 'TEACHER' && status === 'APPROVED') {
+        const existingTeacher = await get(
+          `SELECT * FROM teachers WHERE school_id = ? AND name = ?`,
+          [user.school_id, user.name]
         );
-      } else {
-        // Create new teacher record and link it
-        const newTeacherId = `tch-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        await run(
-          `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
-          [newTeacherId, user.school_id, user.name, '미지정']
-        );
-        await run(
-          `UPDATE user_accounts SET teacher_id = ? WHERE id = ?`,
-          [newTeacherId, userId]
-        );
+
+        if (existingTeacher) {
+          await run(`UPDATE user_accounts SET teacher_id = ? WHERE id = ?`, [existingTeacher.id, id]);
+        } else {
+          const newTeacherId = `tch-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          await run(
+            `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
+            [newTeacherId, user.school_id, user.name, '미지정']
+          );
+          await run(`UPDATE user_accounts SET teacher_id = ? WHERE id = ?`, [newTeacherId, id]);
+        }
       }
     }
 

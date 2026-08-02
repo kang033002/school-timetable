@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>👩‍🏫 교사 등록 및 관리</title>
+  <title>👩‍🏫 가입 완료 교사 관리</title>
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=3.0">
   <style>
@@ -28,7 +28,7 @@
 </head>
 <body>
   <div class="header">
-    <h2>👩‍🏫 교사 등록 및 관리</h2>
+    <h2>👩‍🏫 가입 완료 교사 관리</h2>
     <button class="btn btn-outline" onclick="window.close()">창 닫기</button>
   </div>
 
@@ -38,7 +38,7 @@
       
       <!-- Form Navigation Tabs -->
       <div class="form-tabs">
-        <button class="form-tab-btn active" id="tab-btn-add" onclick="switchLeftTab('add')">➕ 교사 신규 직접 등록</button>
+        <button class="form-tab-btn active" id="tab-btn-add" onclick="switchLeftTab('add')">➕ 신규 직접 등록</button>
         <button class="form-tab-btn" id="tab-btn-edit" onclick="switchLeftTab('edit')">✏️ 교사 정보 수정</button>
       </div>
 
@@ -46,14 +46,14 @@
       <div id="tab-content-add" class="tab-content active" style="display: flex; flex-direction: column; gap: 1.2rem; height: 100%;">
         <div>
           <h4 style="margin:0 0 0.5rem 0;">👩‍🏫 교사 신규 직접 등록 (자동가입)</h4>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">담당과목, 교사명을 입력하면 아이디가 자동 생성(t01, t02...)되며 임시 비밀번호(1234)가 부여됩니다.</p>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">담당 과목, 교사명을 입력하면 아이디가 자동 생성(t01, t02...)되며 임시 비밀번호(1234)가 부여됩니다.</p>
         </div>
 
         <div class="table-responsive" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
           <table class="logs-table" style="margin:0;">
             <thead>
               <tr>
-                <th style="width: 120px;">담당 과목</th>
+                <th style="width: 140px;">담당 과목</th>
                 <th>교사명</th>
                 <th style="width: 50px; text-align:center;">삭제</th>
               </tr>
@@ -73,7 +73,7 @@
       <!-- Tab 2: Edit Selected Teacher -->
       <div id="tab-content-edit" class="tab-content" style="display: none;">
         <h4 style="margin:0 0 1rem 0;">✏️ 선택한 교사 정보 수정</h4>
-        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 아이디/비밀번호/과목을 바로 수정할 수 있습니다.</p>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom: 1rem;">목록에서 교사를 클릭하면 정보가 자동 로드되어 아이디/비밀번호/담당 과목을 바로 수정할 수 있습니다.</p>
         
         <form id="teacher-edit-form" onsubmit="updateTeacher(event)">
           <input type="hidden" id="edit-teacher-id">
@@ -87,7 +87,7 @@
           </div>
           <div class="form-group">
             <label>로그인 아이디 (아이디 수정 가능)</label>
-            <input type="text" id="edit-teacher-email" class="form-input" required placeholder="예: teacher1">
+            <input type="text" id="edit-teacher-email" class="form-input" required placeholder="예: t01">
           </div>
           <div class="form-group">
             <label>비밀번호 (비밀번호 수정 가능)</label>
