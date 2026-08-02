@@ -411,7 +411,7 @@ async function showDashboard() {
         tabTeacher.textContent = '👩‍🏫 자기 수업 시간표';
       }
       if (tabGen) tabGen.style.display = 'none';
-      if (btnSettings) btnSettings.style.display = 'none';
+      if (btnSettings) btnSettings.style.display = 'inline-block';
       
       // Default to Teacher timetable or class timetable if active tab is restricted
       if (activeTab === 'BASE' || activeTab === 'GENERATOR') {
@@ -734,9 +734,9 @@ function toggleSettingsPanel() {
       if (cardPending) cardPending.style.display = 'block';
       if (cardTeacherSetup) cardTeacherSetup.style.display = 'none';
       if (cardClassSetup) cardClassSetup.style.display = 'none';
-      if (cardApprovedStudents) cardApprovedStudents.style.display = 'none';
+      if (cardApprovedStudents) cardApprovedStudents.style.display = 'block';
       if (cardTeacherMgmt) cardTeacherMgmt.style.display = 'none';
-      if (cardClassMgmt) cardClassMgmt.style.display = 'none';
+      if (cardClassMgmt) cardClassMgmt.style.display = 'block';
       if (cardAccount) cardAccount.style.display = 'none';
       if (cardHolidays) cardHolidays.style.display = 'none';
     } else {
@@ -751,9 +751,7 @@ function toggleSettingsPanel() {
     }
 
     loadPendingUsers();
-    if (!isTeacher) {
-      loadApprovedStudents();
-    }
+    loadApprovedStudents();
   } else {
     settingsPanel.classList.add('hidden');
     timetableDisplayContainer.classList.remove('hidden');
