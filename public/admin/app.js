@@ -1259,6 +1259,9 @@ async function initGeneratorTab() {
           const isSelected = (matchingTeacher && matchingTeacher.id === t.id) ? 'selected' : '';
           return `<option value="${t.id}" ${isSelected}>${t.name} 선생님</option>`;
         }).join('');
+        
+        const defaultHours = matchingTeacher && matchingTeacher.weekly_hours !== undefined && matchingTeacher.weekly_hours !== null ? matchingTeacher.weekly_hours : 3;
+
         tr.innerHTML = `
           <td><strong>📚 ${sub.name}</strong></td>
           <td>
@@ -1268,7 +1271,7 @@ async function initGeneratorTab() {
           </td>
           <td>
             <input type="number" class="form-input gen-hours-input" data-subject-id="${sub.id}"
-              min="0" max="10" value="3"
+              min="0" max="10" value="${defaultHours}"
               style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
           </td>
         `;
