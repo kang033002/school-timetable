@@ -22,6 +22,46 @@ router.get('/users/pending', async (req, res) => {
   }
 });
 
+// 1.5 GET /api/admin/students/approved?schoolId=...
+router.get('/students/approved', async (req, res) => {
+  try {
+    const { schoolId } = req.query;
+    if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+
+    const students = await all(
+      `SELECT * FROM user_accounts WHERE school_id = ? AND role = 'STUDENT' AND status = 'APPROVED'`,
+      [schoolId]
+    );
+    res.json(students);
+  } catch (err) {
+    console.error('Fetch approved students error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 1.6 DELETE /api/admin/users
+router.delete('/users', async (req, res) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.status(400).json({ error: 'User IDs are required' });
+    
+    const idList = ids.split(',').map(id => id.trim());
+    if (idList.length === 0) return res.status(400).json({ error: 'No IDs provided' });
+
+    const placeholders = idList.map(() => '?').join(',');
+    
+    await run(
+      `DELETE FROM user_accounts WHERE id IN (${placeholders})`,
+      idList
+    );
+
+    res.json({ message: 'Users deleted successfully' });
+  } catch (err) {
+    console.error('Delete users error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 2. POST /api/admin/users/approve
 router.post('/users/approve', async (req, res) => {
   try {

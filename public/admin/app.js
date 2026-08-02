@@ -124,6 +124,20 @@ teacherTitleSelect.addEventListener('change', () => {
   classSetupForm.addEventListener('submit', handleClassSetup);
   holidaySetupForm.addEventListener('submit', handleHolidaySetup);
 
+  document.getElementById('chk-select-all-students')?.addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.chk-student');
+    checkboxes.forEach(chk => chk.checked = e.target.checked);
+  });
+
+  document.getElementById('btn-delete-selected-students')?.addEventListener('click', () => {
+    const selectedIds = Array.from(document.querySelectorAll('.chk-student:checked')).map(chk => chk.value);
+    if (selectedIds.length === 0) {
+      alert('삭제할 학생을 선택해주세요.');
+      return;
+    }
+    deleteStudents(selectedIds);
+  });
+
   const adminCredentialsForm = document.getElementById('admin-credentials-form');
   adminCredentialsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -430,7 +444,9 @@ async function loadSchoolMetadata() {
     // Refresh pending requests & holidays if visible
     if (!settingsPanel.classList.contains('hidden')) {
       await loadPendingUsers();
-      await loadHolidays();
+      loadApprovedStudents();
+      loadAdminClassesList();
+      loadAdminHolidaysList();
     }
 
     // Render Teachers List for Deletion
@@ -531,6 +547,7 @@ function toggleSettingsPanel() {
     timetableDisplayContainer.classList.add('hidden');
     btnSettingsToggle.textContent = '📅 시간표 보기';
     loadPendingUsers();
+    loadApprovedStudents();
   } else {
     settingsPanel.classList.add('hidden');
     timetableDisplayContainer.classList.remove('hidden');
@@ -581,6 +598,57 @@ window.approveUser = async function(userId, status) {
     }
   } catch (err) {
     console.error('Approve user fetch error:', err);
+  }
+};
+
+async function loadApprovedStudents() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/students/approved?schoolId=${currentUser.schoolId}`);
+    const students = await res.json();
+    const listUI = document.getElementById('approved-students-list');
+    listUI.innerHTML = '';
+
+    if (students.length === 0) {
+      listUI.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">가입된 학생이 없습니다.</td></tr>`;
+      return;
+    }
+
+    students.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" class="chk-student" value="${s.id}"></td>
+        <td>${s.name}</td>
+        <td>${s.email}</td>
+        <td>${s.password_hash || ''}</td>
+        <td style="text-align:center;">
+          <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteStudents(['${s.id}'])">삭제</button>
+        </td>
+      `;
+      listUI.appendChild(tr);
+    });
+    
+    const selectAllChk = document.getElementById('chk-select-all-students');
+    if (selectAllChk) selectAllChk.checked = false;
+
+  } catch (err) {
+    console.error('Load approved students error:', err);
+  }
+}
+
+window.deleteStudents = async function(ids) {
+  if (!confirm(`선택한 ${ids.length}명의 학생을 삭제하시겠습니까?`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/users?ids=${ids.join(',')}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      alert('성공적으로 삭제되었습니다.');
+      loadApprovedStudents();
+    } else {
+      alert('삭제 처리 중 실패했습니다.');
+    }
+  } catch (err) {
+    console.error('Delete students error:', err);
   }
 };
 
