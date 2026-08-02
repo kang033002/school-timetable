@@ -219,6 +219,8 @@ teacherTitleSelect.addEventListener('change', () => {
     const name = document.getElementById('student-name').value;
     const grade = parseInt(document.getElementById('student-grade').value);
     const classNumber = parseInt(document.getElementById('student-class').value);
+    const email = document.getElementById('student-email').value;
+    const password = document.getElementById('student-password').value;
 
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
@@ -229,7 +231,9 @@ teacherTitleSelect.addEventListener('change', () => {
           role: 'STUDENT',
           name,
           grade,
-          classNumber
+          classNumber,
+          email,
+          password
         })
       });
       const data = await res.json();

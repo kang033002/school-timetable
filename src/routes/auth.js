@@ -123,8 +123,8 @@ router.post('/register', async (req, res) => {
   try {
     const { schoolId, email, password, name, teacherId, role, grade, classNumber } = req.body;
     
-    if (!schoolId || !name) {
-      return res.status(400).json({ error: 'School ID and Name are required' });
+    if (!schoolId || !name || !email || !password) {
+      return res.status(400).json({ error: 'School ID, Name, ID, and Password are required' });
     }
 
     let actualSchoolId = schoolId;
@@ -138,34 +138,29 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
+    if (existingUser) {
+      return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });
+    }
+
     const userId = `u-${Date.now()}`;
 
     if (role === 'STUDENT') {
       if (!grade || !classNumber) {
         return res.status(400).json({ error: 'Grade and Class number are required for student registration' });
       }
-      const studentEmail = `std_${actualSchoolId}_g${grade}c${classNumber}_${name}_${Date.now()}`;
       const displayName = `${name} (${grade}학년 ${classNumber}반 학생)`;
       
       await run(
         `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-         VALUES (?, ?, ?, 'student123', 'STUDENT', null, ?, 'PENDING')`,
-        [userId, actualSchoolId, studentEmail, displayName]
+         VALUES (?, ?, ?, ?, 'STUDENT', null, ?, 'PENDING')`,
+        [userId, actualSchoolId, email, password, displayName]
       );
       
       return res.status(201).json({ message: '학생 가입 신청 완료. 관리자 승인 대기 중.' });
     }
 
     // Teacher signup
-    if (!email || !password) {
-      return res.status(400).json({ error: 'ID and password are required for teacher' });
-    }
-
-    const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
-    if (existingUser) {
-      return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });
-    }
-
     await run(
       `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
        VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'PENDING')`,
