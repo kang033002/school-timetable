@@ -438,7 +438,7 @@ async function showDashboard() {
       if (tabBase) tabBase.style.display = 'inline-block';
       if (tabTeacher) {
         tabTeacher.style.display = 'inline-block';
-        tabTeacher.textContent = '👩‍🏫 교사 시간표 (교사별 주간 조회)';
+        tabTeacher.textContent = '👩‍🏫 교사 시간표';
       }
       if (tabGen) tabGen.style.display = 'inline-block';
       if (btnSettings) btnSettings.style.display = 'inline-block';
