@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { query, all, run } = require('../db/database');
+const { get, all, run } = require('../db/database');
 
 // ────────────────────────────────────────────────────────────────────────────
 // 그리디 + 백트래킹 시간표 자동 생성 알고리즘
 // ────────────────────────────────────────────────────────────────────────────
+// (generateTimetable 함수 등은 유지)
 function generateTimetable(assignments, maxPeriodsPerDay, operatingDays) {
   // schedule[gradeClassId][day][period] = { subjectId, teacherId }
   const schedule = {};
@@ -105,7 +106,7 @@ router.get('/data', async (req, res) => {
       `SELECT id, name FROM teachers WHERE school_id = ? ORDER BY name`,
       [schoolId]
     );
-    const school = await query(
+    const school = await get(
       `SELECT max_periods_per_day, operating_days FROM schools WHERE id = ?`,
       [schoolId]
     );
@@ -114,8 +115,8 @@ router.get('/data', async (req, res) => {
       classes,
       subjects,
       teachers,
-      maxPeriodsPerDay: Math.max(school.rows[0]?.max_periods_per_day || 10, 10),
-      operatingDays: school.rows[0]?.operating_days || 5
+      maxPeriodsPerDay: Math.max(school?.max_periods_per_day || 10, 10),
+      operatingDays: school?.operating_days || 5
     });
   } catch (err) {
     console.error('Generator data error:', err);
@@ -139,9 +140,9 @@ router.post('/generate', async (req, res) => {
     const subMap = Object.fromEntries(subjects.map(s => [s.id, s.name]));
     const tchMap = Object.fromEntries(teachers.map(t => [t.id, t.name]));
 
-    const school = await query(`SELECT max_periods_per_day, operating_days FROM schools WHERE id = ?`, [schoolId]);
-    const maxPeriodsPerDay = Math.max(school.rows[0]?.max_periods_per_day || 10, 10);
-    const operatingDays = school.rows[0]?.operating_days || 5;
+    const school = await get(`SELECT max_periods_per_day, operating_days FROM schools WHERE id = ?`, [schoolId]);
+    const maxPeriodsPerDay = Math.max(school?.max_periods_per_day || 10, 10);
+    const operatingDays = school?.operating_days || 5;
 
     // 과목명/교사명 주입
     const enrichedAssignments = assignments.map(gc => ({
