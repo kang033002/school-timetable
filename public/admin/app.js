@@ -361,8 +361,10 @@ function handleLogout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   currentUser = null;
+  window.sandboxChanges = [];
   dashboardScreen.classList.add('hidden');
   loginScreen.classList.remove('hidden');
+  location.reload();
 }
 
 // Show Dashboard
@@ -717,8 +719,41 @@ function toggleSettingsPanel() {
     settingsPanel.classList.remove('hidden');
     timetableDisplayContainer.classList.add('hidden');
     btnSettingsToggle.textContent = '📅 시간표 보기';
+    
+    const isTeacher = currentUser?.role === 'TEACHER';
+    const cardPending = document.getElementById('card-pending-approvals');
+    const cardTeacherSetup = document.getElementById('card-teacher-setup');
+    const cardClassSetup = document.getElementById('card-class-setup');
+    const cardApprovedStudents = document.getElementById('card-approved-students');
+    const cardTeacherMgmt = document.getElementById('card-teacher-management');
+    const cardClassMgmt = document.getElementById('card-class-management');
+    const cardAccount = document.getElementById('card-account-settings');
+    const cardHolidays = document.getElementById('card-holidays-manager');
+
+    if (isTeacher) {
+      if (cardPending) cardPending.style.display = 'block';
+      if (cardTeacherSetup) cardTeacherSetup.style.display = 'none';
+      if (cardClassSetup) cardClassSetup.style.display = 'none';
+      if (cardApprovedStudents) cardApprovedStudents.style.display = 'none';
+      if (cardTeacherMgmt) cardTeacherMgmt.style.display = 'none';
+      if (cardClassMgmt) cardClassMgmt.style.display = 'none';
+      if (cardAccount) cardAccount.style.display = 'none';
+      if (cardHolidays) cardHolidays.style.display = 'none';
+    } else {
+      if (cardPending) cardPending.style.display = 'block';
+      if (cardTeacherSetup) cardTeacherSetup.style.display = 'block';
+      if (cardClassSetup) cardClassSetup.style.display = 'block';
+      if (cardApprovedStudents) cardApprovedStudents.style.display = 'block';
+      if (cardTeacherMgmt) cardTeacherMgmt.style.display = 'block';
+      if (cardClassMgmt) cardClassMgmt.style.display = 'block';
+      if (cardAccount) cardAccount.style.display = 'block';
+      if (cardHolidays) cardHolidays.style.display = 'block';
+    }
+
     loadPendingUsers();
-    loadApprovedStudents();
+    if (!isTeacher) {
+      loadApprovedStudents();
+    }
   } else {
     settingsPanel.classList.add('hidden');
     timetableDisplayContainer.classList.remove('hidden');
@@ -976,6 +1011,30 @@ async function loadTimetable() {
 
     const res = await fetch(url);
     const data = await res.json();
+
+    // Patch data.timetable with window.sandboxChanges
+    if (window.sandboxChanges && window.sandboxChanges.length > 0) {
+      data.timetable = data.timetable.map(slot => {
+        const patch = window.sandboxChanges.find(p => 
+          parseInt(p.period) === parseInt(slot.period) &&
+          parseInt(p.dayOfWeek) === parseInt(slot.dayOfWeek) &&
+          (p.gradeClassId === slot.gradeClassId || String(p.gradeClassId) === String(slot.gradeClassId)) &&
+          p.targetDate === slot.targetDate
+        );
+        if (patch) {
+          return {
+            ...slot,
+            subjectId: patch.subjectId,
+            subjectName: patch.subjectName,
+            teacherId: patch.teacherId,
+            teacherName: patch.teacherName,
+            isChanged: true,
+            changeType: 'SUBSTITUTE'
+          };
+        }
+        return slot;
+      });
+    }
 
     weekDateSubtext.textContent = `기준주간 시작: ${data.mondayDate}`;
     renderGrid(data.timetable, mode);
@@ -1291,6 +1350,7 @@ async function handleApplyChange(e) {
   }
 
   // DAILY Tab Case
+  const isTeacher = currentUser?.role === 'TEACHER';
   const payload = {
     schoolId: currentUser.schoolId,
     targetDate: selectedSlotData.targetDate || new Date().toISOString().split('T')[0],
@@ -1300,9 +1360,10 @@ async function handleApplyChange(e) {
     changedTeacherId,
     changedSubjectId,
     changedRoomId: null,
-    reason: '일과계 시간표 조정',
+    reason: isTeacher ? '[교사 테스트] 시간표 모의 수업 교체' : '일과계 시간표 조정',
     createdBy: currentUser.name || '관리자',
-    force: false
+    force: false,
+    sandbox: isTeacher
   };
 
   try {
@@ -1327,7 +1388,28 @@ async function handleApplyChange(e) {
     }
 
     if (res.ok) {
-      alert('🎉 수업 변경/보강이 성공적으로 저장 및 적용되었습니다!');
+      if (isTeacher) {
+        window.sandboxChanges = window.sandboxChanges || [];
+        window.sandboxChanges = window.sandboxChanges.filter(p =>
+          !(parseInt(p.period) === parseInt(selectedSlotData.period) &&
+            parseInt(p.dayOfWeek) === parseInt(selectedSlotData.dayOfWeek) &&
+            String(p.gradeClassId) === String(selectedSlotData.gradeClassId) &&
+            p.targetDate === selectedSlotData.targetDate)
+        );
+        window.sandboxChanges.push({
+          gradeClassId: selectedSlotData.gradeClassId,
+          targetDate: selectedSlotData.targetDate,
+          dayOfWeek: selectedSlotData.dayOfWeek,
+          period: selectedSlotData.period,
+          subjectId: changedSubjectId,
+          subjectName: currentSchoolMeta.subjects.find(s => s.id === changedSubjectId)?.name || '',
+          teacherId: changedTeacherId,
+          teacherName: currentSchoolMeta.teachers.find(t => t.id === changedTeacherId)?.name || ''
+        });
+        alert('🎉 [시뮬레이션 모드] 시간표 변경이 임시 적용되었습니다! (서버 데이터에는 영향이 없으며, 로그아웃 또는 새로고침 시 원래대로 돌아갑니다)');
+      } else {
+        alert('🎉 수업 변경/보강이 성공적으로 저장 및 적용되었습니다!');
+      }
       if (changeModal) changeModal.classList.add('hidden');
       loadTimetable();
     } else {
@@ -1359,7 +1441,29 @@ document.getElementById('btn-force-ok').addEventListener('click', async () => {
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      alert(isBase ? '기본 시간표가 저장되었습니다.' : '시간표 변경이 적용되었습니다.');
+      if (currentUser?.role === 'TEACHER') {
+        window.sandboxChanges = window.sandboxChanges || [];
+        const dayVal = payload.dayOfWeek !== undefined ? payload.dayOfWeek : (new Date(payload.targetDate).getDay());
+        window.sandboxChanges = window.sandboxChanges.filter(p =>
+          !(parseInt(p.period) === parseInt(payload.period) &&
+            parseInt(p.dayOfWeek) === parseInt(dayVal) &&
+            String(p.gradeClassId) === String(payload.gradeClassId) &&
+            p.targetDate === payload.targetDate)
+        );
+        window.sandboxChanges.push({
+          gradeClassId: payload.gradeClassId,
+          targetDate: payload.targetDate,
+          dayOfWeek: dayVal,
+          period: payload.period,
+          subjectId: payload.changedSubjectId,
+          subjectName: currentSchoolMeta.subjects.find(s => s.id === payload.changedSubjectId)?.name || '',
+          teacherId: payload.changedTeacherId,
+          teacherName: currentSchoolMeta.teachers.find(t => t.id === payload.changedTeacherId)?.name || ''
+        });
+        alert('🎉 [시뮬레이션 모드] 충돌을 무시하고 임시 강제 적용되었습니다! (서버 데이터에는 영향이 없으며, 로그아웃 또는 새로고침 시 원래대로 돌아갑니다)');
+      } else {
+        alert(isBase ? '기본 시간표가 저장되었습니다.' : '시간표 변경이 적용되었습니다.');
+      }
       changeModal.classList.add('hidden');
       loadTimetable();
     } else {

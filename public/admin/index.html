@@ -157,7 +157,7 @@
           
           <div class="settings-grid">
             <!-- 1. Pending Approvals -->
-            <div class="settings-card">
+            <div class="settings-card" id="card-pending-approvals">
               <h4>👥 가입 승인 대기 목록</h4>
               <div class="table-responsive">
                 <table class="logs-table">
@@ -178,7 +178,7 @@
 
 
             <!-- 2. Teacher Edit -->
-            <div class="settings-card">
+            <div class="settings-card" id="card-teacher-setup">
               <h4>👩‍🏫 교사 등록</h4>
               <form id="teacher-setup-form">
                 <input type="hidden" id="teacher-edit-id">
@@ -203,7 +203,7 @@
             </div>
 
             <!-- 4. Class Setup -->
-            <div class="settings-card">
+            <div class="settings-card" id="card-class-setup">
               <h4>🏫 학년/학급 생성 및 담임 지정</h4>
               <form id="class-setup-form">
                 <div class="form-group">
@@ -223,7 +223,7 @@
             </div>
 
             <!-- 1.5 Approved Students List (Full Width) -->
-            <div class="settings-card" style="grid-column: 1 / -1;">
+            <div class="settings-card" id="card-approved-students" style="grid-column: 1 / -1;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h4 style="margin: 0;">🎓 가입 완료 학생 관리</h4>
                 <button class="btn btn-sm" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none;">선택 삭제</button>
@@ -249,7 +249,7 @@
             </div>
 
             <!-- 2.5 Teacher Management (Full Width) -->
-            <div class="settings-card" style="grid-column: 1 / -1;">
+            <div class="settings-card" id="card-teacher-management" style="grid-column: 1 / -1;">
               <h4 style="margin-bottom: 1rem;">👩‍🏫 교사 관리</h4>
               <div class="table-responsive">
                 <table class="logs-table">
@@ -270,7 +270,7 @@
             </div>
 
             <!-- 4.5 Class Management (Full Width) -->
-            <div class="settings-card" style="grid-column: 1 / -1;">
+            <div class="settings-card" id="card-class-management" style="grid-column: 1 / -1;">
               <h4 style="margin-bottom: 1rem;">🏫 학년/학급 생성 및 담임관리</h4>
               <div class="table-responsive">
                 <table class="logs-table">
@@ -290,7 +290,7 @@
             </div>
 
              <!-- 5. Account Settings -->
-            <div class="settings-card">
+            <div class="settings-card" id="card-account-settings">
               <h4>🔐 담당자 계정 정보 변경</h4>
               <form id="admin-credentials-form">
                 <div class="form-group">
@@ -306,7 +306,7 @@
             </div>
 
             <!-- 7. Holidays Manager -->
-            <div class="settings-card">
+            <div class="settings-card" id="card-holidays-manager">
               <h4>📅 학업 휴일 설정 및 등록 (휴업일)</h4>
               <form id="holiday-setup-form">
                 <div class="form-group">

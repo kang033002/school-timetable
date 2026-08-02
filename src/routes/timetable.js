@@ -514,7 +514,8 @@ router.post('/timetable/change', async (req, res) => {
       changedRoomId,
       reason,
       createdBy,
-      force
+      force,
+      sandbox
     } = req.body;
 
     if (!schoolId || !targetDate || !period || !gradeClassId || !changeType) {
@@ -569,6 +570,10 @@ router.post('/timetable/change', async (req, res) => {
       `SELECT * FROM base_timetable WHERE school_id = ? AND grade_class_id = ? AND day_of_week = ? AND period = ?`,
       [schoolId, gradeClassId, dayOfWeek, period]
     );
+
+    if (sandbox || String(sandbox) === 'true') {
+      return res.status(200).json({ message: 'Sandbox change validated successfully (No database write)', sandbox: true });
+    }
 
     const changeId = `chg-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
