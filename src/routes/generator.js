@@ -99,7 +99,7 @@ router.get('/data', async (req, res) => {
       [schoolId]
     );
     const subjects = await all(
-      `SELECT id, name FROM subjects WHERE school_id = ? ORDER BY name`,
+      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? GROUP BY name ORDER BY name`,
       [schoolId]
     );
     const teachers = await all(
