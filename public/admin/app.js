@@ -173,21 +173,33 @@ teacherTitleSelect.addEventListener('change', () => {
 
   // Student & School signup toggles
   const linkShowStudentSignup = document.getElementById('link-show-student-signup');
+  const linkShowTeacherSignup = document.getElementById('link-show-teacher-signup');
   const linkShowSchoolSignup = document.getElementById('link-show-school-signup');
   const studentSignupForm = document.getElementById('student-signup-form');
+  const teacherSignupFormPublic = document.getElementById('teacher-signup-form-public');
   const schoolSignupForm = document.getElementById('school-signup-form');
 
   linkShowStudentSignup?.addEventListener('click', (e) => {
     e.preventDefault();
     loginForm.classList.add('hidden');
     schoolSignupForm.classList.add('hidden');
+    teacherSignupFormPublic.classList.add('hidden');
     studentSignupForm.classList.remove('hidden');
+  });
+
+  linkShowTeacherSignup?.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    schoolSignupForm.classList.add('hidden');
+    studentSignupForm.classList.add('hidden');
+    teacherSignupFormPublic.classList.remove('hidden');
   });
 
   linkShowSchoolSignup?.addEventListener('click', (e) => {
     e.preventDefault();
     loginForm.classList.add('hidden');
     studentSignupForm.classList.add('hidden');
+    teacherSignupFormPublic.classList.add('hidden');
     schoolSignupForm.classList.remove('hidden');
   });
 
@@ -195,6 +207,7 @@ teacherTitleSelect.addEventListener('change', () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       studentSignupForm.classList.add('hidden');
+      teacherSignupFormPublic.classList.add('hidden');
       schoolSignupForm.classList.add('hidden');
       loginForm.classList.remove('hidden');
     });
@@ -221,6 +234,40 @@ teacherTitleSelect.addEventListener('change', () => {
         loginForm.classList.remove('hidden');
       } else {
         alert(data.error || '학교 등록 신청 실패');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('서버 통신 오류가 발생했습니다.');
+    }
+  });
+
+  // Teacher signup form submit
+  teacherSignupFormPublic?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('teacher-signup-name').value.trim();
+    const email = document.getElementById('teacher-signup-email').value.trim();
+    const password = document.getElementById('teacher-signup-password').value.trim();
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: 'sch-1',
+          role: 'TEACHER',
+          name,
+          email,
+          password
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('선생님 가입 신청이 완료되었습니다! 관리자 승인 대기 중입니다.');
+        teacherSignupFormPublic.reset();
+        teacherSignupFormPublic.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+      } else {
+        alert(data.error || '가입 신청 실패');
       }
     } catch (err) {
       console.error(err);
