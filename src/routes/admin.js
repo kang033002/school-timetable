@@ -92,10 +92,44 @@ router.post('/users/approve', async (req, res) => {
     const { userId, status } = req.body; // status: 'APPROVED' or 'REJECTED'
     if (!userId || !status) return res.status(400).json({ error: 'userId and status are required' });
 
+    // Fetch user account info first
+    const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User account not found' });
+    }
+
     await run(
       `UPDATE user_accounts SET status = ? WHERE id = ?`,
       [status, userId]
     );
+
+    // If teacher approval and status is APPROVED, link or auto-provision in teachers table
+    if (user.role === 'TEACHER' && status === 'APPROVED') {
+      // Check if a teacher with the same name already exists in this school
+      const existingTeacher = await get(
+        `SELECT * FROM teachers WHERE school_id = ? AND name = ?`,
+        [user.school_id, user.name]
+      );
+
+      if (existingTeacher) {
+        // Link user account to the existing teacher profile to avoid duplication
+        await run(
+          `UPDATE user_accounts SET teacher_id = ? WHERE id = ?`,
+          [existingTeacher.id, userId]
+        );
+      } else {
+        // Create new teacher record and link it
+        const newTeacherId = `tch-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        await run(
+          `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
+          [newTeacherId, user.school_id, user.name, '미지정']
+        );
+        await run(
+          `UPDATE user_accounts SET teacher_id = ? WHERE id = ?`,
+          [newTeacherId, userId]
+        );
+      }
+    }
 
     res.json({ message: `User account status updated to ${status}` });
   } catch (err) {
