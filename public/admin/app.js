@@ -609,18 +609,31 @@ async function loadApprovedStudents() {
     listUI.innerHTML = '';
 
     if (students.length === 0) {
-      listUI.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">가입된 학생이 없습니다.</td></tr>`;
+      listUI.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-sub);">가입된 학생이 없습니다.</td></tr>`;
       return;
     }
 
     students.forEach(s => {
+      const nameMatch = s.name.match(/^(.*?)\s*\((\d+)학년\s*(\d+)반\s*학생\)$/);
+      let actualName = s.name;
+      let grade = '-';
+      let classNum = '-';
+      if (nameMatch) {
+        actualName = nameMatch[1];
+        grade = nameMatch[2];
+        classNum = nameMatch[3];
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="text-align:center;"><input type="checkbox" class="chk-student" value="${s.id}"></td>
-        <td>${s.name}</td>
-        <td>${s.email}</td>
-        <td>${s.password_hash || ''}</td>
-        <td style="text-align:center;">
+        <td>${grade}</td>
+        <td>${classNum}</td>
+        <td>${actualName}</td>
+        <td><input type="text" class="form-input" id="student-email-${s.id}" value="${s.email}" style="padding: 4px; font-size: 0.9em;"></td>
+        <td><input type="text" class="form-input" id="student-pwd-${s.id}" value="${s.password_hash || ''}" style="padding: 4px; font-size: 0.9em;"></td>
+        <td style="text-align:center; white-space: nowrap;">
+          <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateStudent('${s.id}')">수정</button>
           <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteStudents(['${s.id}'])">삭제</button>
         </td>
       `;
@@ -634,6 +647,38 @@ async function loadApprovedStudents() {
     console.error('Load approved students error:', err);
   }
 }
+
+window.updateStudent = async function(userId) {
+  const emailElem = document.getElementById(`student-email-${userId}`);
+  const pwdElem = document.getElementById(`student-pwd-${userId}`);
+  
+  if (!emailElem || !pwdElem) return;
+  const email = emailElem.value.trim();
+  const password = pwdElem.value.trim();
+  
+  if (!email || !password) {
+    alert('아이디와 비밀번호를 모두 입력해주세요.');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('성공적으로 수정되었습니다.');
+      loadApprovedStudents();
+    } else {
+      alert(data.error || '수정 중 오류가 발생했습니다.');
+    }
+  } catch (err) {
+    console.error('Update student error:', err);
+    alert('수정 중 오류가 발생했습니다.');
+  }
+};
 
 window.deleteStudents = async function(ids) {
   if (!confirm(`선택한 ${ids.length}명의 학생을 삭제하시겠습니까?`)) return;

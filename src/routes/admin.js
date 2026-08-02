@@ -62,6 +62,30 @@ router.delete('/users', async (req, res) => {
   }
 });
 
+// 1.7 PUT /api/admin/users/:userId
+router.put('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+
+    // Check if email is already taken by another user
+    const existing = await get(`SELECT id FROM user_accounts WHERE email = ? AND id != ?`, [email, userId]);
+    if (existing) {
+      return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });
+    }
+
+    await run(
+      `UPDATE user_accounts SET email = ?, password_hash = ? WHERE id = ?`,
+      [email, password, userId]
+    );
+    res.json({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error('Update user error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 2. POST /api/admin/users/approve
 router.post('/users/approve', async (req, res) => {
   try {

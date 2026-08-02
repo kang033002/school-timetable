@@ -153,29 +153,7 @@
               </div>
             </div>
 
-            <!-- 1.5 Approved Students List -->
-            <div class="settings-card">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h4 style="margin: 0;">🎓 가입 완료 학생 관리</h4>
-                <button class="btn btn-sm" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none;">선택 삭제</button>
-              </div>
-              <div class="table-responsive">
-                <table class="logs-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-students"></th>
-                      <th>이름 (학급)</th>
-                      <th>아이디</th>
-                      <th>비밀번호</th>
-                      <th style="text-align: center;">작업</th>
-                    </tr>
-                  </thead>
-                  <tbody id="approved-students-list">
-                    <!-- Dynamic -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
+
 
             <!-- 2. Teacher Edit -->
             <div class="settings-card">
@@ -215,6 +193,32 @@
               </form>
               <div class="settings-list-container mt-3" id="admin-classes-list-ui">
                 <!-- Registered classes list will be populated here -->
+              </div>
+            </div>
+
+            <!-- 1.5 Approved Students List (Full Width) -->
+            <div class="settings-card" style="grid-column: 1 / -1;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0;">🎓 가입 완료 학생 관리</h4>
+                <button class="btn btn-sm" id="btn-delete-selected-students" style="background: var(--danger); color: white; border: none;">선택 삭제</button>
+              </div>
+              <div class="table-responsive">
+                <table class="logs-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-select-all-students"></th>
+                      <th>학년</th>
+                      <th>반</th>
+                      <th>이름</th>
+                      <th>아이디</th>
+                      <th>비밀번호</th>
+                      <th style="text-align: center;">작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="approved-students-list">
+                    <!-- Dynamic -->
+                  </tbody>
+                </table>
               </div>
             </div>
 
