@@ -2214,21 +2214,21 @@ document.querySelectorAll('.btn-main-reset').forEach(btn => {
 });
 
 window.openStudentMgmtOverlay = () => {
-  window.open('popup-students.html', 'student_mgmt', 'width=1000,height=600,scrollbars=yes,resizable=yes');
+  window.open('popup-students.html?v=' + Date.now(), 'student_mgmt', 'width=1000,height=650,scrollbars=yes,resizable=yes');
 };
 window.closeStudentMgmtOverlay = () => {
   const el = document.getElementById('overlay-student-mgmt');
   if (el) el.classList.add('hidden');
 };
 window.openTeacherMgmtOverlay = () => {
-  window.open('popup-teachers.html', 'teacher_mgmt', 'width=1200,height=700,scrollbars=yes,resizable=yes');
+  window.open('popup-teachers.html?v=' + Date.now(), 'teacher_mgmt', 'width=1200,height=700,scrollbars=yes,resizable=yes');
 };
 window.closeTeacherMgmtOverlay = () => {
   const el = document.getElementById('overlay-teacher-mgmt');
   if (el) el.classList.add('hidden');
 };
 window.openPendingApprovalsOverlay = () => {
-  window.open('popup-pending.html', 'pending_approvals', 'width=1000,height=600,scrollbars=yes,resizable=yes');
+  window.open('popup-pending.html?v=' + Date.now(), 'pending_approvals', 'width=1000,height=650,scrollbars=yes,resizable=yes');
 };
 window.closePendingApprovalsOverlay = () => {
   const el = document.getElementById('overlay-pending-approvals');
