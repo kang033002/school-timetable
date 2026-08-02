@@ -1162,13 +1162,41 @@ async function initGeneratorTab() {
     // 기본 빈 그리드 표출 (1~10교시)
     renderGenGrid(null);
 
-    const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
-    if (!res.ok) return;
-    generatorData = await res.json();
+    let classesList = [];
+    let subjectsList = [];
+    let teachersList = [];
 
-    const classesList = (generatorData?.classes?.length > 0)
-      ? generatorData.classes
-      : (currentSchoolMeta?.gradeClasses || []);
+    try {
+      const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
+      if (res.ok) {
+        generatorData = await res.json();
+        classesList = generatorData?.classes || [];
+        subjectsList = generatorData?.subjects || [];
+        teachersList = generatorData?.teachers || [];
+      }
+    } catch (e) {
+      console.warn('API fetch failed, fallback to currentSchoolMeta:', e);
+    }
+
+    if (!classesList.length && currentSchoolMeta?.gradeClasses) {
+      classesList = currentSchoolMeta.gradeClasses;
+    }
+    if (!subjectsList.length && currentSchoolMeta?.subjects) {
+      subjectsList = currentSchoolMeta.subjects;
+    }
+    if (!teachersList.length && currentSchoolMeta?.teachers) {
+      teachersList = currentSchoolMeta.teachers;
+    }
+
+    if (!generatorData) {
+      generatorData = {
+        classes: classesList,
+        subjects: subjectsList,
+        teachers: teachersList,
+        maxPeriodsPerDay: 10,
+        operatingDays: 5
+      };
+    }
 
     // ① 학급 선택 칩 버튼 목록 생성
     const classContainer = document.getElementById('gen-class-checkboxes');
