@@ -18,7 +18,6 @@ const classSelect = document.getElementById('class-select');
 const teacherSelect = document.getElementById('teacher-select');
 const datePicker = document.getElementById('date-picker');
 const btnRefresh = document.getElementById('btn-refresh');
-const btnLogs = document.getElementById('btn-logs');
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
 
 const timetableTitle = null; // 탭별로 동적으로 사용 (아래 loadTimetable 참조)
@@ -33,9 +32,6 @@ const pendingUsersList = document.getElementById('pending-users-list');
 const teacherSetupForm = document.getElementById('teacher-setup-form');
 const teacherSetupName = document.getElementById('teacher-setup-name');
 const teacherSetupSubject = document.getElementById('teacher-setup-subject');
-
-const subjectSetupForm = document.getElementById('subject-setup-form');
-const subjectSetupName = document.getElementById('subject-setup-name');
 
 const classSetupForm = document.getElementById('class-setup-form');
 const classSetupGrade = document.getElementById('class-setup-grade');
@@ -63,10 +59,6 @@ const changeTeacherSelect = document.getElementById('change-teacher-select');
 const conflictAlert = document.getElementById('conflict-alert');
 const conflictList = document.getElementById('conflict-list');
 let pendingForcePayload = null; // stores payload to retry with force=true
-
-const logsModal = document.getElementById('logs-modal');
-const btnLogsClose = document.getElementById('btn-logs-close');
-const logsBody = document.getElementById('logs-body');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -117,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
   switchTab('DAILY');
 
   teacherSetupForm.addEventListener('submit', handleTeacherSetup);
-  subjectSetupForm.addEventListener('submit', handleSubjectSetup);
   classSetupForm.addEventListener('submit', handleClassSetup);
   holidaySetupForm.addEventListener('submit', handleHolidaySetup);
 
@@ -153,9 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
   btnModalClose.addEventListener('click', () => changeModal.classList.add('hidden'));
   btnModalCancel.addEventListener('click', () => changeModal.classList.add('hidden'));
   changeForm.addEventListener('submit', handleApplyChange);
-
-  btnLogs.addEventListener('click', openLogsModal);
-  btnLogsClose.addEventListener('click', () => logsModal.classList.add('hidden'));
 
   // Student & School signup toggles
   const linkShowStudentSignup = document.getElementById('link-show-student-signup');
@@ -560,31 +548,6 @@ async function handleTeacherSetup(e) {
       await loadSchoolMetadata();
     } else {
       alert('선생님 등록 실패');
-    }
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-async function handleSubjectSetup(e) {
-  e.preventDefault();
-  const payload = {
-    schoolId: currentUser.schoolId,
-    name: subjectSetupName.value,
-    shortName: subjectSetupName.value
-  };
-  try {
-    const res = await fetch(`${API_BASE}/admin/subjects`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      alert('신규 과목이 성공적으로 생성되었습니다.');
-      subjectSetupForm.reset();
-      await loadSchoolMetadata();
-    } else {
-      alert('과목 생성 실패');
     }
   } catch (err) {
     console.error(err);
