@@ -232,6 +232,27 @@ router.post('/users/approve', async (req, res) => {
   }
 });
 
+// GET /api/admin/teachers
+router.get('/teachers', async (req, res) => {
+  try {
+    const { schoolId } = req.query;
+    if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+
+    const list = await all(
+      `SELECT t.*, u.email, u.password_hash as password_plain
+       FROM teachers t
+       LEFT JOIN user_accounts u ON u.teacher_id = t.id
+       WHERE t.school_id = ?
+       ORDER BY t.name`,
+      [schoolId]
+    );
+    res.json(list);
+  } catch (err) {
+    console.error('Fetch teachers error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 3. POST /api/admin/teachers (Create/Update teacher)
 router.post('/teachers', async (req, res) => {
   try {
