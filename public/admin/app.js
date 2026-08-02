@@ -2220,4 +2220,10 @@ window.openTeacherMgmtOverlay = () => {
 window.closeTeacherMgmtOverlay = () => {
   document.getElementById('overlay-teacher-mgmt').classList.add('hidden');
 };
+window.openPendingApprovalsOverlay = () => {
+  document.getElementById('overlay-pending-approvals').classList.remove('hidden');
+};
+window.closePendingApprovalsOverlay = () => {
+  document.getElementById('overlay-pending-approvals').classList.add('hidden');
+};
 
