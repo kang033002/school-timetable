@@ -314,9 +314,39 @@ async function showDashboard() {
     const userRoleElem = document.getElementById('user-role-badge');
     const navSchoolNameElem = document.getElementById('nav-school-name');
 
-    if (userNameElem) userNameElem.textContent = `${currentUser?.name || '사용자'}`;
-    if (userRoleElem) userRoleElem.textContent = currentUser?.role === 'ADMIN' ? '관리자(일과계)' : '교사';
-    if (navSchoolNameElem) navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 관리자 시스템`;
+    if (navSchoolNameElem) {
+      if (currentUser?.role === 'STUDENT') {
+        navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 학생 시간표`;
+      } else {
+        navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 관리자 시스템`;
+      }
+    }
+    
+    if (userRoleElem) {
+      if (currentUser?.role === 'STUDENT') {
+        userRoleElem.style.display = 'none';
+      } else {
+        userRoleElem.style.display = 'inline-block';
+        userRoleElem.textContent = currentUser?.role === 'ADMIN' ? '관리자(일과계)' : '교사';
+      }
+    }
+
+    const tabBase = document.getElementById('tab-btn-base');
+    const tabTeacher = document.getElementById('tab-btn-teacher');
+    const tabGen = document.getElementById('tab-btn-generator');
+    const btnSettings = document.getElementById('btn-settings-toggle');
+    
+    if (currentUser?.role === 'STUDENT') {
+      if (tabBase) tabBase.style.display = 'none';
+      if (tabTeacher) tabTeacher.style.display = 'none';
+      if (tabGen) tabGen.style.display = 'none';
+      if (btnSettings) btnSettings.style.display = 'none';
+    } else {
+      if (tabBase) tabBase.style.display = 'inline-block';
+      if (tabTeacher) tabTeacher.style.display = 'inline-block';
+      if (tabGen) tabGen.style.display = 'inline-block';
+      if (btnSettings) btnSettings.style.display = 'inline-block';
+    }
 
     // 1~10교시 그리드 즉시 항시 렌더링
     renderGrid([], 'CLASS');
@@ -344,7 +374,7 @@ async function loadSchoolMetadata() {
         const opt = document.createElement('option');
         opt.value = `${gc.grade}-${gc.class_number}`;
         opt.dataset.id = gc.id;
-        opt.textContent = `${gc.grade}학년 ${gc.class_number}반 (${gc.homeroom_teacher_name || '담임미정'})`;
+        opt.textContent = `${gc.grade}학년 ${gc.class_number}반 (${gc.homeroom_teacher_name ? gc.homeroom_teacher_name + ' 담임 선생님' : '담임미정'})`;
         classSelect.appendChild(opt);
       });
     }
@@ -653,7 +683,7 @@ async function loadTimetable() {
       if (activeTab === 'BASE') {
         if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
       } else {
-        if (titleElemDaily) titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 주간 시간표 (변동 내역 포함)`;
+        if (titleElemDaily) titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 일자별 시간표`;
       }
     }
 
