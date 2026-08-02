@@ -646,11 +646,7 @@ window.updateClassHomeroom = async function(classId, grade, classNumber) {
     alert('수정 중 오류 발생');
   }
 };
-    }
-  } catch (err) {
-    console.error(err);
-  }
-};
+
 
 window.deleteSubject = async function(id) {
   if (!confirm('정말로 이 과목을 삭제하시겠습니까? 관련 시간표 데이터가 소실되거나 초기화될 수 있습니다.')) return;
