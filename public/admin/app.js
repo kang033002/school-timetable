@@ -1248,35 +1248,81 @@ async function initGeneratorTab() {
     const subjectBody = document.getElementById('gen-subject-body');
     if (subjectBody) {
       subjectBody.innerHTML = '';
-      if (!generatorData.subjects || generatorData.subjects.length === 0) {
-        subjectBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:1rem; color:var(--text-sub);">[⚙️ 학교/교사 설정]에서 먼저 과목과 교사를 등록해주세요.</td></tr>';
-        return;
-      }
-      generatorData.subjects.forEach(sub => {
+      
+      window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = 3) {
         const tr = document.createElement('tr');
-        const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || '') === sub.name || (t.subjectName || '') === sub.name);
-        const teacherOptions = (generatorData.teachers || []).map(t => {
-          const isSelected = (matchingTeacher && matchingTeacher.id === t.id) ? 'selected' : '';
-          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님</option>`;
+        tr.className = 'gen-row';
+        
+        const subjectOptions = (generatorData.subjects || []).map(s => {
+          const isSelected = (s.id === defaultSubjectId) ? 'selected' : '';
+          return `<option value="${s.id}" ${isSelected}>${s.name}</option>`;
         }).join('');
         
-        const defaultHours = matchingTeacher && matchingTeacher.weekly_hours !== undefined && matchingTeacher.weekly_hours !== null ? matchingTeacher.weekly_hours : 3;
+        const teacherOptions = (generatorData.teachers || []).map(t => {
+          const isSelected = (t.id === defaultTeacherId) ? 'selected' : '';
+          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님</option>`;
+        }).join('');
 
         tr.innerHTML = `
-          <td><strong>📚 ${sub.name}</strong></td>
           <td>
-            <select class="form-select gen-teacher-select" data-subject-id="${sub.id}" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+            <select class="form-select gen-subject-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+              <option value="">-- 선택 --</option>
+              ${subjectOptions}
+            </select>
+          </td>
+          <td>
+            <select class="form-select gen-teacher-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+              <option value="">-- 선택 --</option>
               ${teacherOptions}
             </select>
           </td>
           <td>
-            <input type="number" class="form-input gen-hours-input" data-subject-id="${sub.id}"
-              min="0" max="10" value="${defaultHours}"
-              style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
+            <input type="number" class="form-input gen-hours-input" min="0" max="10" value="${defaultHours}" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
+          </td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-sm btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;" onclick="this.closest('tr').remove()">삭제</button>
           </td>
         `;
+        
+        // Auto-select teacher when subject changes
+        const subjSelect = tr.querySelector('.gen-subject-select');
+        subjSelect.addEventListener('change', (e) => {
+          const selectedSubjId = e.target.value;
+          const sub = (generatorData.subjects || []).find(s => s.id === selectedSubjId);
+          if (sub) {
+            const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || '') === sub.name || (t.subjectName || '') === sub.name);
+            if (matchingTeacher) {
+              const teachSelect = tr.querySelector('.gen-teacher-select');
+              teachSelect.value = matchingTeacher.id;
+              const hoursInput = tr.querySelector('.gen-hours-input');
+              hoursInput.value = matchingTeacher.weekly_hours || 3;
+            }
+          }
+        });
+
         subjectBody.appendChild(tr);
-      });
+      };
+
+      const btnAddRow = document.getElementById('btn-gen-add-row');
+      if (btnAddRow) {
+        const newBtn = btnAddRow.cloneNode(true);
+        btnAddRow.parentNode.replaceChild(newBtn, btnAddRow);
+        newBtn.addEventListener('click', () => window.addGenRow());
+      }
+
+      // Pre-populate rows based on teachers who have subjects assigned
+      const teachersWithSubjects = (generatorData.teachers || []).filter(t => t.subject_name || t.subjectName);
+      if (teachersWithSubjects.length === 0) {
+        window.addGenRow();
+      } else {
+        teachersWithSubjects.forEach(t => {
+          const subName = t.subject_name || t.subjectName;
+          const sub = (generatorData.subjects || []).find(s => s.name === subName);
+          if (sub) {
+            window.addGenRow(sub.id, t.id, t.weekly_hours || 3);
+          }
+        });
+      }
     }
 
   } catch (err) {
@@ -1315,13 +1361,18 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
   }
 
   const subjectsList = [];
-  document.querySelectorAll('.gen-hours-input').forEach(input => {
-    const subjectId = input.getAttribute('data-subject-id');
-    const weeklyHours = parseInt(input.value) || 0;
-    const teacherSel = document.querySelector(`.gen-teacher-select[data-subject-id="${subjectId}"]`);
-    const teacherId = teacherSel ? teacherSel.value : null;
-    if (weeklyHours > 0 && teacherId) {
-      subjectsList.push({ subjectId, teacherId, weeklyHours });
+  document.querySelectorAll('.gen-row').forEach(row => {
+    const subjectSel = row.querySelector('.gen-subject-select');
+    const teacherSel = row.querySelector('.gen-teacher-select');
+    const hoursInput = row.querySelector('.gen-hours-input');
+    
+    if (subjectSel && teacherSel && hoursInput) {
+      const subjectId = subjectSel.value;
+      const teacherId = teacherSel.value;
+      const weeklyHours = parseInt(hoursInput.value) || 0;
+      if (weeklyHours > 0 && subjectId && teacherId) {
+        subjectsList.push({ subjectId, teacherId, weeklyHours });
+      }
     }
   });
 
