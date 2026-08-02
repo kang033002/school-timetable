@@ -834,10 +834,12 @@ function renderGrid(weeklyData, mode) {
 
         if (slot && slot.isChanged) {
           td.classList.add('is-changed');
-          const badge = document.createElement('span');
-          badge.className = 'change-badge';
-          badge.textContent = slot.changeType === 'SUBSTITUTE' ? '변동' : '결강';
-          td.appendChild(badge);
+          if (currentUser?.role !== 'STUDENT') {
+            const badge = document.createElement('span');
+            badge.className = 'change-badge';
+            badge.textContent = slot.changeType === 'SUBSTITUTE' ? '변동' : '결강';
+            td.appendChild(badge);
+          }
         }
 
         // 수업 내용이 있거나(subjectName/gradeName), 변경/보강 이력이 있으면 표시
