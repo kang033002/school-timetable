@@ -832,7 +832,7 @@ function switchTab(tabName) {
     if (contentBase) contentBase.classList.remove('hidden');
     datePicker.parentElement.style.display = 'none';
     loadTimetable();
-    loadTeacherStats();
+
   } else if (tabName === 'DAILY') {
     if (tabBtnDaily) tabBtnDaily.classList.add('active');
     if (contentDaily) contentDaily.classList.remove('hidden');
@@ -849,53 +849,10 @@ function switchTab(tabName) {
     datePicker.parentElement.style.display = 'none';
     renderGrid([], 'CLASS');
     initGeneratorTab();
-    loadTeacherStats();
   }
 }
 
-// 교사별 시수 통계 불러오기
-async function loadTeacherStats() {
-  if (!currentUser || !currentUser.schoolId) return;
-  try {
-    const res = await fetch(`${API_BASE}/admin/teacher-stats?schoolId=${currentUser.schoolId}`);
-    if (!res.ok) return;
-    const stats = await res.json();
 
-    const statsBodyBase = document.getElementById('stats-body-base');
-    const statsBodyGen = document.getElementById('stats-body-gen');
-
-    const renderStatsRows = (targetBody) => {
-      if (!targetBody) return;
-      targetBody.innerHTML = '';
-      if (!stats || stats.length === 0) {
-        targetBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-sub);">등록된 기본 시간표 정보가 없습니다.</td></tr>';
-        return;
-      }
-
-      stats.forEach(st => {
-        const tr = document.createElement('tr');
-        
-        const classDetails = st.classes.map(c => `${c.grade}학년 ${c.classNumber}반(${c.subjectName} ${c.weeklyHours}시간)`).join(', ');
-        const monthlyEst = st.totalWeeklyHours * 4;
-        const isOverload = st.totalWeeklyHours > 20;
-
-        tr.innerHTML = `
-          <td><strong>👩‍🏫 ${st.teacherName}</strong></td>
-          <td style="font-size:0.88rem; color:var(--text-main);">${classDetails || '-'}</td>
-          <td><span class="badge ${isOverload ? 'badge-danger' : 'badge-primary'}">${st.totalWeeklyHours} 시간</span></td>
-          <td>약 ${monthlyEst} 시간</td>
-          <td>${isOverload ? '<span style="color:#ef4444; font-weight:600;">⚠️ 과다 시수</span>' : '<span style="color:#10b981; font-weight:600;">✅ 적정</span>'}</td>
-        `;
-        targetBody.appendChild(tr);
-      });
-    };
-
-    renderStatsRows(statsBodyBase);
-    renderStatsRows(statsBodyGen);
-  } catch (err) {
-    console.error('Load teacher stats error:', err);
-  }
-}
 
 function renderGrid(weeklyData, mode) {
   let targetBody = null;
@@ -1148,7 +1105,7 @@ async function handleApplyChange(e) {
         alert('🎉 학기 기본 시간표 수업 설정이 성공적으로 저장되었습니다!');
         if (changeModal) changeModal.classList.add('hidden');
         loadTimetable();
-        loadTeacherStats();
+
       } else {
         alert(data.error || '기본 시간표 저장 실패');
       }
@@ -1827,7 +1784,7 @@ document.getElementById('btn-apply-timetable')?.addEventListener('click', async 
       // 학기 기본 시간표 탭으로 이동 + 새로고침
       switchTab('BASE');
       loadTimetable();
-      loadTeacherStats();
+
     } else {
       alert(data.error || '시간표 적용 실패');
     }
