@@ -1328,39 +1328,86 @@ async function handleApplyChange(e) {
   const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
 
   if (activeTab === 'GENERATOR') {
-    if (!changedSubjectId || !changedTeacherId) {
-      alert('과목과 교사를 선택해주세요.');
-      return;
-    }
-    const subjectName = currentSchoolMeta?.subjects?.find(s => s.id === changedSubjectId)?.name || '';
-    const teacherName = currentSchoolMeta?.teachers?.find(t => t.id === changedTeacherId)?.name || '';
-    const gradeClassId = selectedSlotData.gradeClassId;
-    const dayOfWeek = selectedSlotData.dayOfWeek;
-    const period = selectedSlotData.period;
-
+    const { gradeClassId, dayOfWeek, period } = selectedSlotData;
+    if (!genClassMap) genClassMap = {};
     if (!genClassMap[gradeClassId]) genClassMap[gradeClassId] = {};
-    if (!genClassMap[gradeClassId][dayOfWeek]) genClassMap[gradeClassId][dayOfWeek] = {};
-    genClassMap[gradeClassId][dayOfWeek][period] = {
-      gradeClassId,
-      dayOfWeek,
-      period,
-      subjectId: changedSubjectId,
-      teacherId: changedTeacherId,
-      subjectName,
-      teacherName
-    };
 
-    const newSlot = { gradeClassId, dayOfWeek, period, subjectId: changedSubjectId, teacherId: changedTeacherId, subjectName, teacherName };
-    if (generatedResult) {
-      const idx = generatedResult.findIndex(r => r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period);
-      if (idx >= 0) generatedResult[idx] = newSlot;
-      else generatedResult.push(newSlot);
+    const subObj = (generatorData?.subjects || currentSchoolMeta?.subjects || []).find(s => s.id === changedSubjectId);
+    const tchObj = (generatorData?.teachers || currentSchoolMeta?.teachers || []).find(t => t.id === changedTeacherId);
+
+    const subjectName = subObj ? subObj.name : '';
+    const teacherName = tchObj ? tchObj.name : '';
+
+    if (!changedSubjectId || !changedTeacherId) {
+      if (genClassMap[gradeClassId]?.[dayOfWeek]) {
+        delete genClassMap[gradeClassId][dayOfWeek][period];
+      }
+      if (generatedResult) {
+        generatedResult = generatedResult.filter(r => !(r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period));
+      }
     } else {
-      generatedResult = [newSlot];
+      // 1. 교사 다른 학년/반 중복 배정 검사 (모든 학년/반 검사)
+      let teacherConflict = null;
+      Object.keys(genClassMap).forEach(gcId => {
+        if (gcId !== gradeClassId && genClassMap[gcId]?.[dayOfWeek]?.[period]) {
+          const otherSlot = genClassMap[gcId][dayOfWeek][period];
+          if (otherSlot.teacherId === changedTeacherId) {
+            const otherGc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
+            const otherGcName = otherGc ? `${otherGc.grade}학년 ${otherGc.class_number || otherGc.classNumber}반` : gcId;
+            const tchName = otherSlot.teacherName || teacherName || '해당 교사';
+            const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
+            teacherConflict = `❌ [교사 중복 배정 오류] ${tchName} 선생님은 ${daysKor[dayOfWeek]}요일 ${period}교시에 이미 [${otherGcName}] 수업에 배정되어 있습니다!`;
+          }
+        }
+      });
+
+      if (teacherConflict) {
+        if (conflictList) {
+          conflictList.innerHTML = `<li>${teacherConflict}</li>`;
+        }
+        if (conflictAlert) conflictAlert.classList.remove('hidden');
+        alert(teacherConflict);
+        return;
+      }
+
+      // 2. 동일 과목 하루 중복 연속배정 경고
+      let sameSubjToday = 0;
+      if (genClassMap[gradeClassId]?.[dayOfWeek]) {
+        Object.keys(genClassMap[gradeClassId][dayOfWeek]).forEach(p => {
+          if (parseInt(p) !== parseInt(period) && genClassMap[gradeClassId][dayOfWeek][p]?.subjectId === changedSubjectId) {
+            sameSubjToday++;
+          }
+        });
+      }
+      if (sameSubjToday >= 2) {
+        const warnMsg = `⚠️ [동일 과목 중복 경고] 하루에 [${subjectName}] 과목이 이미 2시간 이상 배정되어 있습니다. 추가 배치하시겠습니까?`;
+        if (!confirm(warnMsg)) return;
+      }
+
+      if (!genClassMap[gradeClassId][dayOfWeek]) genClassMap[gradeClassId][dayOfWeek] = {};
+      genClassMap[gradeClassId][dayOfWeek][period] = {
+        gradeClassId,
+        dayOfWeek,
+        period,
+        subjectId: changedSubjectId,
+        teacherId: changedTeacherId,
+        subjectName,
+        teacherName
+      };
+
+      const newSlot = { gradeClassId, dayOfWeek, period, subjectId: changedSubjectId, teacherId: changedTeacherId, subjectName, teacherName };
+      if (generatedResult) {
+        const idx = generatedResult.findIndex(r => r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period);
+        if (idx >= 0) generatedResult[idx] = newSlot;
+        else generatedResult.push(newSlot);
+      } else {
+        generatedResult = [newSlot];
+      }
     }
 
     if (changeModal) changeModal.classList.add('hidden');
-    renderGenGrid(genCurrentClassId);
+    const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+    renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
     return;
   }
 
@@ -2258,6 +2305,56 @@ function renderGenGrid(gradeClassId, maxPeriods) {
   const classMap = gradeClassId ? genClassMap[gradeClassId] : null;
   const gc = gradeClassId ? (generatorData?.classes || []).find(c => c.id === gradeClassId) : null;
 
+  // 시수 검증 알림바 렌더링
+  let hoursStatusContainer = document.getElementById('gen-hours-status-container');
+  if (!hoursStatusContainer) {
+    hoursStatusContainer = document.createElement('div');
+    hoursStatusContainer.id = 'gen-hours-status-container';
+    hoursStatusContainer.style.margin = '0.75rem 0';
+    hoursStatusContainer.style.fontSize = '0.85rem';
+    tbody.parentNode.parentNode.insertBefore(hoursStatusContainer, tbody.parentNode);
+  }
+
+  if (gradeClassId && window.genClassHoursMap?.[gradeClassId]) {
+    const targetHours = window.genClassHoursMap[gradeClassId];
+    const placedCounts = {};
+    if (classMap) {
+      Object.keys(classMap).forEach(d => {
+        Object.keys(classMap[d] || {}).forEach(p => {
+          const slot = classMap[d][p];
+          if (slot && slot.subjectId) {
+            placedCounts[slot.subjectId] = (placedCounts[slot.subjectId] || 0) + 1;
+          }
+        });
+      });
+    }
+
+    const statusBadges = targetHours.map(th => {
+      if (!th.subjectId || !th.hours) return '';
+      const target = parseInt(th.hours) || 0;
+      const placed = placedCounts[th.subjectId] || 0;
+      const subName = (generatorData?.subjects || []).find(s => s.id === th.subjectId)?.name || '과목';
+
+      if (placed === target) {
+        return `<span style="background:rgba(16, 185, 129, 0.12); color:#059669; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">✅ ${subName}: ${placed}/${target}시간 (완료)</span>`;
+      } else if (placed < target) {
+        return `<span style="background:rgba(239, 68, 68, 0.12); color:#dc2626; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${target - placed}시간 부족)</span>`;
+      } else {
+        return `<span style="background:rgba(245, 158, 11, 0.12); color:#d97706; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${placed - target}시간 초과)</span>`;
+      }
+    }).filter(Boolean);
+
+    const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : gradeClassId;
+    hoursStatusContainer.innerHTML = `
+      <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+        <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
+        ${statusBadges.join(' ')}
+      </div>
+    `;
+  } else {
+    hoursStatusContainer.innerHTML = '';
+  }
+
   for (let p = 1; p <= periods; p++) {
     const tr = document.createElement('tr');
     const th = document.createElement('th');
@@ -2289,7 +2386,7 @@ function renderGenGrid(gradeClassId, maxPeriods) {
       // 클릭 시 수동 수정 모달 열기 (BASE 탭과 동일한 모달 재사용)
       td.addEventListener('click', () => {
         if (!gradeClassId) {
-          alert('먼저 AI 생성을 실행하거나 학급을 선택해주세요.');
+          alert('먼저 학급을 선택해주세요.');
           return;
         }
         openGenCellModal(gradeClassId, d, p, slot, gc);
