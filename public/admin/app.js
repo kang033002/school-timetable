@@ -547,12 +547,10 @@ async function loadSchoolMetadata() {
       changeTeacherSelect.appendChild(opt);
     });
 
-    // Refresh pending requests & holidays if visible
-    if (!settingsPanel.classList.contains('hidden')) {
-      await loadPendingUsers();
-      loadApprovedStudents();
-      loadAdminClassesList();
-      loadAdminHolidaysList();
+    // Refresh pending requests if visible
+    if (settingsPanel && !settingsPanel.classList.contains('hidden')) {
+      try { await loadPendingUsers(); } catch(e){}
+      try { if (typeof loadApprovedStudents === 'function') loadApprovedStudents(); } catch(e){}
     }
 
     // Render Teachers Table
@@ -964,14 +962,19 @@ async function handleClassSetup(e) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert('학급 설정이 성공적으로 저장되었습니다.');
+      alert('🎉 학급 설정이 성공적으로 저장되었습니다.');
       classSetupForm.reset();
       await loadSchoolMetadata();
     } else {
-      alert(data.error || '학급 생성/수정 실패');
+      let errorMsg = data.error || '학급 생성/수정 실패';
+      if (typeof errorMsg === 'string' && errorMsg.includes('already exists')) {
+        errorMsg = '⚠️ 이미 개설된 학년/반입니다. 아래 [🏫 학년/학급 생성 및 담임 관리] 목록에서 확인 및 수정이 가능합니다.';
+      }
+      alert(errorMsg);
     }
   } catch (err) {
     console.error(err);
+    alert('서버 통신 오류가 발생했습니다.');
   }
 }
 
