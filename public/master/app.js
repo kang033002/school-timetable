@@ -150,13 +150,13 @@ async function loadSchools() {
 
       tr.innerHTML = `
         <td style="text-align: center;"><input type="checkbox" class="school-cb" value="${s.id}"></td>
-        <td>${s.id}</td>
+        <td style="white-space: nowrap;"><strong>${s.name}</strong></td>
+        <td><span style="font-size: 0.8em; color: var(--text-sub);">${s.id}</span></td>
         <td><input type="text" class="form-input" id="school-code-${s.id}" value="${s.code}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
-        <td><strong>${s.name}</strong> <span style="font-size: 0.8em; color: var(--text-sub);">${s.school_type || ''}</span></td>
         <td><input type="text" class="form-input" id="admin-username-${s.id}" value="${s.admin_username || ''}" style="padding: 4px; font-size: 0.85em; width: 140px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td><input type="text" class="form-input" id="admin-password-${s.id}" value="${s.admin_password || ''}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
-        <td>${statusBadge}</td>
-        <td class="action-cell">${updateBtn} ${actions} ${deleteBtn}</td>
+        <td style="white-space: nowrap;">${statusBadge}</td>
+        <td class="action-cell" style="white-space: nowrap;">${updateBtn} ${actions} ${deleteBtn}</td>
       `;
       schoolsListUi.appendChild(tr);
     });
