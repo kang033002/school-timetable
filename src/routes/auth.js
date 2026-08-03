@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { run, get } = require('../db/database');
+const { run, get, all } = require('../db/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'timetable-secret-key-2026';
 
@@ -93,9 +93,15 @@ router.post('/register-school', async (req, res) => {
     }
 
     const schoolId = `sch-${Date.now()}`;
-    const maxCodeRow = await get(`SELECT MAX(CAST(code AS INTEGER)) as maxCode FROM schools WHERE code GLOB '[0-9]*'`);
-    const nextCodeNum = (maxCodeRow && maxCodeRow.maxCode) ? maxCodeRow.maxCode + 1 : 1;
-    const schoolCode = nextCodeNum.toString();
+    const allSchools = await all(`SELECT code FROM schools`);
+    let maxCodeNum = 0;
+    for (const s of allSchools) {
+      if (s.code && /^[0-9]+$/.test(s.code)) {
+        const num = parseInt(s.code, 10);
+        if (num > maxCodeNum) maxCodeNum = num;
+      }
+    }
+    const schoolCode = (maxCodeNum + 1).toString();
     const adminId = `u-${Date.now()}`;
 
     // 1. Create PENDING school
