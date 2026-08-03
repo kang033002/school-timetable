@@ -566,11 +566,14 @@ async function loadSchoolMetadata() {
           const opt = document.createElement('option');
           opt.value = t.id;
           opt.textContent = `${t.name} (${t.subject_name || '과목'})`;
-          if (teacherSelect) teacherSelect.appendChild(opt);
+          
+          if (typeof teacherSelect !== 'undefined' && teacherSelect) {
+            teacherSelect.appendChild(opt);
+          }
 
           // Also copy to classSetupHomeroom dropdown
           const optHr = opt.cloneNode(true);
-          classSetupHomeroom.appendChild(optHr);
+          if (classSetupHomeroom) classSetupHomeroom.appendChild(optHr);
         });
       }
     }
@@ -1893,6 +1896,7 @@ async function initGeneratorTab() {
     window.renderCreatedClassBadges();
     buildPreviewChips(window.activeGenClassIds);
     
+    const btnAddClass = document.getElementById('btn-gen-add-class');
     if (btnAddClass) {
       const newBtnAddClass = btnAddClass.cloneNode(true);
       btnAddClass.parentNode.replaceChild(newBtnAddClass, btnAddClass);
