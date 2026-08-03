@@ -148,8 +148,8 @@ router.post('/schools/update-admin', async (req, res) => {
     }
 
     const existingEmail = await get(
-      `SELECT id FROM user_accounts WHERE email = ? AND id != ?`,
-      [adminUsername, adminAccount.id]
+      `SELECT id FROM user_accounts WHERE email = ? AND school_id = ? AND id != ?`,
+      [adminUsername, schoolId, adminAccount.id]
     );
     if (existingEmail) {
       return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });

@@ -16,21 +16,36 @@ router.post('/login', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    const user = await get(
-      `SELECT u.*, s.name as school_name, s.code as school_code 
-       FROM user_accounts u
-       LEFT JOIN schools s ON u.school_id = s.id
-       WHERE LOWER(TRIM(u.email)) = ?`,
-      [cleanEmail]
-    );
+    let query = `SELECT u.*, s.name as school_name, s.code as school_code 
+                 FROM user_accounts u
+                 LEFT JOIN schools s ON u.school_id = s.id
+                 WHERE LOWER(TRIM(u.email)) = ?`;
+    let params = [cleanEmail];
 
-    if (!user) {
-      return res.status(401).json({ error: '등록되지 않은 아이디(이메일)입니다.' });
+    if (req.body.schoolCode) {
+      query += ` AND (s.code = ? OR u.role = 'MASTER_ADMIN')`;
+      params.push(req.body.schoolCode.trim());
     }
 
-    if (user.password_hash !== cleanPassword && user.password_hash !== password) {
+    const users = await all(query, params);
+
+    if (users.length === 0) {
+      return res.status(401).json({ error: '등록되지 않은 아이디이거나 학교 코드가 다릅니다.' });
+    }
+
+    const validUsers = users.filter(u => u.password_hash === cleanPassword || u.password_hash === password);
+
+    if (validUsers.length === 0) {
       return res.status(401).json({ error: '비밀번호가 일치하지 않습니다.' });
     }
+
+    if (validUsers.length > 1) {
+      if (!req.body.schoolCode) {
+        return res.status(400).json({ error: '동일한 아이디와 비밀번호가 여러 학교에 존재합니다. 로그인 화면에서 [학교 코드]를 입력해주세요.' });
+      }
+    }
+
+    const user = validUsers[0];
 
     // Validate school approval status
     if (user.role !== 'MASTER_ADMIN') {
@@ -86,11 +101,8 @@ router.post('/register-school', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if school admin ID is already taken
-    const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [adminEmail]);
-    if (existingUser) {
-      return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });
-    }
+    // Global uniqueness for school admin ID is no longer required
+    // because school code at login can distinguish them.
 
     const schoolId = `sch-${Date.now()}`;
     const allSchools = await all(`SELECT code FROM schools`);
@@ -142,9 +154,9 @@ router.post('/register', async (req, res) => {
     }
     const actualSchoolId = schoolRow.id;
 
-    const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
+    const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ? AND school_id = ?`, [email, actualSchoolId]);
     if (existingUser) {
-      return res.status(400).json({ error: '이미 사용 중인 아이디입니다.' });
+      return res.status(400).json({ error: '해당 학교 내에 이미 사용 중인 아이디입니다.' });
     }
 
     const userId = `u-${Date.now()}`;

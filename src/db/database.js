@@ -1,4 +1,4 @@
-﻿const { Pool } = require('pg');
+const { Pool } = require('pg');
 
 // Use DATABASE_URL env var for PostgreSQL (Supabase)
 const pool = new Pool({
@@ -176,7 +176,7 @@ async function initSchema() {
     CREATE TABLE IF NOT EXISTS user_accounts (
       id TEXT PRIMARY KEY,
       school_id TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
+      email TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL,
       teacher_id TEXT,
@@ -194,8 +194,13 @@ async function initSchema() {
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS grade INTEGER`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS class_number INTEGER`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS subject_name TEXT`);
+    
+    // Change unique constraint to allow duplicate emails across different schools
+    await pool.query(`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS user_accounts_email_key`);
+    await pool.query(`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS user_accounts_school_id_email_key`);
+    await pool.query(`ALTER TABLE user_accounts ADD CONSTRAINT user_accounts_school_id_email_key UNIQUE (school_id, email)`);
   } catch (err) {
-    console.log('Altering user_accounts columns error or already exists:', err.message);
+    console.log('Altering user_accounts columns/constraints error or already exists:', err.message);
   }
 
   // 9. Holidays

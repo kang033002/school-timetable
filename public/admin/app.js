@@ -328,9 +328,11 @@ async function handleLogin(e) {
   e.preventDefault();
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
+  const schoolCodeInput = document.getElementById('login-school-code');
 
   const email = emailInput ? emailInput.value.trim() : '';
   const password = passwordInput ? passwordInput.value.trim() : '';
+  const schoolCode = schoolCodeInput ? schoolCodeInput.value.trim() : '';
 
   if (!email || !password) {
     alert('아이디(이메일)와 비밀번호를 모두 입력해주세요!');
@@ -341,7 +343,7 @@ async function handleLogin(e) {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, schoolCode })
     });
 
     const data = await res.json();
