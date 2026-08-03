@@ -1651,6 +1651,21 @@ async function initGeneratorTab() {
       };
     }
 
+    // 모든 등록된 교사의 과목명이 과목 선택 목록(subjects)에 100% 누락 없이 들어가도록 자동 융합
+    if (generatorData && generatorData.teachers && generatorData.subjects) {
+      const existingSubNames = new Set(generatorData.subjects.map(s => s.name));
+      generatorData.teachers.forEach(t => {
+        const subName = (t.subject_name || t.subjectName || '').trim();
+        if (subName && subName !== '미지정' && !existingSubNames.has(subName)) {
+          const newSub = { id: `sub-gen-${t.id}`, name: subName };
+          generatorData.subjects.push(newSub);
+          existingSubNames.add(subName);
+        }
+      });
+      // 과목명 순 정렬
+      generatorData.subjects.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    }
+
     // ① 학급 선택 - 드롭다운으로 추가 후 목록에서 선택
     const classListSelect = document.getElementById('gen-class-list-select');
     const btnAddClass = document.getElementById('btn-gen-add-class');
@@ -1756,7 +1771,7 @@ async function initGeneratorTab() {
         
         const teacherOptions = (generatorData.teachers || []).map(t => {
           const isSelected = (t.id === defaultTeacherId) ? 'selected' : '';
-          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님</option>`;
+          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`;
         }).join('');
 
         tr.innerHTML = `
@@ -1789,16 +1804,26 @@ async function initGeneratorTab() {
           const selectedSubjId = e.target.value;
           const sub = (generatorData.subjects || []).find(s => s.id === selectedSubjId);
           if (sub) {
-            const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || '') === sub.name || (t.subjectName || '') === sub.name);
+            const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || t.subjectName || '') === sub.name);
             if (matchingTeacher) {
               teachSelect.value = matchingTeacher.id;
-              hoursInput.value = '';
             }
           }
           window.saveGeneratorRowsState();
         });
 
-        teachSelect.addEventListener('change', window.saveGeneratorRowsState);
+        teachSelect.addEventListener('change', (e) => {
+          const selectedTeacherId = e.target.value;
+          const teacher = (generatorData.teachers || []).find(t => t.id === selectedTeacherId);
+          if (teacher) {
+            const subName = teacher.subject_name || teacher.subjectName;
+            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            if (sub) {
+              subjSelect.value = sub.id;
+            }
+          }
+          window.saveGeneratorRowsState();
+        });
         hoursInput.addEventListener('input', window.saveGeneratorRowsState);
         
         delBtn.addEventListener('click', () => {
@@ -1807,6 +1832,28 @@ async function initGeneratorTab() {
         });
 
         subjectBody.appendChild(tr);
+      };
+
+      window.syncGeneratorRows = function() {
+        if (!generatorData || !generatorData.teachers) return;
+        const currentTeacherIds = new Set();
+        document.querySelectorAll('.gen-row').forEach(row => {
+          const tVal = row.querySelector('.gen-teacher-select')?.value;
+          if (tVal) currentTeacherIds.add(tVal);
+        });
+
+        let addedCount = 0;
+        generatorData.teachers.forEach(t => {
+          if (!currentTeacherIds.has(t.id)) {
+            const subName = t.subject_name || t.subjectName;
+            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            window.addGenRow(sub ? sub.id : '', t.id, '');
+            addedCount++;
+          }
+        });
+        if (addedCount > 0) {
+          window.saveGeneratorRowsState();
+        }
       };
 
       const btnAddRow = document.getElementById('btn-gen-add-row');
