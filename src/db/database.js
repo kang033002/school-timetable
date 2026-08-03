@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+﻿const { Pool } = require('pg');
 
 // Use DATABASE_URL env var for PostgreSQL (Supabase)
 const pool = new Pool({
@@ -23,7 +23,7 @@ function convertParams(sql, params) {
   return { pgSql, params };
 }
 
-// run: execute INSERT/UPDATE/DELETE — returns { lastID, changes } for SQLite compatibility
+// run: execute INSERT/UPDATE/DELETE ??returns { lastID, changes } for SQLite compatibility
 async function run(sql, params = []) {
   const { pgSql, params: pgParams } = convertParams(sql, params);
   const result = await pool.query(pgSql, pgParams);
@@ -52,7 +52,7 @@ async function initSchema() {
       id TEXT PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
-      school_type TEXT DEFAULT '초등학교',
+      school_type TEXT DEFAULT '초등?�교',
       max_periods_per_day INTEGER DEFAULT 7,
       operating_days INTEGER DEFAULT 5,
       status TEXT DEFAULT 'PENDING'
@@ -61,7 +61,7 @@ async function initSchema() {
 
   // Add school_type column if it doesn't exist
   try {
-    await pool.query(`ALTER TABLE schools ADD COLUMN school_type TEXT DEFAULT '초등학교'`);
+    await pool.query(`ALTER TABLE schools ADD COLUMN school_type TEXT DEFAULT '초등?�교'`);
   } catch (e) {
     // Ignore if column already exists
   }
@@ -70,6 +70,8 @@ async function initSchema() {
   try {
     await pool.query(`DELETE FROM user_accounts WHERE status = 'REJECTED'`);
     await pool.query(`DELETE FROM schools WHERE status = 'REJECTED'`);
+    await pool.query(`DELETE FROM user_accounts WHERE role = 'TEACHER' AND teacher_id IS NULL`);
+    await pool.query(`DELETE FROM user_accounts WHERE email = 'k111'`);
   } catch (e) {
     console.error('Cleanup error:', e);
   }
@@ -88,7 +90,7 @@ async function initSchema() {
     )
   `);
 
-  // 3. GradeClasses (학년-반)
+  // 3. GradeClasses (?�년-�?
   await pool.query(`
     CREATE TABLE IF NOT EXISTS grade_classes (
       id TEXT PRIMARY KEY,
@@ -115,7 +117,7 @@ async function initSchema() {
 
 
 
-  // 5. Rooms (장소 / 특별실)
+  // 5. Rooms (?�소 / ?�별??
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY,
@@ -126,7 +128,7 @@ async function initSchema() {
     )
   `);
 
-  // 6. BaseTimetable (원본시간표)
+  // 6. BaseTimetable (?�본?�간??
   await pool.query(`
     CREATE TABLE IF NOT EXISTS base_timetable (
       id TEXT PRIMARY KEY,
@@ -146,7 +148,7 @@ async function initSchema() {
     )
   `);
 
-  // 7. TimetableChanges (시간표 변경 이력)
+  // 7. TimetableChanges (?�간??변�??�력)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS timetable_changes (
       id TEXT PRIMARY KEY,
@@ -208,7 +210,7 @@ async function initSchema() {
     )
   `);
 
-  // ── Seed master account if it doesn't exist ──────────────────────────────
+  // ?�?� Seed master account if it doesn't exist ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
   // Master admin system school
   const masterSchoolId = 'sch-system-master';
@@ -216,12 +218,12 @@ async function initSchema() {
   if (masterSchool.rows.length === 0) {
     await pool.query(
       `INSERT INTO schools (id, code, name, max_periods_per_day, operating_days, status)
-       VALUES ($1, 'SYS-MASTER', '시스템(마스터)', 9, 5, 'APPROVED')`,
+       VALUES ($1, 'SYS-MASTER', '?�스??마스??', 9, 5, 'APPROVED')`,
       [masterSchoolId]
     );
     await pool.query(
       `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-       VALUES ($1, $2, 'master', 'master123', 'MASTER_ADMIN', null, '마스터관리자', 'APPROVED')`,
+       VALUES ($1, $2, 'master', 'master123', 'MASTER_ADMIN', null, '마스?��?리자', 'APPROVED')`,
       ['u-master-001', masterSchoolId]
     );
     console.log('Default master account initialized.');
