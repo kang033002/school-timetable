@@ -52,11 +52,29 @@ async function initSchema() {
       id TEXT PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
+      school_type TEXT DEFAULT '초등학교',
       max_periods_per_day INTEGER DEFAULT 7,
       operating_days INTEGER DEFAULT 5,
       status TEXT DEFAULT 'PENDING'
     )
   `);
+
+  // Add school_type column if it doesn't exist
+  try {
+    await pool.query(`ALTER TABLE schools ADD COLUMN school_type TEXT DEFAULT '초등학교'`);
+  } catch (e) {
+    // Ignore if column already exists
+  }
+
+  // Cleanup old REJECTED users (One-time or idempotent cleanup)
+  try {
+    await pool.query(`DELETE FROM user_accounts WHERE status = 'REJECTED'`);
+    await pool.query(`DELETE FROM schools WHERE status = 'REJECTED'`);
+  } catch (e) {
+    console.error('Cleanup error:', e);
+  }
+
+
 
   // 2. Teachers
   await pool.query(`

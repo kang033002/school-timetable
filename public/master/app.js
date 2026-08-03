@@ -152,7 +152,7 @@ async function loadSchools() {
         <td style="text-align: center;"><input type="checkbox" class="school-cb" value="${s.id}"></td>
         <td>${s.id}</td>
         <td><code>${s.code}</code></td>
-        <td><strong>${s.name}</strong></td>
+        <td><strong>${s.name}</strong> <span style="font-size: 0.8em; color: var(--text-sub);">${s.school_type || ''}</span></td>
         <td><input type="text" class="form-input" id="admin-username-${s.id}" value="${s.admin_username || ''}" style="padding: 4px; font-size: 0.85em; width: 140px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td><input type="text" class="form-input" id="admin-password-${s.id}" value="${s.admin_password || ''}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td>${statusBadge}</td>
@@ -223,14 +223,13 @@ document.addEventListener('change', (e) => {
 
 function updateBatchDeleteBtn() {
   const checked = document.querySelectorAll('.school-cb:checked');
-  const btn = document.getElementById('btn-batch-delete');
-  if (!btn) return;
+  const btnSelected = document.getElementById('btn-delete-selected');
+  if (!btnSelected) return;
   
   if (checked.length > 0) {
-    btn.classList.remove('hidden');
-    btn.textContent = `선택 일괄 삭제 (${checked.length})`;
+    btnSelected.textContent = `선택 삭제 (${checked.length})`;
   } else {
-    btn.classList.add('hidden');
+    btnSelected.textContent = `선택 삭제`;
   }
   
   const allCb = document.querySelectorAll('.school-cb');
@@ -241,34 +240,63 @@ function updateBatchDeleteBtn() {
 }
 
 document.addEventListener('click', async (e) => {
-  if (e.target.id === 'btn-batch-delete') {
+  if (e.target.id === 'btn-delete-selected') {
     const checked = document.querySelectorAll('.school-cb:checked');
-    if (checked.length === 0) return;
+    if (checked.length === 0) {
+      alert('삭제할 학교를 선택해주세요.');
+      return;
+    }
 
-    if (!confirm(`정말로 선택한 ${checked.length}개의 학교를 삭제하시겠습니까? 연관된 모든 데이터가 영구적으로 삭제됩니다.`)) return;
+    if (!confirm(`선택한 ${checked.length}개의 학교를 삭제하시겠습니까? 모든 정보가 영구 삭제됩니다.`)) return;
 
     const schoolIds = Array.from(checked).map(cb => cb.value);
 
     try {
       const res = await fetch(`${API_BASE}/master/schools/batch-delete`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('master_token')}` },
         body: JSON.stringify({ schoolIds })
       });
-      const data = await res.json();
       if (res.ok) {
-        alert(data.message);
-        document.getElementById('check-all-schools').checked = false;
+        alert('선택한 학교가 삭제되었습니다.');
         loadSchools();
-        updateBatchDeleteBtn();
       } else {
+        const data = await res.json();
         alert(data.error || '삭제 실패');
       }
     } catch (err) {
       console.error(err);
+      alert('오류가 발생했습니다.');
+    }
+  }
+  
+  if (e.target.id === 'btn-delete-all') {
+    const allCb = document.querySelectorAll('.school-cb');
+    if (allCb.length === 0) {
+      alert('삭제할 학교가 없습니다.');
+      return;
+    }
+
+    if (!confirm(`정말 모든 학교(${allCb.length}개)를 삭제하시겠습니까? 모든 정보가 영구 삭제됩니다.`)) return;
+
+    const schoolIds = Array.from(allCb).map(cb => cb.value);
+
+    try {
+      const res = await fetch(`${API_BASE}/master/schools/batch-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('master_token')}` },
+        body: JSON.stringify({ schoolIds })
+      });
+      if (res.ok) {
+        alert('모든 학교가 삭제되었습니다.');
+        loadSchools();
+      } else {
+        const data = await res.json();
+        alert(data.error || '삭제 실패');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('오류가 발생했습니다.');
     }
   }
 });

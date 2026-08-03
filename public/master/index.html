@@ -154,12 +154,17 @@
           <p style="color: var(--text-sub); font-size: 0.85rem; margin-top: 0.25rem;">전체 가입 신청 학교 관리 및 승인 절차 제어</p>
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <button id="btn-batch-delete" class="btn btn-danger btn-sm hidden">선택 일괄 삭제</button>
           <button id="btn-logout" class="btn btn-danger btn-sm">마스터 로그아웃</button>
         </div>
       </div>
 
-      <h3 style="margin-bottom: 1rem;">🏫 가입 신청 학교 목록</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin-bottom: 0;">🏫 가입 신청 학교 목록</h3>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btn-delete-selected" class="btn btn-danger btn-sm">선택 삭제</button>
+          <button id="btn-delete-all" class="btn btn-danger btn-sm">전체 삭제</button>
+        </div>
+      </div>
       <table style="margin-bottom: 2rem;">
         <thead>
           <tr>

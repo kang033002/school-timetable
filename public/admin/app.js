@@ -222,6 +222,7 @@ teacherTitleSelect.addEventListener('change', () => {
   schoolSignupForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const schoolName = document.getElementById('school-signup-name').value.trim();
+    const schoolType = document.getElementById('school-signup-type').value;
     const adminEmail = document.getElementById('school-signup-email').value.trim();
     const adminPassword = document.getElementById('school-signup-password').value.trim();
 
@@ -229,7 +230,7 @@ teacherTitleSelect.addEventListener('change', () => {
       const res = await fetch(`${API_BASE}/auth/register-school`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolName, adminEmail, adminPassword })
+        body: JSON.stringify({ schoolName, schoolType, adminEmail, adminPassword })
       });
       const data = await res.json();
       if (res.ok) {

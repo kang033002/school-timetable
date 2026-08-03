@@ -80,15 +80,15 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/register-school (New School and Admin Account Registration Request)
 router.post('/register-school', async (req, res) => {
   try {
-    const { schoolName, adminEmail, adminPassword } = req.body;
-    if (!schoolName || !adminEmail || !adminPassword) {
+    const { schoolName, schoolType, adminEmail, adminPassword } = req.body;
+    if (!schoolName || !schoolType || !adminEmail || !adminPassword) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     // Check if school admin ID is already taken
     const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [adminEmail]);
     if (existingUser) {
-      return res.status(400).json({ error: '이미 존재하는 아이디입니다.' });
+      return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });
     }
 
     const schoolId = `sch-${Date.now()}`;
@@ -97,9 +97,9 @@ router.post('/register-school', async (req, res) => {
 
     // 1. Create PENDING school
     await run(
-      `INSERT INTO schools (id, code, name, max_periods_per_day, operating_days, status)
-       VALUES (?, ?, ?, 9, 5, 'PENDING')`,
-      [schoolId, schoolCode, schoolName]
+      `INSERT INTO schools (id, code, name, school_type, max_periods_per_day, operating_days, status)
+       VALUES (?, ?, ?, ?, 9, 5, 'PENDING')`,
+      [schoolId, schoolCode, schoolName, schoolType]
     );
 
     // 2. Create PENDING user account under that school (requires Master Approval)
