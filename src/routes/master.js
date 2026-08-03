@@ -118,8 +118,8 @@ router.post('/schools/batch-delete', async (req, res) => {
 // POST /api/master/schools/update-admin
 router.post('/schools/update-admin', async (req, res) => {
   try {
-    const { schoolId, adminUsername, adminPassword } = req.body;
-    if (!schoolId || !adminUsername || !adminPassword) {
+    const { schoolId, adminUsername, adminPassword, schoolCode } = req.body;
+    if (!schoolId || !adminUsername || !adminPassword || !schoolCode) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -132,13 +132,26 @@ router.post('/schools/update-admin', async (req, res) => {
       return res.status(404).json({ error: 'School admin account not found' });
     }
 
-    const existing = await get(
+    const existingEmail = await get(
       `SELECT id FROM user_accounts WHERE email = ? AND id != ?`,
       [adminUsername, adminAccount.id]
     );
-    if (existing) {
+    if (existingEmail) {
       return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });
     }
+
+    const existingCode = await get(
+      `SELECT id FROM schools WHERE code = ? AND id != ?`,
+      [schoolCode, schoolId]
+    );
+    if (existingCode) {
+      return res.status(400).json({ error: '이미 사용중인 학교 코드입니다. 다른 코드를 입력해주세요.' });
+    }
+
+    await run(
+      `UPDATE schools SET code = ? WHERE id = ?`,
+      [schoolCode, schoolId]
+    );
 
     await run(
       `UPDATE user_accounts SET email = ?, password_hash = ? WHERE id = ?`,

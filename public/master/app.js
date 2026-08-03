@@ -151,7 +151,7 @@ async function loadSchools() {
       tr.innerHTML = `
         <td style="text-align: center;"><input type="checkbox" class="school-cb" value="${s.id}"></td>
         <td>${s.id}</td>
-        <td><code>${s.code}</code></td>
+        <td><input type="text" class="form-input" id="school-code-${s.id}" value="${s.code}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td><strong>${s.name}</strong> <span style="font-size: 0.8em; color: var(--text-sub);">${s.school_type || ''}</span></td>
         <td><input type="text" class="form-input" id="admin-username-${s.id}" value="${s.admin_username || ''}" style="padding: 4px; font-size: 0.85em; width: 140px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
         <td><input type="text" class="form-input" id="admin-password-${s.id}" value="${s.admin_password || ''}" style="padding: 4px; font-size: 0.85em; width: 100px; background: rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-color); border-radius: 4px;"></td>
@@ -304,9 +304,10 @@ document.addEventListener('click', async (e) => {
 window.updateSchoolAdmin = async function(schoolId) {
   const adminUsername = document.getElementById(`admin-username-${schoolId}`).value.trim();
   const adminPassword = document.getElementById(`admin-password-${schoolId}`).value.trim();
+  const schoolCode = document.getElementById(`school-code-${schoolId}`).value.trim();
 
-  if (!adminUsername || !adminPassword) {
-    alert('관리자 ID와 비밀번호를 모두 입력해주세요.');
+  if (!adminUsername || !adminPassword || !schoolCode) {
+    alert('학교 코드, 관리자 ID, 비밀번호를 모두 입력해주세요.');
     return;
   }
 
@@ -317,7 +318,7 @@ window.updateSchoolAdmin = async function(schoolId) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ schoolId, adminUsername, adminPassword })
+      body: JSON.stringify({ schoolId, adminUsername, adminPassword, schoolCode })
     });
     const data = await res.json();
     if (res.ok) {
