@@ -1207,6 +1207,46 @@ function renderGrid(weeklyData, mode) {
 }
 
 // Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
+function populateModalDropdowns(slot) {
+  const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
+  const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
+
+  if (changeSubjectSelect) {
+    changeSubjectSelect.innerHTML = '<option value="">-- 과목 선택 (삭제 시 빈값) --</option>' +
+      subs.map(s => `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+  }
+  if (changeTeacherSelect) {
+    changeTeacherSelect.innerHTML = '<option value="">-- 교사 선택 --</option>' +
+      tchs.map(t => `<option value="${t.id}" ${slot?.teacherId === t.id ? 'selected' : ''}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`).join('');
+  }
+}
+
+// 모달 드롭다운 양방향 자동 연결
+if (changeSubjectSelect && changeTeacherSelect) {
+  changeSubjectSelect.addEventListener('change', (e) => {
+    const selectedSubjId = e.target.value;
+    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
+    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
+    const sub = subs.find(s => s.id === selectedSubjId);
+    if (sub) {
+      const match = tchs.find(t => (t.subject_name || t.subjectName || '') === sub.name);
+      if (match) changeTeacherSelect.value = match.id;
+    }
+  });
+
+  changeTeacherSelect.addEventListener('change', (e) => {
+    const selectedTchId = e.target.value;
+    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
+    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
+    const tch = tchs.find(t => t.id === selectedTchId);
+    if (tch) {
+      const subName = tch.subject_name || tch.subjectName;
+      const sub = subs.find(s => s.name === subName);
+      if (sub) changeSubjectSelect.value = sub.id;
+    }
+  });
+}
+
 function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   if (currentUser?.role === 'STUDENT') {
     return;
@@ -1254,6 +1294,9 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   // Reset form
   if (conflictAlert) conflictAlert.classList.add('hidden');
   pendingForcePayload = null;
+
+  // 과목/교사 드롭다운 채우기
+  populateModalDropdowns(slot);
 
   // Show Modal
   if (changeModal) changeModal.classList.remove('hidden');
@@ -2234,17 +2277,8 @@ function openGenCellModal(gradeClassId, dayOfWeek, period, slot, gc) {
   if (conflictAlert) conflictAlert.classList.add('hidden');
   pendingForcePayload = null;
 
-  // 과목/교사 셀렉트 채우기 (currentSchoolMeta 사용)
-  if (changeSubjectSelect && currentSchoolMeta?.subjects) {
-    changeSubjectSelect.innerHTML = currentSchoolMeta.subjects.map(s =>
-      `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`
-    ).join('');
-  }
-  if (changeTeacherSelect && currentSchoolMeta?.teachers) {
-    changeTeacherSelect.innerHTML = currentSchoolMeta.teachers.map(t =>
-      `<option value="${t.id}" ${slot?.teacherId === t.id ? 'selected' : ''}>${t.name} 선생님</option>`
-    ).join('');
-  }
+  // 과목/교사 셀렉트 채우기
+  populateModalDropdowns(slot);
 
   // selectedSlotData 및 activeTab 바인딩
   activeTab = 'GENERATOR';
