@@ -481,7 +481,7 @@ async function loadSchoolMetadata() {
     if (!res.ok) return;
     currentSchoolMeta = await res.json();
 
-    if (currentSchoolMeta && currentSchoolMeta.gradeClasses) {
+    if (currentSchoolMeta && currentSchoolMeta.gradeClasses && classSelect) {
       // Populate Class Select
       classSelect.innerHTML = '';
       currentSchoolMeta.gradeClasses.forEach(gc => {
@@ -494,58 +494,70 @@ async function loadSchoolMetadata() {
     }
 
     // Populate Teacher Title Dropdown
-    teacherTitleSelect.innerHTML = '';
-    const defTeacherOpt = document.createElement('option');
-    defTeacherOpt.value = '';
-    defTeacherOpt.textContent = '교사 선택';
-    teacherTitleSelect.appendChild(defTeacherOpt);
+    if (teacherTitleSelect) {
+      teacherTitleSelect.innerHTML = '';
+      const defTeacherOpt = document.createElement('option');
+      defTeacherOpt.value = '';
+      defTeacherOpt.textContent = '교사 선택';
+      teacherTitleSelect.appendChild(defTeacherOpt);
 
-    currentSchoolMeta.teachers.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = `${t.name} (${t.subject_name || t.subjectName})`;
-      teacherTitleSelect.appendChild(opt);
-    });
+      if (currentSchoolMeta.teachers) {
+        currentSchoolMeta.teachers.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = `${t.name} (${t.subject_name || t.subjectName})`;
+          teacherTitleSelect.appendChild(opt);
+        });
+      }
 
-    if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-      teacherTitleSelect.value = currentUser.teacherId;
+      if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
+        teacherTitleSelect.value = currentUser.teacherId;
+      }
     }
 
-    classSetupHomeroom.innerHTML = '';
-    
-    // Add default empty option for homeroom selection
-    const optNone = document.createElement('option');
-    optNone.value = '';
-    optNone.textContent = '담임 없음';
-    classSetupHomeroom.appendChild(optNone);
+    if (classSetupHomeroom) {
+      classSetupHomeroom.innerHTML = '';
+      
+      // Add default empty option for homeroom selection
+      const optNone = document.createElement('option');
+      optNone.value = '';
+      optNone.textContent = '담임 없음';
+      classSetupHomeroom.appendChild(optNone);
 
-    currentSchoolMeta.teachers.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = `${t.name} (${t.subject_name || '과목'})`;
-      teacherSelect.appendChild(opt);
+      if (currentSchoolMeta.teachers) {
+        currentSchoolMeta.teachers.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = `${t.name} (${t.subject_name || '과목'})`;
+          if (teacherSelect) teacherSelect.appendChild(opt);
 
-      // Also copy to classSetupHomeroom dropdown
-      const optHr = opt.cloneNode(true);
-      classSetupHomeroom.appendChild(optHr);
-    });
+          // Also copy to classSetupHomeroom dropdown
+          const optHr = opt.cloneNode(true);
+          classSetupHomeroom.appendChild(optHr);
+        });
+      }
+    }
 
     // Populate Modal Selects
-    changeSubjectSelect.innerHTML = '';
-    currentSchoolMeta.subjects.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.name;
-      changeSubjectSelect.appendChild(opt);
-    });
+    if (changeSubjectSelect && currentSchoolMeta.subjects) {
+      changeSubjectSelect.innerHTML = '';
+      currentSchoolMeta.subjects.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        changeSubjectSelect.appendChild(opt);
+      });
+    }
 
-    changeTeacherSelect.innerHTML = '';
-    currentSchoolMeta.teachers.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = `${t.name} (${t.subject_name || ''})`;
-      changeTeacherSelect.appendChild(opt);
-    });
+    if (changeTeacherSelect && currentSchoolMeta.teachers) {
+      changeTeacherSelect.innerHTML = '';
+      currentSchoolMeta.teachers.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = `${t.name} (${t.subject_name || ''})`;
+        changeTeacherSelect.appendChild(opt);
+      });
+    }
 
     // Refresh pending requests if visible
     if (settingsPanel && !settingsPanel.classList.contains('hidden')) {
