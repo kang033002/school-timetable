@@ -7,12 +7,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #0b0f19;
-      --card-bg: #151d30;
-      --text-color: #e2e8f0;
-      --text-sub: #94a3b8;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --text-sub: #64748b;
       --primary-color: #3b82f6;
-      --border-color: rgba(255, 255, 255, 0.08);
+      --border-color: #e2e8f0;
       --success-color: #10b981;
       --danger-color: #ef4444;
     }
@@ -49,7 +49,7 @@
     .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-sub); }
     .form-input {
       width: 100%;
-      background: rgba(0, 0, 0, 0.2);
+      background: #f1f5f9;
       border: 1px solid var(--border-color);
       padding: 0.75rem 1rem;
       border-radius: 8px;
@@ -76,12 +76,13 @@
     /* Dashboard */
     .dashboard-container {
       width: 100%;
-      max-width: 1000px;
+      max-width: 1300px;
+      overflow-x: auto;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
       margin: 2rem;
     }
     .dashboard-header {
