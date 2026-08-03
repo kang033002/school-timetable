@@ -2302,6 +2302,41 @@ document.addEventListener('change', (e) => {
 
 function buildPreviewChips(classIds) {
   const container = document.getElementById('gen-preview-chips');
+  const targetDropdown = document.getElementById('gen-target-class-dropdown');
+
+  if (targetDropdown) {
+    if (!classIds || classIds.length === 0) {
+      targetDropdown.innerHTML = '<option value="">-- 학급 선택 --</option>';
+    } else {
+      targetDropdown.innerHTML = classIds.map(gcId => {
+        const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
+        const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber || ''}반` : gcId;
+        return `<option value="${gcId}" ${gcId === genCurrentClassId ? 'selected' : ''}>${gcName}</option>`;
+      }).join('');
+    }
+
+    if (!targetDropdown.dataset.bound) {
+      targetDropdown.dataset.bound = 'true';
+      targetDropdown.addEventListener('change', (e) => {
+        const selectedGcId = e.target.value;
+        if (!selectedGcId) return;
+        if (window.saveCurrentClassHours && genCurrentClassId) {
+          window.saveCurrentClassHours(genCurrentClassId);
+        }
+        genCurrentClassId = selectedGcId;
+        if (window.loadClassHours) {
+          window.loadClassHours(selectedGcId);
+        }
+        document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => {
+          if (c.dataset.classId === selectedGcId) c.classList.add('active');
+          else c.classList.remove('active');
+        });
+        const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      });
+    }
+  }
+
   if (!container) return;
   container.innerHTML = '';
   
@@ -2325,6 +2360,7 @@ function buildPreviewChips(classIds) {
       document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       genCurrentClassId = gcId;
+      if (targetDropdown) targetDropdown.value = gcId;
       if (window.loadClassHours) {
         window.loadClassHours(gcId);
       }
