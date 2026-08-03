@@ -438,10 +438,10 @@
                   <button type="button" id="btn-gen-add-class" class="btn btn-primary" style="padding:0.4rem 1rem;">생성</button>
                   <button type="button" id="btn-gen-delete-class" class="btn" style="padding:0.4rem 1rem; background-color:#ef4444; color:white; border:none; transition: all 0.2s;">삭제</button>
                 </div>
-                <select id="gen-class-list-select" class="form-select" style="width:100%; font-size:0.95rem; font-weight:600;">
-                  <option value="">-- 학급을 선택하세요 --</option>
-                  <!-- 생성된 학급들이 여기에 추가됩니다 -->
-                </select>
+                <div id="gen-class-list-box" style="width:100%; min-height:48px; background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>
+                </div>
+                <select id="gen-class-list-select" class="hidden"></select>
               </div>
 
               <!-- ③ 자동 생성 실행 -->
