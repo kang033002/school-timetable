@@ -380,6 +380,9 @@ async function showDashboard() {
     loginScreen?.classList.add('hidden');
     dashboardScreen?.classList.remove('hidden');
 
+    const contactBox = document.getElementById('login-contact-box');
+    if (contactBox) contactBox.style.display = 'none';
+
     const userNameElem = document.getElementById('user-name-display');
     const userRoleElem = document.getElementById('user-role-badge');
     const navSchoolNameElem = document.getElementById('nav-school-name');
