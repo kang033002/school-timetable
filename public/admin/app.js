@@ -2250,6 +2250,48 @@ document.getElementById('btn-regen')?.addEventListener('click', () => {
   document.getElementById('btn-generate')?.click();
 });
 
+// 해당 학급 초기화
+document.getElementById('btn-reset-current-class')?.addEventListener('click', () => {
+  if (!genCurrentClassId) {
+    alert('초기화할 학급이 선택되지 않았습니다.');
+    return;
+  }
+  const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === genCurrentClassId);
+  const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : '선택된 학급';
+
+  if (!confirm(`⚠️ [${gcName}] 의 시간표 데이터를 초기화하시겠습니까?\n다른 학급의 시간표는 유지되고 현재 선택된 학급만 초기화됩니다.`)) return;
+
+  if (genClassMap && genClassMap[genCurrentClassId]) {
+    delete genClassMap[genCurrentClassId];
+  }
+  if (generatedResult) {
+    generatedResult = generatedResult.filter(r => r.gradeClassId !== genCurrentClassId);
+  }
+
+  localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+  localStorage.setItem('genResult', JSON.stringify(generatedResult));
+
+  const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+  renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+  alert(`🗑️ [${gcName}] 시간표가 초기화되었습니다.`);
+});
+
+// 전체 학년/반 초기화
+document.getElementById('btn-reset-all-classes')?.addEventListener('click', () => {
+  if (!confirm('⚠️ 경고: 전체 학년 및 학급의 미리보기 시간표 데이터를 모두 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+
+  genClassMap = {};
+  generatedResult = [];
+
+  localStorage.removeItem('genSelectedClassIds');
+  localStorage.removeItem('genClassMap');
+  localStorage.removeItem('genResult');
+
+  const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+  renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+  alert('🗑️ 전체 학년/반의 시간표 데이터가 완전히 초기화되었습니다.');
+});
+
 // 버튼 클릭시 칩 변경 로직은 buildPreviewChips 내부에 포함됨
 document.addEventListener('change', (e) => {
   if (e.target?.id === 'gen-max-period-select') {
@@ -2329,28 +2371,39 @@ function renderGenGrid(gradeClassId, maxPeriods) {
       });
     }
 
-    const statusBadges = targetHours.map(th => {
-      if (!th.subjectId || !th.hours) return '';
-      const target = parseInt(th.hours) || 0;
-      const placed = placedCounts[th.subjectId] || 0;
-      const subName = (generatorData?.subjects || []).find(s => s.id === th.subjectId)?.name || '과목';
-
-      if (placed === target) {
-        return `<span style="background:rgba(16, 185, 129, 0.12); color:#059669; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">✅ ${subName}: ${placed}/${target}시간 (완료)</span>`;
-      } else if (placed < target) {
-        return `<span style="background:rgba(239, 68, 68, 0.12); color:#dc2626; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${target - placed}시간 부족)</span>`;
-      } else {
-        return `<span style="background:rgba(245, 158, 11, 0.12); color:#d97706; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${placed - target}시간 초과)</span>`;
-      }
-    }).filter(Boolean);
-
+    const totalPlacedCount = Object.values(placedCounts).reduce((a, b) => a + b, 0);
     const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : gradeClassId;
-    hoursStatusContainer.innerHTML = `
-      <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-        <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
-        ${statusBadges.join(' ')}
-      </div>
-    `;
+
+    if (totalPlacedCount === 0) {
+      hoursStatusContainer.innerHTML = `
+        <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+          <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
+          <span style="color:var(--text-sub); font-size:0.85rem; font-weight:600;">시간표 배치 전(초기화 상태)입니다. [시간표 자동 생성] 또는 셀을 눌러 수동 배치하세요.</span>
+        </div>
+      `;
+    } else {
+      const statusBadges = targetHours.map(th => {
+        if (!th.subjectId || !th.hours) return '';
+        const target = parseInt(th.hours) || 0;
+        const placed = placedCounts[th.subjectId] || 0;
+        const subName = (generatorData?.subjects || []).find(s => s.id === th.subjectId)?.name || '과목';
+
+        if (placed === target) {
+          return `<span style="background:rgba(16, 185, 129, 0.12); color:#059669; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">✅ ${subName}: ${placed}/${target}시간 (완료)</span>`;
+        } else if (placed < target) {
+          return `<span style="background:rgba(239, 68, 68, 0.12); color:#dc2626; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${target - placed}시간 부족)</span>`;
+        } else {
+          return `<span style="background:rgba(245, 158, 11, 0.12); color:#d97706; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${placed - target}시간 초과)</span>`;
+        }
+      }).filter(Boolean);
+
+      hoursStatusContainer.innerHTML = `
+        <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+          <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
+          ${statusBadges.join(' ')}
+        </div>
+      `;
+    }
   } else {
     hoursStatusContainer.innerHTML = '';
   }
