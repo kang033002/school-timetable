@@ -473,6 +473,43 @@ async function showDashboard() {
   }
 }
 
+// Render Classes Table
+function renderAdminClassesTable() {
+  const cTableBody = document.getElementById('admin-classes-table-body');
+  if (!cTableBody) return;
+  cTableBody.innerHTML = '';
+
+  const gradeClasses = currentSchoolMeta?.gradeClasses || [];
+  const teachers = currentSchoolMeta?.teachers || [];
+
+  if (gradeClasses.length === 0) {
+    cTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다. 상단 [학급 생성/수정 저장]에서 학년과 반을 등록해주세요.</td></tr>`;
+    return;
+  }
+
+  gradeClasses.forEach(c => {
+    const tr = document.createElement('tr');
+    
+    let optionsHtml = '<option value="">담임 미지정</option>';
+    teachers.forEach(t => {
+      const isSelected = t.id === c.homeroom_teacher_id ? 'selected' : '';
+      optionsHtml += `<option value="${t.id}" ${isSelected}>${t.name} (${t.subject_name || '과목없음'})</option>`;
+    });
+
+    tr.innerHTML = `
+      <td><strong>${c.grade}학년</strong></td>
+      <td><strong>${c.class_number}반</strong></td>
+      <td>
+        <select id="class-homeroom-${c.id}" class="form-select" style="padding: 4px 8px; font-size: 0.9em; height: auto;" onchange="updateClassHomeroom('${c.id}', ${c.grade}, ${c.class_number})">
+          ${optionsHtml}
+        </select>
+      </td>
+    `;
+    cTableBody.appendChild(tr);
+  });
+}
+window.renderAdminClassesTable = renderAdminClassesTable;
+
 // Load Metadata
 async function loadSchoolMetadata() {
   if (!currentUser || !currentUser.schoolId) return;
@@ -590,51 +627,12 @@ async function loadSchoolMetadata() {
     }
 
     // Render Classes Table
-    window.renderAdminClassesTable();
+    renderAdminClassesTable();
 
   } catch (err) {
     console.error('Metadata load error:', err);
   }
 }
-
-window.renderAdminClassesTable = function() {
-  const cTableBody = document.getElementById('admin-classes-table-body');
-  if (!cTableBody) return;
-  cTableBody.innerHTML = '';
-
-  const gradeClasses = currentSchoolMeta?.gradeClasses || [];
-  const teachers = currentSchoolMeta?.teachers || [];
-
-  if (gradeClasses.length === 0) {
-    cTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다. 상단 [학급 생성/수정 저장]에서 학년과 반을 등록해주세요.</td></tr>`;
-    return;
-  }
-
-  gradeClasses.forEach(c => {
-    const tr = document.createElement('tr');
-    
-    let optionsHtml = '<option value="">담임 미지정</option>';
-    teachers.forEach(t => {
-      const isSelected = t.id === c.homeroom_teacher_id ? 'selected' : '';
-      optionsHtml += `<option value="${t.id}" ${isSelected}>${t.name} (${t.subject_name || '과목없음'})</option>`;
-    });
-
-    tr.innerHTML = `
-      <td><strong>${c.grade}학년</strong></td>
-      <td><strong>${c.class_number}반</strong></td>
-      <td>
-        <select id="class-homeroom-${c.id}" class="form-select" style="padding: 4px; font-size: 0.9em; height: auto;">
-          ${optionsHtml}
-        </select>
-      </td>
-      <td style="text-align:center; white-space: nowrap;">
-        <button type="button" class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateClassHomeroom('${c.id}', ${c.grade}, ${c.class_number})">수정</button>
-        <button type="button" class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteClass('${c.id}')">삭제</button>
-      </td>
-    `;
-    cTableBody.appendChild(tr);
-  });
-};
 
 window.deleteClass = async function(id) {
   if (!confirm('해당 학급을 삭제하시겠습니까? 관련 시간표 데이터도 삭제될 수 있습니다.')) return;
