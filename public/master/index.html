@@ -187,14 +187,14 @@
       <!-- Master Credentials Change Form Card -->
       <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); max-width: 500px; margin-top: 2rem;">
         <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">🔑 마스터 로그인 정보 변경</h3>
-        <form id="master-credentials-form">
+        <form id="master-credentials-form" autocomplete="off">
           <div class="form-group">
             <label>새 마스터 아이디</label>
-            <input type="text" id="new-master-username" class="form-input" required placeholder="새 아이디">
+            <input type="text" id="new-master-username" class="form-input" required placeholder="새 아이디" autocomplete="off" data-lpignore="true">
           </div>
           <div class="form-group">
             <label>새 마스터 비밀번호</label>
-            <input type="password" id="new-master-password" class="form-input" required placeholder="••••••••">
+            <input type="password" id="new-master-password" class="form-input" required placeholder="새 비밀번호" autocomplete="new-password" data-lpignore="true">
           </div>
           <button type="submit" class="btn btn-primary btn-block">로그인 정보 변경 저장</button>
         </form>

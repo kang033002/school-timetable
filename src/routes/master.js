@@ -41,6 +41,21 @@ router.post('/schools/approve', async (req, res) => {
   }
 });
 
+// GET /api/master/me/:userId
+router.get('/me/:userId', async (req, res) => {
+  try {
+    const user = await get(`SELECT email, password_hash FROM user_accounts WHERE id = ?`, [req.params.userId]);
+    if (user) {
+      res.json({ email: user.email, password: user.password_hash });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    console.error('Fetch master info error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/master/change-credentials
 router.post('/change-credentials', async (req, res) => {
   try {

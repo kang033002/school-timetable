@@ -111,6 +111,21 @@ function showDashboard() {
   loginScreen.classList.add('hidden');
   dashboardScreen.classList.remove('hidden');
   loadSchools();
+  loadMasterInfo();
+}
+
+async function loadMasterInfo() {
+  const userId = localStorage.getItem('master_userId') || 'u-master';
+  try {
+    const res = await fetch(`${API_BASE}/master/me/${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('new-master-username').value = data.email || '';
+      document.getElementById('new-master-password').value = data.password || '';
+    }
+  } catch (err) {
+    console.error('Load master info error:', err);
+  }
 }
 
 async function loadSchools() {
