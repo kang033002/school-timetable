@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
     const cleanPassword = password.trim();
 
     const user = await get(
-      `SELECT u.*, s.name as school_name 
+      `SELECT u.*, s.name as school_name, s.code as school_code 
        FROM user_accounts u
        LEFT JOIN schools s ON u.school_id = s.id
        WHERE LOWER(TRIM(u.email)) = ?`,
@@ -68,6 +68,7 @@ router.post('/login', async (req, res) => {
         role: user.role,
         schoolId: user.school_id,
         schoolName: user.school_name,
+        schoolCode: user.school_code,
         teacherId: user.teacher_id
       }
     });
@@ -92,7 +93,9 @@ router.post('/register-school', async (req, res) => {
     }
 
     const schoolId = `sch-${Date.now()}`;
-    const schoolCode = `SCH-${Date.now().toString().slice(-6)}`;
+    const maxCodeRow = await get(`SELECT MAX(CAST(code AS INTEGER)) as maxCode FROM schools WHERE code GLOB '[0-9]*'`);
+    const nextCodeNum = (maxCodeRow && maxCodeRow.maxCode) ? maxCodeRow.maxCode + 1 : 1;
+    const schoolCode = nextCodeNum.toString();
     const adminId = `u-${Date.now()}`;
 
     // 1. Create PENDING school
@@ -121,22 +124,17 @@ router.post('/register-school', async (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { schoolId, email, password, name, subjectName, teacherId, role, grade, classNumber } = req.body;
+    const { schoolCode, email, password, name, subjectName, teacherId, role, grade, classNumber } = req.body;
     
-    if (!schoolId || !name || !email || !password) {
-      return res.status(400).json({ error: 'School ID, Name, ID, and Password are required' });
+    if (!schoolCode || !name || !email || !password) {
+      return res.status(400).json({ error: '학교 코드, 이름, 아이디, 비밀번호는 필수 입력 항목입니다.' });
     }
 
-    let actualSchoolId = schoolId;
-    const schoolRow = await get(`SELECT id FROM schools WHERE id = ?`, [actualSchoolId]);
+    const schoolRow = await get(`SELECT id FROM schools WHERE code = ?`, [schoolCode]);
     if (!schoolRow) {
-      const firstSchool = await get(`SELECT id FROM schools LIMIT 1`);
-      if (firstSchool) {
-        actualSchoolId = firstSchool.id;
-      } else {
-        return res.status(400).json({ error: 'School not found. Please register a school first.' });
-      }
+      return res.status(400).json({ error: '유효하지 않은 학교 코드입니다. 코드를 다시 확인해주세요.' });
     }
+    const actualSchoolId = schoolRow.id;
 
     const existingUser = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
     if (existingUser) {

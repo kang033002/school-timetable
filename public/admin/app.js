@@ -250,6 +250,7 @@ teacherTitleSelect.addEventListener('change', () => {
   // Teacher signup form submit
   teacherSignupFormPublic?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const schoolCode = document.getElementById('teacher-signup-school-code')?.value.trim();
     const subjectName = document.getElementById('teacher-signup-subject')?.value.trim() || '';
     const name = document.getElementById('teacher-signup-name').value.trim();
     const email = document.getElementById('teacher-signup-email').value.trim();
@@ -260,7 +261,7 @@ teacherTitleSelect.addEventListener('change', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          schoolId: 'sch-1',
+          schoolCode,
           role: 'TEACHER',
           name,
           subjectName,
@@ -285,6 +286,7 @@ teacherTitleSelect.addEventListener('change', () => {
 
   studentSignupForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const schoolCode = document.getElementById('student-signup-school-code')?.value.trim();
     const name = document.getElementById('student-name').value;
     const grade = parseInt(document.getElementById('student-grade').value);
     const classNumber = parseInt(document.getElementById('student-class').value);
@@ -296,7 +298,7 @@ teacherTitleSelect.addEventListener('change', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          schoolId: 'sch-1',
+          schoolCode,
           role: 'STUDENT',
           name,
           grade,
@@ -389,10 +391,13 @@ async function showDashboard() {
     const navSchoolNameElem = document.getElementById('nav-school-name');
 
     if (navSchoolNameElem) {
+      const schoolTitle = currentUser?.schoolName || '시간표';
+      const codeStr = currentUser?.schoolCode ? ` (학교 코드 번호 ${currentUser.schoolCode})` : '';
+      
       if (currentUser?.role === 'STUDENT') {
-        navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 학생 시간표`;
+        navSchoolNameElem.textContent = `🏫 ${schoolTitle} 학생 시간표${codeStr}`;
       } else {
-        navSchoolNameElem.textContent = `🏫 ${currentUser?.schoolName || '시간표'} 관리자 시스템`;
+        navSchoolNameElem.textContent = `🏫 ${schoolTitle} 관리자 시스템${codeStr}`;
       }
     }
     
