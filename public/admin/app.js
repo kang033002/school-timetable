@@ -2301,7 +2301,6 @@ document.addEventListener('change', (e) => {
 });
 
 function buildPreviewChips(classIds) {
-  const container = document.getElementById('gen-preview-chips');
   const targetDropdown = document.getElementById('gen-target-class-dropdown');
 
   if (targetDropdown) {
@@ -2327,49 +2326,11 @@ function buildPreviewChips(classIds) {
         if (window.loadClassHours) {
           window.loadClassHours(selectedGcId);
         }
-        document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => {
-          if (c.dataset.classId === selectedGcId) c.classList.add('active');
-          else c.classList.remove('active');
-        });
         const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
         renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
       });
     }
   }
-
-  if (!container) return;
-  container.innerHTML = '';
-  
-  if (!classIds || classIds.length === 0) {
-    container.innerHTML = '<span style="font-size:0.9rem; font-weight:600; color:var(--text-sub);">AI 시간표를 생성해주세요.</span>';
-    return;
-  }
-  
-  classIds.forEach(gcId => {
-    const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
-    const chip = document.createElement('div');
-    chip.className = 'gen-preview-chip gen-class-chip' + (gcId === genCurrentClassId ? ' active' : '');
-    chip.textContent = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber || ''}반` : gcId;
-    chip.dataset.classId = gcId;
-    chip.style.cursor = 'pointer';
-    
-    chip.addEventListener('click', () => {
-      if (window.saveCurrentClassHours && genCurrentClassId) {
-        window.saveCurrentClassHours(genCurrentClassId);
-      }
-      document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      genCurrentClassId = gcId;
-      if (targetDropdown) targetDropdown.value = gcId;
-      if (window.loadClassHours) {
-        window.loadClassHours(gcId);
-      }
-      const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
-      renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-    });
-    
-    container.appendChild(chip);
-  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
