@@ -1667,6 +1667,48 @@ async function initGeneratorTab() {
       generatorData.subjects.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     }
 
+    // 과목 필터 체크박스 렌더링
+    window.renderGenSubjectFilter = function() {
+      const container = document.getElementById('gen-subject-filter-container');
+      if (!container) return;
+      
+      const subs = generatorData?.subjects || [];
+      if (subs.length === 0) {
+        container.innerHTML = '<span style="color:var(--text-sub);">등록된 과목이 없습니다.</span>';
+        return;
+      }
+
+      const savedFilters = localStorage.getItem('gen_subject_filter_' + currentUser.schoolId);
+      let checkedSet = null;
+      if (savedFilters) {
+        try { checkedSet = new Set(JSON.parse(savedFilters)); } catch(e){}
+      }
+
+      container.innerHTML = subs.map(s => {
+        const isChecked = checkedSet ? checkedSet.has(s.id) : true;
+        return `
+          <label style="display:inline-flex; align-items:center; gap:0.35rem; background:var(--bg-card); padding:0.3rem 0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; user-select:none;">
+            <input type="checkbox" class="gen-subject-chk" value="${s.id}" ${isChecked ? 'checked' : ''} style="cursor:pointer;" onchange="saveGenSubjectFilters()">
+            <span style="font-weight:600;">${s.name}</span>
+          </label>
+        `;
+      }).join('');
+    };
+
+    window.saveGenSubjectFilters = function() {
+      const checkedIds = Array.from(document.querySelectorAll('.gen-subject-chk:checked')).map(c => c.value);
+      localStorage.setItem('gen_subject_filter_' + currentUser.schoolId, JSON.stringify(checkedIds));
+    };
+
+    window.selectAllGenSubjectFilters = function(checked) {
+      document.querySelectorAll('.gen-subject-chk').forEach(chk => {
+        chk.checked = checked;
+      });
+      window.saveGenSubjectFilters();
+    };
+
+    renderGenSubjectFilter();
+
     // ① 학급 선택 - 드롭다운으로 추가 후 목록에서 선택
     const classListSelect = document.getElementById('gen-class-list-select');
     const btnAddClass = document.getElementById('btn-gen-add-class');
@@ -1680,6 +1722,23 @@ async function initGeneratorTab() {
         option.dataset.grade = c.grade;
         option.dataset.classNum = c.class_number || c.classNumber;
         classListSelect.appendChild(option);
+      });
+
+      // 학급 드롭다운 변경 시 즉시 시간표 그리드 렌더링
+      const newClassListSelect = classListSelect.cloneNode(true);
+      classListSelect.parentNode.replaceChild(newClassListSelect, classListSelect);
+      newClassListSelect.addEventListener('change', (e) => {
+        const selectedId = e.target.value;
+        if (selectedId) {
+          genCurrentClassId = selectedId;
+          const allOptionIds = Array.from(newClassListSelect.options).filter(o => o.value).map(o => o.value);
+          if (!genClassMap) genClassMap = {};
+          if (!genClassMap[selectedId]) genClassMap[selectedId] = {};
+          
+          buildPreviewChips(allOptionIds);
+          const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+          renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+        }
       });
     }
     
@@ -1937,6 +1996,12 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
     return;
   }
 
+  const targetSubjectIds = Array.from(document.querySelectorAll('.gen-subject-chk:checked')).map(c => c.value);
+  if (targetSubjectIds.length === 0) {
+    alert('자동 생성 대상 과목을 최소 1개 이상 선택해 주세요.');
+    return;
+  }
+
   const subjectsList = [];
   document.querySelectorAll('.gen-row').forEach(row => {
     const subjectSel = row.querySelector('.gen-subject-select');
@@ -1960,28 +2025,55 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
 
   const assignments = selectedClassIds.map(gcId => ({ gradeClassId: gcId, subjects: subjectsList }));
 
+  // 기존 수동 작성된 셀 고정 목록 추출
+  const fixedSlots = [];
+  if (genClassMap) {
+    Object.keys(genClassMap).forEach(gcId => {
+      Object.keys(genClassMap[gcId] || {}).forEach(d => {
+        Object.keys(genClassMap[gcId][d] || {}).forEach(p => {
+          const slot = genClassMap[gcId][d][p];
+          if (slot && slot.subjectId && slot.teacherId) {
+            fixedSlots.push({
+              gradeClassId: gcId,
+              dayOfWeek: parseInt(d),
+              period: parseInt(p),
+              subjectId: slot.subjectId,
+              teacherId: slot.teacherId
+            });
+          }
+        });
+      });
+    });
+  }
+
   const btnGen = document.getElementById('btn-generate');
   const maxPeriodSelect = document.getElementById('gen-max-period-select');
   const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
   
   try {
-    if (btnGen) { btnGen.textContent = '⏳ AI가 배정 작업 중...'; btnGen.disabled = true; }
+    if (btnGen) { btnGen.textContent = '⏳ 시간표 배정 작업 중...'; btnGen.disabled = true; }
 
     const res = await fetch(`${API_BASE}/generator/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolId: currentUser.schoolId, assignments, maxPeriodsPerDay })
+      body: JSON.stringify({
+        schoolId: currentUser.schoolId,
+        assignments,
+        maxPeriodsPerDay,
+        fixedSlots,
+        targetSubjectIds
+      })
     });
 
-    if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
+    if (btnGen) { btnGen.textContent = '🤖 시간표 자동 생성 시작'; btnGen.disabled = false; }
 
     if (!res.ok) { alert('자동 생성 실패'); return; }
 
     const data = await res.json();
     generatedResult = data.timetable;
 
-    // classMap 빌드: { gcId: { day: { period: slotData } } }
-    genClassMap = {};
+    // 기존 수동 배치 유지하며 AI 생성 결과 융합 (classMap 업데이트)
+    if (!genClassMap) genClassMap = {};
     (data.timetable || []).forEach(t => {
       if (!genClassMap[t.gradeClassId]) genClassMap[t.gradeClassId] = {};
       if (!genClassMap[t.gradeClassId][t.dayOfWeek]) genClassMap[t.gradeClassId][t.dayOfWeek] = {};

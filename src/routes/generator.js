@@ -6,11 +6,12 @@ const { get, all, run } = require('../db/database');
 // 그리디 + 백트래킹 시간표 자동 생성 알고리즘
 // ────────────────────────────────────────────────────────────────────────────
 // (generateTimetable 함수 등은 유지)
-function generateTimetable(assignments, maxPeriodsPerDay, operatingDays) {
+function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSlots = [], targetSubjectIds = []) {
   // schedule[gradeClassId][day][period] = { subjectId, teacherId }
   const schedule = {};
   // teacherBusy[teacherId][day] = Set<period>
   const teacherBusy = {};
+  const result = [];
 
   for (const gc of assignments) {
     schedule[gc.gradeClassId] = {};
@@ -19,11 +20,41 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays) {
     }
   }
 
-  // 배정해야 할 슬롯 목록 생성 (과목별 주간 시수 만큼 반복)
+  // 1. 수동 배치된 셀(fixedSlots) 먼저 고정(Lock) 처리
+  const fixedCounts = {}; // key: `${gradeClassId}_${subjectId}_${teacherId}` -> count
+  for (const fs of fixedSlots) {
+    const { gradeClassId, dayOfWeek, period, subjectId, teacherId } = fs;
+    if (!schedule[gradeClassId]) schedule[gradeClassId] = {};
+    if (!schedule[gradeClassId][dayOfWeek]) schedule[gradeClassId][dayOfWeek] = {};
+
+    schedule[gradeClassId][dayOfWeek][period] = { subjectId, teacherId };
+    
+    if (teacherId) {
+      if (!teacherBusy[teacherId]) teacherBusy[teacherId] = {};
+      if (!teacherBusy[teacherId][dayOfWeek]) teacherBusy[teacherId][dayOfWeek] = new Set();
+      teacherBusy[teacherId][dayOfWeek].add(period);
+    }
+
+    result.push({ gradeClassId, dayOfWeek, period, subjectId, teacherId, isFixed: true });
+
+    const key = `${gradeClassId}_${subjectId}_${teacherId}`;
+    fixedCounts[key] = (fixedCounts[key] || 0) + 1;
+  }
+
+  // 2. 배정해야 할 잔여 슬롯 목록 생성 (선택된 과목만, 수동 고정 시수 차감)
+  const targetSet = targetSubjectIds.length > 0 ? new Set(targetSubjectIds) : null;
   const slots = [];
+
   for (const gc of assignments) {
     for (const sub of gc.subjects) {
-      for (let i = 0; i < sub.weeklyHours; i++) {
+      // 선택된 과목 필터링 (targetSet이 정의된 경우)
+      if (targetSet && !targetSet.has(sub.subjectId)) continue;
+
+      const key = `${gc.gradeClassId}_${sub.subjectId}_${sub.teacherId}`;
+      const alreadyPlaced = fixedCounts[key] || 0;
+      const remainingHours = Math.max(0, sub.weeklyHours - alreadyPlaced);
+
+      for (let i = 0; i < remainingHours; i++) {
         slots.push({
           gradeClassId: gc.gradeClassId,
           subjectId: sub.subjectId,
@@ -38,7 +69,6 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays) {
   // 무작위 섞기 (실행마다 다른 결과)
   slots.sort(() => Math.random() - 0.5);
 
-  const result = [];
   const unassigned = [];
 
   for (const slot of slots) {
@@ -56,18 +86,21 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays) {
 
     for (const { d, p } of options) {
       // 이미 해당 반에 수업이 있으면 패스
-      if (schedule[gradeClassId][d][p]) continue;
+      if (schedule[gradeClassId]?.[d]?.[p]) continue;
 
       // 해당 시간에 해당 교사가 다른 반에 배정되어 있으면 패스
       if (teacherBusy[teacherId]?.[d]?.has(p)) continue;
 
       // 하루에 같은 과목 2번 연속 방지 (같은 요일 같은 과목 최대 2회)
-      const sameSubjectToday = Object.values(schedule[gradeClassId][d])
+      const sameSubjectToday = Object.values(schedule[gradeClassId]?.[d] || {})
         .filter(s => s.subjectId === subjectId).length;
       if (sameSubjectToday >= 2) continue;
 
       // 배정 확정
+      if (!schedule[gradeClassId]) schedule[gradeClassId] = {};
+      if (!schedule[gradeClassId][d]) schedule[gradeClassId][d] = {};
       schedule[gradeClassId][d][p] = { subjectId, teacherId };
+
       if (!teacherBusy[teacherId]) teacherBusy[teacherId] = {};
       if (!teacherBusy[teacherId][d]) teacherBusy[teacherId][d] = new Set();
       teacherBusy[teacherId][d].add(p);
@@ -148,11 +181,11 @@ router.get('/data', async (req, res) => {
 
 // ────────────────────────────────────────────────────────────────────────────
 // 2. POST /api/generator/generate
-//    시간표 자동 생성 (DB 저장 없이 미리보기용 결과만 반환)
+//    시간표 자동 생성 (수동 배치 셀 보존 및 선택 과목만 빈 공간에 생성)
 // ────────────────────────────────────────────────────────────────────────────
 router.post('/generate', async (req, res) => {
   try {
-    const { schoolId, assignments } = req.body;
+    const { schoolId, assignments, fixedSlots = [], targetSubjectIds = [] } = req.body;
     if (!schoolId || !assignments?.length) {
       return res.status(400).json({ error: 'schoolId and assignments are required' });
     }
@@ -176,7 +209,13 @@ router.post('/generate', async (req, res) => {
       }))
     }));
 
-    const { result, unassigned } = generateTimetable(enrichedAssignments, maxPeriodsPerDay, operatingDays);
+    const { result, unassigned } = generateTimetable(
+      enrichedAssignments,
+      maxPeriodsPerDay,
+      operatingDays,
+      fixedSlots,
+      targetSubjectIds
+    );
 
     // 결과에 이름 추가
     const enrichedResult = result.map(r => ({
