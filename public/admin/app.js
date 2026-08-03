@@ -1767,13 +1767,19 @@ async function initGeneratorTab() {
         classListSelect.appendChild(option);
       });
 
-      // 학급 드롭다운 변경 시 즉시 시간표 그리드 렌더링
+      // 학급 드롭다운 변경 시 즉시 시간표 그리드 렌더링 및 해당 학급 시수 불러오기
       const newClassListSelect = classListSelect.cloneNode(true);
       classListSelect.parentNode.replaceChild(newClassListSelect, classListSelect);
       newClassListSelect.addEventListener('change', (e) => {
         const selectedId = e.target.value;
         if (selectedId) {
+          if (window.saveCurrentClassHours && genCurrentClassId) {
+            window.saveCurrentClassHours(genCurrentClassId);
+          }
           genCurrentClassId = selectedId;
+          if (window.loadClassHours) {
+            window.loadClassHours(selectedId);
+          }
           const allOptionIds = Array.from(newClassListSelect.options).filter(o => o.value).map(o => o.value);
           if (!genClassMap) genClassMap = {};
           if (!genClassMap[selectedId]) genClassMap[selectedId] = {};
@@ -1985,19 +1991,48 @@ async function initGeneratorTab() {
         loadDefaultRows();
       }
 
-      function loadDefaultRows() {
-        const allTeachers = generatorData.teachers || [];
-        if (allTeachers.length === 0) {
-          window.addGenRow();
-        } else {
-          allTeachers.forEach(t => {
-            const subName = t.subject_name || t.subjectName;
-            const sub = (generatorData.subjects || []).find(s => s.name === subName);
-            window.addGenRow(sub ? sub.id : '', t.id, '');
-          });
+      // 학급별 독립 시수 저장소
+      window.genClassHoursMap = window.genClassHoursMap || {};
+
+      window.saveCurrentClassHours = function(classId) {
+        if (!classId) return;
+        const rows = [];
+        document.querySelectorAll('.gen-row').forEach(row => {
+          const subjectId = row.querySelector('.gen-subject-select')?.value || '';
+          const teacherId = row.querySelector('.gen-teacher-select')?.value || '';
+          const hours = row.querySelector('.gen-hours-input')?.value || '';
+          if (subjectId || teacherId || hours) {
+            rows.push({ subjectId, teacherId, hours });
+          }
+        });
+        window.genClassHoursMap[classId] = rows;
+        localStorage.setItem('gen_class_hours_' + currentUser.schoolId, JSON.stringify(window.genClassHoursMap));
+      };
+
+      window.loadClassHours = function(classId) {
+        if (!classId) return;
+        const savedMapStr = localStorage.getItem('gen_class_hours_' + currentUser.schoolId);
+        if (savedMapStr) {
+          try { window.genClassHoursMap = JSON.parse(savedMapStr); } catch(e){}
         }
-        window.saveGeneratorRowsState();
-      }
+
+        const subjectBody = document.getElementById('gen-subject-body');
+        if (!subjectBody) return;
+        subjectBody.innerHTML = '';
+
+        const classRows = window.genClassHoursMap[classId];
+        if (classRows && classRows.length > 0) {
+          classRows.forEach(r => window.addGenRow(r.subjectId, r.teacherId, r.hours));
+        } else {
+          loadDefaultRows();
+        }
+      };
+
+      window.saveGeneratorRowsState = function() {
+        if (genCurrentClassId) {
+          window.saveCurrentClassHours(genCurrentClassId);
+        }
+      };
     }
     
     // 로컬 스토리지에서 이전 상태 복원
@@ -2195,9 +2230,15 @@ function buildPreviewChips(classIds) {
     chip.style.cursor = 'pointer';
     
     chip.addEventListener('click', () => {
+      if (window.saveCurrentClassHours && genCurrentClassId) {
+        window.saveCurrentClassHours(genCurrentClassId);
+      }
       document.querySelectorAll('#gen-preview-chips .gen-preview-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       genCurrentClassId = gcId;
+      if (window.loadClassHours) {
+        window.loadClassHours(gcId);
+      }
       const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
       renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
     });
