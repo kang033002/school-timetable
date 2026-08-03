@@ -34,9 +34,12 @@
             <span style="color: var(--border-color); font-size: 0.85rem;">|</span>
             <a href="#" id="link-show-school-signup" style="color: var(--primary-color); font-size: 0.85rem; text-decoration: none;">우리 학교 등록 신청</a>
           </div>
-          <div style="text-align:center; margin-top:0.75rem;">
+          <div style="text-align:center; margin-top:0.75rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
             <button type="button" onclick="localStorage.clear(); alert('로그인 세션이 깨끗하게 초기화되었습니다! 다시 로그인 해주세요.'); location.reload();" class="btn btn-sm btn-outline" style="font-size:0.78rem; padding:0.25rem 0.5rem; color:#64748b;">
               🧹 로그인 세션 막힘 초기화
+            </button>
+            <button type="button" onclick="document.getElementById('manual-modal').style.display='flex';" class="btn btn-sm btn-primary" style="font-size:0.78rem; padding:0.25rem 0.5rem;">
+              📖 사용 설명서
             </button>
           </div>
           <div style="margin-top: 1.2rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.88rem; color: var(--text-sub);">
@@ -754,6 +757,53 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Modal -->
+  <div id="manual-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: var(--card-bg); width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;">
+      <button onclick="document.getElementById('manual-modal').style.display='none';" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; color: var(--text-color); cursor: pointer;">&times;</button>
+      <h2 style="margin-bottom: 1.5rem; color: var(--primary-color);">🏫 우리 학교 온라인 시간표 시스템 사용 설명서</h2>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">1️⃣ 마스터 (최고 관리자) 이용 방법</h3>
+        <ul style="color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; padding-left: 1.5rem;">
+          <li><strong>마스터 로그인:</strong> 숨겨진 주소(<code>/master</code>)로 접속하여 마스터 전용 아이디와 비밀번호로 로그인합니다.</li>
+          <li><strong>학교 승인 및 관리:</strong> 신규 가입을 신청한 학교들의 목록을 확인하고 <strong>[승인]</strong> 또는 <strong>[비활성화/삭제]</strong> 처리를 할 수 있습니다.</li>
+          <li><strong>학교 코드 및 정보 수정:</strong> 시스템에 가입한 학교들에게는 <code>1</code>, <code>2</code> 등의 자연수 학교 코드가 부여됩니다. 마스터 대시보드에서 각 학교의 학교 코드나 관리자 아이디/비밀번호를 언제든지 임의로 수정할 수 있습니다.</li>
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">2️⃣ 학교 관리자 (시간표 담당 선생님) 이용 방법</h3>
+        <ul style="color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; padding-left: 1.5rem;">
+          <li><strong>학교 가입 신청:</strong> 메인 웹사이트의 <strong>[학교 등록 신청]</strong> 버튼을 눌러 우리 학교 이름과 관리자 계정을 생성하고 마스터의 승인을 기다립니다.</li>
+          <li><strong>기초 환경 설정:</strong> 마스터 승인 완료 후 로그인하여, 상단 <strong>[학교/교사 설정]</strong> 메뉴에서 우리 학교에 맞는 '학년/반'과 '담당 교사' 목록을 세팅합니다.</li>
+          <li><strong>가입 승인 처리:</strong> 교사나 학생들이 가입 신청을 하면 대시보드에 목록이 뜹니다. 소속을 확인한 후 <strong>[승인]</strong>을 해주어야 그들이 사이트를 이용할 수 있습니다.</li>
+          <li><strong>시간표 작성 및 자동 적용:</strong> 시간표 생성 탭에서 시간표를 한 번만 작성(생성)하면, <strong>학기별 시간표와 일일 시간표에 자동으로 모두 적용</strong>되며 교사와 학생들의 화면에도 즉시 배포됩니다.</li>
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">3️⃣ 교사 이용 방법</h3>
+        <ul style="color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; padding-left: 1.5rem;">
+          <li><strong>회원가입:</strong> 메인 웹사이트에서 <strong>[교사 가입]</strong>을 누르고, 학교 관리자가 알려준 우리 학교의 <strong>[학교 코드 번호]</strong>와 자신의 담당 과목 등을 입력하여 가입합니다.</li>
+          <li><strong>시간표 조회:</strong> 학교 관리자가 가입을 승인한 뒤 로그인하면, <strong>[교사 시간표]</strong> 탭에서 자신이 오늘 들어가야 할 반과 시간표를 한눈에 볼 수 있습니다.</li>
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">4️⃣ 학생 이용 방법</h3>
+        <ul style="color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; padding-left: 1.5rem;">
+          <li><strong>회원가입:</strong> 메인 화면에서 <strong>[학생 가입]</strong>을 누르고, <strong>[학교 코드 번호]</strong>와 자신의 학년, 반, 이름을 정확히 입력하여 가입을 신청합니다.</li>
+          <li><strong>시간표 조회:</strong> 가입이 승인된 후 로그인하면, 번거롭게 학년 반을 찾을 필요 없이 <strong>내 학년/반에 맞는 시간표</strong>가 맞춤형으로 화면에 즉시 표시됩니다.</li>
+        </ul>
+      </div>
+      
+      <div style="text-align: right; margin-top: 1rem;">
+        <button class="btn btn-primary" onclick="document.getElementById('manual-modal').style.display='none';">닫기</button>
       </div>
     </div>
   </div>
