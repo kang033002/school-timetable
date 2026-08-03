@@ -90,10 +90,16 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
       [school.id]
     );
 
-    const subjects = await all(
-      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' GROUP BY name ORDER BY name`,
+    const rawSubjects = await all(
+      `SELECT id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' ORDER BY name`,
       [school.id]
     );
+    const seenNames = new Set();
+    const subjects = rawSubjects.filter(s => {
+      if (seenNames.has(s.name)) return false;
+      seenNames.add(s.name);
+      return true;
+    });
 
     const rooms = await all(
       `SELECT * FROM rooms WHERE school_id = ? ORDER BY name`,

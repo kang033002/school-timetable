@@ -153,10 +153,16 @@ router.get('/data', async (req, res) => {
       `SELECT id, grade, class_number FROM grade_classes WHERE school_id = ? ORDER BY grade, class_number`,
       [schoolId]
     );
-    const subjects = await all(
-      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' GROUP BY name ORDER BY name`,
+    const rawSubjects = await all(
+      `SELECT id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' ORDER BY name`,
       [schoolId]
     );
+    const seenNames = new Set();
+    const subjects = rawSubjects.filter(s => {
+      if (seenNames.has(s.name)) return false;
+      seenNames.add(s.name);
+      return true;
+    });
     const teachers = await all(
       `SELECT id, name, subject_name, weekly_hours FROM teachers WHERE school_id = ? ORDER BY name`,
       [schoolId]
