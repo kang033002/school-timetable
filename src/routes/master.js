@@ -47,7 +47,7 @@ router.post('/change-credentials', async (req, res) => {
     // Check if username taken
     const existing = await get(`SELECT id FROM user_accounts WHERE email = ? AND id != ?`, [newUsername, userId]);
     if (existing) {
-      return res.status(400).json({ error: 'Username already in use' });
+      return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });
     }
 
     await run(`UPDATE user_accounts SET email = ?, password_hash = ? WHERE id = ?`, [newUsername, newPassword, userId]);
@@ -132,7 +132,7 @@ router.post('/schools/update-admin', async (req, res) => {
       [adminUsername, adminAccount.id]
     );
     if (existing) {
-      return res.status(400).json({ error: 'Username/Email already in use' });
+      return res.status(400).json({ error: '이미 사용중인 관리자 ID입니다. 다른 ID를 입력해주세요.' });
     }
 
     await run(
