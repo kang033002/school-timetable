@@ -1651,12 +1651,13 @@ async function initGeneratorTab() {
       };
     }
 
-    // 모든 등록된 교사의 과목명이 과목 선택 목록(subjects)에 100% 누락 없이 들어가도록 자동 융합
+    // 모든 등록된 교사의 과목명이 과목 선택 목록(subjects)에 100% 누락 없이 들어가도록 자동 융합 (sports 제외)
     if (generatorData && generatorData.teachers && generatorData.subjects) {
+      generatorData.subjects = generatorData.subjects.filter(s => (s.name || '').toLowerCase() !== 'sports');
       const existingSubNames = new Set(generatorData.subjects.map(s => s.name));
       generatorData.teachers.forEach(t => {
         const subName = (t.subject_name || t.subjectName || '').trim();
-        if (subName && subName !== '미지정' && !existingSubNames.has(subName)) {
+        if (subName && subName !== '미지정' && subName.toLowerCase() !== 'sports' && !existingSubNames.has(subName)) {
           const newSub = { id: `sub-gen-${t.id}`, name: subName };
           generatorData.subjects.push(newSub);
           existingSubNames.add(subName);

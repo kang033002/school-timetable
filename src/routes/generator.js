@@ -94,17 +94,19 @@ router.get('/data', async (req, res) => {
     const { schoolId } = req.query;
     if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
 
-    // 교사 목록에 존재하는 모든 교과목이 subjects 테이블에 존재하도록 자동 동기화
+    // sports 삭제 및 교사 목록에 존재하는 모든 교과목이 subjects 테이블에 존재하도록 자동 동기화
+    await run(`DELETE FROM subjects WHERE LOWER(name) = 'sports' OR LOWER(short_name) = 'sports'`);
+    
     const teacherSubjects = await all(
-      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != ''`,
+      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != '' AND LOWER(subject_name) != 'sports'`,
       [schoolId]
     );
     for (const ts of teacherSubjects) {
       const subName = (ts.subject_name || '').trim();
-      if (!subName || subName === '미지정') continue;
+      if (!subName || subName === '미지정' || subName.toLowerCase() === 'sports') continue;
       const existing = await get(
-        `SELECT id FROM subjects WHERE school_id = ? AND name = ?`,
-        [schoolId, subName]
+        `SELECT id FROM subjects WHERE school_id = ? AND LOWER(name) = ?`,
+        [schoolId, subName.toLowerCase()]
       );
       if (!existing) {
         await run(
@@ -119,7 +121,7 @@ router.get('/data', async (req, res) => {
       [schoolId]
     );
     const subjects = await all(
-      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? GROUP BY name ORDER BY name`,
+      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' GROUP BY name ORDER BY name`,
       [schoolId]
     );
     const teachers = await all(

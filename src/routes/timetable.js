@@ -50,17 +50,19 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     const school = await get(`SELECT * FROM schools WHERE id = ? OR code = ?`, [schoolId, schoolId]);
     if (!school) return res.status(404).json({ error: 'School not found' });
 
-    // 교사 목록의 과목이 subjects 테이블에 없으면 자동 생성/동기화
+    // sports 삭제 및 교사 목록의 과목이 subjects 테이블에 없으면 자동 생성/동기화
+    await run(`DELETE FROM subjects WHERE LOWER(name) = 'sports' OR LOWER(short_name) = 'sports'`);
+
     const teacherSubjects = await all(
-      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != ''`,
+      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != '' AND LOWER(subject_name) != 'sports'`,
       [school.id]
     );
     for (const ts of teacherSubjects) {
       const subName = (ts.subject_name || '').trim();
-      if (!subName || subName === '미지정') continue;
+      if (!subName || subName === '미지정' || subName.toLowerCase() === 'sports') continue;
       const existing = await get(
-        `SELECT id FROM subjects WHERE school_id = ? AND name = ?`,
-        [school.id, subName]
+        `SELECT id FROM subjects WHERE school_id = ? AND LOWER(name) = ?`,
+        [school.id, subName.toLowerCase()]
       );
       if (!existing) {
         await run(
@@ -89,7 +91,7 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     );
 
     const subjects = await all(
-      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? GROUP BY name ORDER BY name`,
+      `SELECT MIN(id) as id, name FROM subjects WHERE school_id = ? AND LOWER(name) != 'sports' GROUP BY name ORDER BY name`,
       [school.id]
     );
 
