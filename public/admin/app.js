@@ -79,22 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (passwordInput) passwordInput.value = '';
 
   const savedUser = localStorage.getItem('timetable_user');
-  const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
+  const token = sessionStorage.getItem('token');
+  const userStr = sessionStorage.getItem('user');
   if (token && userStr) {
     try {
       const u = JSON.parse(userStr);
       if (u && u.role === 'MASTER_ADMIN') {
         // If master admin token remains, clear and show login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
       } else if (u) {
         currentUser = u;
         showDashboard();
       }
     } catch (e) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
     }
   }
 }
@@ -353,8 +353,8 @@ async function handleLogin(e) {
       return;
     }
 
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    sessionStorage.setItem('token', data.token);
+    sessionStorage.setItem('user', JSON.stringify(data.user));
     currentUser = data.user;
 
     showDashboard();
@@ -365,8 +365,8 @@ async function handleLogin(e) {
 }
 
 function handleLogout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('user');
   currentUser = null;
   window.sandboxChanges = [];
   dashboardScreen.classList.add('hidden');
