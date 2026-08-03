@@ -200,6 +200,11 @@ router.post('/users/approve', async (req, res) => {
       const user = await get(`SELECT * FROM user_accounts WHERE id = ?`, [id]);
       if (!user) continue;
 
+      if (status === 'REJECTED') {
+        await run(`DELETE FROM user_accounts WHERE id = ?`, [id]);
+        continue;
+      }
+
       let newEmail = user.email;
       let newPwd = user.password_hash;
       if (updatesMap[id]) {
