@@ -216,6 +216,12 @@ router.post('/users/approve', async (req, res) => {
         );
 
         const subject = user.subject_name || '미지정';
+        if (subject && subject !== '미지정') {
+          const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [user.school_id, subject]);
+          if (!existingSub) {
+            await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, user.school_id, subject, subject]);
+          }
+        }
 
         if (existingTeacher) {
           await run(`UPDATE teachers SET subject_name = ? WHERE id = ?`, [subject, existingTeacher.id]);
@@ -272,6 +278,14 @@ router.post('/teachers/register-teachers-bulk', async (req, res) => {
       const { subjectName, name } = item;
       if (!name) continue;
 
+      const subName = (subjectName || '미지정').trim();
+      if (subName && subName !== '미지정') {
+        const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, subName]);
+        if (!existingSub) {
+          await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, schoolId, subName, subName]);
+        }
+      }
+
       const countRow = await get(
         `SELECT COUNT(*) as cnt FROM teachers WHERE school_id = ?`,
         [schoolId]
@@ -291,7 +305,7 @@ router.post('/teachers/register-teachers-bulk', async (req, res) => {
       const teacherId = `t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       await run(
         `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
-        [teacherId, schoolId, name, subjectName || '미지정']
+        [teacherId, schoolId, name, subName]
       );
 
       const userId = `u-t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -301,7 +315,7 @@ router.post('/teachers/register-teachers-bulk', async (req, res) => {
         [userId, schoolId, finalEmail, password, teacherId, name]
       );
 
-      results.push({ id: teacherId, email: finalEmail, password, name, subjectName });
+      results.push({ id: teacherId, email: finalEmail, password, name, subjectName: subName });
     }
 
     res.json({ message: 'Teachers registered successfully', registered: results });

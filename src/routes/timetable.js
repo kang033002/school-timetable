@@ -50,6 +50,26 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     const school = await get(`SELECT * FROM schools WHERE id = ? OR code = ?`, [schoolId, schoolId]);
     if (!school) return res.status(404).json({ error: 'School not found' });
 
+    // 교사 목록의 과목이 subjects 테이블에 없으면 자동 생성/동기화
+    const teacherSubjects = await all(
+      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != ''`,
+      [school.id]
+    );
+    for (const ts of teacherSubjects) {
+      const subName = (ts.subject_name || '').trim();
+      if (!subName || subName === '미지정') continue;
+      const existing = await get(
+        `SELECT id FROM subjects WHERE school_id = ? AND name = ?`,
+        [school.id, subName]
+      );
+      if (!existing) {
+        await run(
+          `INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`,
+          [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, school.id, subName, subName]
+        );
+      }
+    }
+
     const gradeClasses = await all(
       `SELECT gc.*, t.name as homeroom_teacher_name 
        FROM grade_classes gc 

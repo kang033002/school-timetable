@@ -94,6 +94,26 @@ router.get('/data', async (req, res) => {
     const { schoolId } = req.query;
     if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
 
+    // 교사 목록에 존재하는 모든 교과목이 subjects 테이블에 존재하도록 자동 동기화
+    const teacherSubjects = await all(
+      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != ''`,
+      [schoolId]
+    );
+    for (const ts of teacherSubjects) {
+      const subName = (ts.subject_name || '').trim();
+      if (!subName || subName === '미지정') continue;
+      const existing = await get(
+        `SELECT id FROM subjects WHERE school_id = ? AND name = ?`,
+        [schoolId, subName]
+      );
+      if (!existing) {
+        await run(
+          `INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`,
+          [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, schoolId, subName, subName]
+        );
+      }
+    }
+
     const classes = await all(
       `SELECT id, grade, class_number FROM grade_classes WHERE school_id = ? ORDER BY grade, class_number`,
       [schoolId]
