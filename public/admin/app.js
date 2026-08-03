@@ -397,8 +397,11 @@ async function showDashboard() {
         userRoleElem.style.display = 'none';
       } else {
         userRoleElem.style.display = 'inline-block';
-        userRoleElem.textContent = currentUser?.role === 'ADMIN' ? '관리자(일과계)' : '교사';
+        userRoleElem.textContent = currentUser?.role === 'ADMIN' ? '관리자' : '교사';
       }
+    }
+    if (userNameElem) {
+      userNameElem.textContent = currentUser?.name || (currentUser?.role === 'ADMIN' ? '관리자' : '교사');
     }
 
     const tabDaily = document.getElementById('tab-btn-daily');
