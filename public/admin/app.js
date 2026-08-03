@@ -2008,6 +2008,21 @@ async function initGeneratorTab() {
         subjectBody.appendChild(tr);
       };
 
+      function loadDefaultRows() {
+        const subjectBody = document.getElementById('gen-subject-body');
+        if (subjectBody) subjectBody.innerHTML = '';
+        const allTeachers = generatorData.teachers || [];
+        if (allTeachers.length === 0) {
+          window.addGenRow();
+        } else {
+          allTeachers.forEach(t => {
+            const subName = t.subject_name || t.subjectName;
+            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            window.addGenRow(sub ? sub.id : '', t.id, '');
+          });
+        }
+      }
+
       window.syncGeneratorRows = function() {
         if (!generatorData || !generatorData.teachers) return;
         const currentTeacherIds = new Set();
@@ -2034,9 +2049,10 @@ async function initGeneratorTab() {
       if (btnAddRow) {
         const newBtn = btnAddRow.cloneNode(true);
         btnAddRow.parentNode.replaceChild(newBtn, btnAddRow);
-        newBtn.addEventListener('click', () => {
+        newBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           window.addGenRow();
-          window.saveGeneratorRowsState();
+          if (window.saveGeneratorRowsState) window.saveGeneratorRowsState();
         });
       }
 
