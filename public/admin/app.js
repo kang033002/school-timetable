@@ -18,7 +18,8 @@ const btnLogout = document.getElementById('btn-logout');
 
 const viewModeSelect = document.getElementById('view-mode-select');
 const classFilterGroup = document.getElementById('class-filter-group');
-const classSelect = document.getElementById('class-select');
+const filterGradeSelect = document.getElementById('filter-grade-select');
+const filterClassSelect = document.getElementById('filter-class-select');
 const teacherTitleSelect = document.getElementById('teacher-title-select');
 const datePicker = document.getElementById('date-picker');
 const btnRefresh = document.getElementById('btn-refresh');
@@ -526,16 +527,30 @@ async function loadSchoolMetadata() {
     if (!res.ok) return;
     currentSchoolMeta = await res.json();
 
-    if (currentSchoolMeta && currentSchoolMeta.gradeClasses && classSelect) {
-      // Populate Class Select
-      classSelect.innerHTML = '';
-      currentSchoolMeta.gradeClasses.forEach(gc => {
-        const opt = document.createElement('option');
-        opt.value = `${gc.grade}-${gc.class_number}`;
-        opt.dataset.id = gc.id;
-        opt.textContent = `${gc.grade}학년 ${gc.class_number}반 (${gc.homeroom_teacher_name ? gc.homeroom_teacher_name + ' 담임 선생님' : '담임미정'})`;
-        classSelect.appendChild(opt);
+    if (currentSchoolMeta && currentSchoolMeta.gradeClasses && filterGradeSelect && filterClassSelect) {
+      const updateClassOptions = () => {
+        const selectedGrade = filterGradeSelect.value;
+        filterClassSelect.innerHTML = '';
+        const filteredClasses = currentSchoolMeta.gradeClasses.filter(gc => String(gc.grade) === selectedGrade);
+        filteredClasses.forEach(gc => {
+          const opt = document.createElement('option');
+          opt.value = `${gc.class_number}`;
+          opt.dataset.id = gc.id;
+          opt.textContent = `${gc.class_number}반 (${gc.homeroom_teacher_name ? gc.homeroom_teacher_name + ' 선생님' : '공석'})`;
+          filterClassSelect.appendChild(opt);
+        });
+      };
+      
+      // Update classes when grade changes
+      filterGradeSelect.addEventListener('change', () => {
+        updateClassOptions();
+        loadTimetable();
       });
+      // Optionally reload when class changes
+      filterClassSelect.addEventListener('change', loadTimetable);
+      
+      // Initialize class options
+      updateClassOptions();
     }
 
     // Populate Teacher Title Dropdown
@@ -809,47 +824,131 @@ async function loadPendingUsers() {
   try {
     const res = await fetch(`${API_BASE}/admin/users/pending?schoolId=${currentUser.schoolId}`);
     const users = await res.json();
-    pendingUsersList.innerHTML = '';
     
-    if (users.length === 0) {
-      pendingUsersList.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-sub);">대기 중인 승인 요청이 없습니다.</td></tr>`;
-      return;
+    const studentsList = document.getElementById('pending-students-list');
+    const teachersList = document.getElementById('pending-teachers-list');
+    
+    if (!studentsList || !teachersList) return;
+
+    studentsList.innerHTML = '';
+    teachersList.innerHTML = '';
+    
+    const students = users.filter(u => u.role === 'STUDENT');
+    const teachers = users.filter(u => u.role === 'TEACHER');
+
+    if (students.length === 0) {
+      studentsList.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-sub);">대기 중인 승인 요청이 없습니다.</td></tr>`;
+    } else {
+      students.forEach(u => {
+        const match = u.name.match(/^(.*?)\s*\((\d+)학년\s*(\d+)반\s*학생\)$/);
+        const name = match ? match[1] : u.name;
+        const grade = match ? match[2] + '학년' : '-';
+        const classNum = match ? match[3] + '반' : '-';
+
+        const tr = document.createElement('tr');
+        tr.dataset.id = u.id;
+        tr.innerHTML = `
+          <td style="text-align:center;"><input type="checkbox" class="chk-pending-student"></td>
+          <td>${grade}</td>
+          <td>${classNum}</td>
+          <td>${name}</td>
+          <td><input type="text" class="form-input pending-email" value="${u.email}" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+          <td><input type="text" class="form-input pending-password" placeholder="변경 시 입력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+        `;
+        studentsList.appendChild(tr);
+      });
     }
 
-    users.forEach(u => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${u.name}</td>
-        <td>${u.email}</td>
-        <td>
-          <button class="btn btn-sm btn-primary" onclick="approveUser('${u.id}', 'APPROVED')">승인</button>
-          <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="approveUser('${u.id}', 'REJECTED')">반려</button>
-        </td>
-      `;
-      pendingUsersList.appendChild(tr);
-    });
+    if (teachers.length === 0) {
+      teachersList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">대기 중인 승인 요청이 없습니다.</td></tr>`;
+    } else {
+      teachers.forEach(u => {
+        const match = u.name.match(/^(.*?)\s*\((.*?)\s*교사\)$/);
+        const name = match ? match[1] : u.name;
+        const subject = match ? match[2] : '-';
+
+        const tr = document.createElement('tr');
+        tr.dataset.id = u.id;
+        tr.innerHTML = `
+          <td style="text-align:center;"><input type="checkbox" class="chk-pending-teacher"></td>
+          <td>${subject}</td>
+          <td>${name}</td>
+          <td><input type="text" class="form-input pending-email" value="${u.email}" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+          <td><input type="text" class="form-input pending-password" placeholder="변경 시 입력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+        `;
+        teachersList.appendChild(tr);
+      });
+    }
   } catch (err) {
     console.error('Load pending users error:', err);
   }
 }
 
-window.approveUser = async function(userId, status) {
+window.toggleAllPending = function(role, checkbox) {
+  const cbs = document.querySelectorAll(`.chk-pending-${role.toLowerCase()}`);
+  cbs.forEach(cb => cb.checked = checkbox.checked);
+};
+
+window.approveSelectedUsers = function(role) {
+  processPendingUsers(role, 'APPROVED', false);
+};
+
+window.approveAllUsers = function(role) {
+  processPendingUsers(role, 'APPROVED', true);
+};
+
+window.rejectSelectedUsers = function(role) {
+  processPendingUsers(role, 'REJECTED', false);
+};
+
+async function processPendingUsers(role, status, all) {
+  const listId = role === 'STUDENT' ? 'pending-students-list' : 'pending-teachers-list';
+  const rows = document.querySelectorAll(`#${listId} tr[data-id]`);
+  const updates = [];
+  const userIds = [];
+
+  rows.forEach(tr => {
+    const cb = tr.querySelector(`.chk-pending-${role.toLowerCase()}`);
+    if (all || (cb && cb.checked)) {
+      const id = tr.dataset.id;
+      userIds.push(id);
+      
+      const emailInput = tr.querySelector('.pending-email');
+      const pwdInput = tr.querySelector('.pending-password');
+      
+      const updateData = { id };
+      if (emailInput && emailInput.value) updateData.email = emailInput.value;
+      if (pwdInput && pwdInput.value) updateData.password_hash = pwdInput.value;
+      
+      updates.push(updateData);
+    }
+  });
+
+  if (userIds.length === 0) {
+    alert('선택된 사용자가 없습니다.');
+    return;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/admin/users/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, status })
+      body: JSON.stringify({ userIds, status, updates })
     });
     if (res.ok) {
-      alert(`성공적으로 처리되었습니다 (${status})`);
+      alert(`성공적으로 처리되었습니다.(${status})`);
       loadPendingUsers();
+      if (status === 'APPROVED') {
+        if (role === 'STUDENT') loadApprovedStudents();
+        else loadTeachers();
+      }
     } else {
-      alert('승인 요청 처리 중 실패했습니다.');
+      alert('요청 처리에 실패했습니다.');
     }
   } catch (err) {
     console.error('Approve user fetch error:', err);
   }
-};
+}
 
 async function loadApprovedStudents() {
   try {
@@ -1044,12 +1143,13 @@ async function loadTimetable() {
       url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${teacherId}&date=${dateVal}${baseParam}`;
     } else {
       mode = 'CLASS';
-      if (!classSelect.value) {
+      if (!filterGradeSelect.value || !filterClassSelect.value) {
         weekDateSubtext.textContent = `기준주간 시작: -`;
         renderGrid([], mode);
         return;
       }
-      const [grade, classNum] = classSelect.value.split('-');
+      const grade = filterGradeSelect.value;
+      const classNum = filterClassSelect.value;
       url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
       if (activeTab === 'BASE') {
         if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
@@ -1299,10 +1399,9 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   let gradeStr = '1';
   let classNumStr = '1';
 
-  if (classSelect && classSelect.value) {
-    const parts = classSelect.value.split('-');
-    gradeStr = parts[0] || '1';
-    classNumStr = parts[1] || '1';
+  if (filterGradeSelect && filterClassSelect) {
+    gradeStr = filterGradeSelect.value || '1';
+    classNumStr = filterClassSelect.value || '1';
     if (currentSchoolMeta && currentSchoolMeta.gradeClasses) {
       const gcObj = currentSchoolMeta.gradeClasses.find(gc => gc.grade == gradeStr && gc.class_number == classNumStr);
       if (gcObj) selectedGcId = gcObj.id;
@@ -2262,7 +2361,11 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
     if (!res.ok) { alert('자동 생성 실패'); return; }
 
     const data = await res.json();
-    generatedResult = data.timetable;
+    
+    if (!generatedResult) generatedResult = [];
+    const newlyGeneratedClasses = [...new Set(data.timetable.map(t => t.gradeClassId))];
+    generatedResult = generatedResult.filter(r => !newlyGeneratedClasses.includes(r.gradeClassId));
+    generatedResult.push(...data.timetable);
 
     // 기존 수동 배치 유지하며 AI 생성 결과 융합 (classMap 업데이트)
     if (!genClassMap) genClassMap = {};
