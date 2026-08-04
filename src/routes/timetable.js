@@ -343,6 +343,60 @@ router.get('/timetable/class', async (req, res) => {
   }
 });
 
+// 3.5 GET /api/timetable/daily-all?schoolId=...&date=...
+router.get('/timetable/daily-all', async (req, res) => {
+  try {
+    const { schoolId, date } = req.query;
+    if (!schoolId || !date) {
+      return res.status(400).json({ error: 'schoolId and date are required' });
+    }
+
+    const targetDateObj = new Date(date);
+    const dayOfWeek = targetDateObj.getDay();
+
+    const school = await get(`SELECT max_periods_per_day FROM schools WHERE id = ?`, [schoolId]);
+    const maxPeriods = school ? school.max_periods_per_day : 9;
+
+    const classes = await all(`SELECT * FROM grade_classes WHERE school_id = ? ORDER BY grade, class_number`, [schoolId]);
+
+    const timetable = [];
+    for (const gc of classes) {
+      const classSlots = [];
+      for (let period = 1; period <= maxPeriods; period++) {
+        const slot = await getEffectiveSlot(schoolId, gc.id, date, dayOfWeek, period);
+        classSlots.push(slot || {
+          dayOfWeek,
+          period,
+          targetDate: date,
+          gradeClassId: gc.id,
+          subjectName: '',
+          shortSubjectName: '',
+          teacherName: '',
+          roomName: '',
+          isChanged: false
+        });
+      }
+      timetable.push({
+        gradeClassId: gc.id,
+        grade: gc.grade,
+        classNumber: gc.class_number,
+        slots: classSlots
+      });
+    }
+
+    res.json({
+      schoolId,
+      date,
+      dayOfWeek,
+      maxPeriods,
+      timetable
+    });
+  } catch (err) {
+    console.error('Daily all timetable error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // 4. GET /api/timetable/teacher?schoolId=...&teacherId=...&date=...
 router.get('/timetable/teacher', async (req, res) => {
   try {

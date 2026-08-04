@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일자별 전체 학급 시간표</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
+  <style>
+    body {
+      background-color: #f8fafc;
+      padding: 1rem;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .table-responsive {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow-x: auto;
+      max-height: calc(100vh - 120px);
+    }
+    .timetable-grid th, .timetable-grid td {
+      min-width: 100px;
+      text-align: center;
+    }
+    .th-period {
+      width: 60px;
+      min-width: 60px !important;
+      position: sticky;
+      left: 0;
+      background: #f1f5f9;
+      z-index: 10;
+    }
+    .timetable-grid thead th {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .timetable-grid thead th:first-child {
+      z-index: 30;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" style="text-align:center; padding: 3rem; font-size: 1.2rem; color: #64748b;">
+    시간표를 불러오는 중입니다... ⏳
+  </div>
+
+  <div id="content" class="hidden">
+    <div class="header-bar">
+      <h1 class="header-title" id="page-title">📅 0000.00.00 (요일) 전체 학급 시간표</h1>
+      
+      <div class="controls">
+        <div class="filter-group" style="display:flex; flex-direction:row; align-items:center; gap:0.5rem; margin:0;">
+          <label style="font-weight:600; color:#475569;">학년 필터</label>
+          <select id="grade-filter" class="form-select" style="width:120px;">
+            <option value="all">전체 학년</option>
+            <option value="1">1학년</option>
+            <option value="2">2학년</option>
+            <option value="3">3학년</option>
+          </select>
+        </div>
+        <button class="btn btn-outline" onclick="window.print()">🖨️ 인쇄</button>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="timetable-grid" id="daily-table">
+        <thead id="daily-thead">
+          <!-- Dynamically populated -->
+        </thead>
+        <tbody id="daily-tbody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="daily-all.js?v=1.0"></script>
+</body>
+</html>

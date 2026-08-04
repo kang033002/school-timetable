@@ -112,6 +112,18 @@ init();
 
   if (btnRefresh) btnRefresh.addEventListener('click', loadTimetable);
   if (btnSettingsToggle) btnSettingsToggle.addEventListener('click', toggleSettingsPanel);
+  
+  const btnDailyAll = document.getElementById('btn-daily-all');
+  if (btnDailyAll) {
+    btnDailyAll.addEventListener('click', () => {
+      const selectedDate = datePicker.value;
+      if (!selectedDate) {
+        alert('기준 일자를 먼저 선택해주세요.');
+        return;
+      }
+      window.open(`daily-all.html?date=${selectedDate}`, '_blank');
+    });
+  }
 
 teacherTitleSelect.addEventListener('change', () => {
   if (activeTab !== 'TEACHER') switchTab('TEACHER');
