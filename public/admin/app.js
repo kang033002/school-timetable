@@ -2087,12 +2087,12 @@ async function initGeneratorTab() {
         }
 
         const subjectOptions = (generatorData.subjects || []).map(s => {
-          const isSelected = (s.id === defaultSubjectId) ? 'selected' : '';
+          const isSelected = (String(s.id) === String(defaultSubjectId)) ? 'selected' : '';
           return `<option value="${s.id}" ${isSelected}>${s.name}</option>`;
         }).join('');
         
         const teacherOptions = (generatorData.teachers || []).map(t => {
-          const isSelected = (t.id === defaultTeacherId) ? 'selected' : '';
+          const isSelected = (String(t.id) === String(defaultTeacherId)) ? 'selected' : '';
           return `<option value="${t.id}" ${isSelected}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`;
         }).join('');
 
