@@ -646,6 +646,43 @@ router.delete('/holidays/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/admin/base-timetable
+router.delete('/base-timetable', async (req, res) => {
+  try {
+    const { schoolId, gradeClassId, dayOfWeek, period } = req.body;
+    if (!schoolId || !gradeClassId || !dayOfWeek || !period) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    await run(
+      `DELETE FROM base_timetable WHERE school_id = ? AND grade_class_id = ? AND day_of_week = ? AND period = ?`,
+      [schoolId, gradeClassId, dayOfWeek, period]
+    );
+    res.json({ message: 'Slot deleted successfully' });
+  } catch (err) {
+    console.error('Delete base-timetable slot error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
+// GET /api/admin/base-timetable-all
+router.get('/base-timetable-all', async (req, res) => {
+  try {
+    const { schoolId } = req.query;
+    if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
+    const data = await all(`
+      SELECT bt.grade_class_id as gradeClassId, bt.day_of_week as dayOfWeek, bt.period,
+             bt.subject_id as subjectId, bt.teacher_id as teacherId, bt.room_id as roomId,
+             s.name as subjectName, t.name as teacherName
+      FROM base_timetable bt
+      LEFT JOIN subjects s ON bt.subject_id = s.id
+      LEFT JOIN teachers t ON bt.teacher_id = t.id
+      WHERE bt.school_id = ?
+    `, [schoolId]);
+    res.json(data);
+  } catch (err) {
+    console.error('Fetch all base-timetable error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 module.exports = router;

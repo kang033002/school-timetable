@@ -1363,8 +1363,9 @@ function populateModalDropdowns(slot) {
   const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
 
   if (changeSubjectSelect) {
-    changeSubjectSelect.innerHTML = '<option value="">-- 과목 선택 (삭제 시 빈값) --</option>' +
-      subs.map(s => `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+    changeSubjectSelect.innerHTML = '<option value="">-- 변경할 과목 선택 --</option>';
+    changeSubjectSelect.innerHTML += '<option value="DELETE" style="color:red; font-weight:bold;">-- 🗑️ 해당 교시 삭제 (빈 시간으로 만들기) --</option>';
+    changeSubjectSelect.innerHTML += subs.map(s => `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
   }
   if (changeTeacherSelect) {
     changeTeacherSelect.innerHTML = '<option value="">-- 교사 선택 --</option>' +
@@ -1488,7 +1489,7 @@ async function handleApplyChange(e) {
     const subjectName = subObj ? subObj.name : '';
     const teacherName = tchObj ? tchObj.name : '';
 
-    if (!changedSubjectId || !changedTeacherId) {
+    if (!changedSubjectId || !changedTeacherId || changedSubjectId === 'DELETE') {
       if (genClassMap[gradeClassId]?.[dayOfWeek]) {
         delete genClassMap[gradeClassId][dayOfWeek][period];
       }
@@ -1562,18 +1563,19 @@ async function handleApplyChange(e) {
   }
 
   if (activeTab === 'BASE') {
+    const isDelete = (changedSubjectId === 'DELETE');
     const payload = {
       schoolId: currentUser.schoolId,
       gradeClassId: selectedSlotData.gradeClassId,
       dayOfWeek: selectedSlotData.dayOfWeek,
       period: selectedSlotData.period,
-      subjectId: changedSubjectId,
-      teacherId: changedTeacherId,
+      subjectId: isDelete ? null : changedSubjectId,
+      teacherId: isDelete ? null : changedTeacherId,
       force: false
     };
     try {
       const res = await fetch(`${API_BASE}/admin/base-timetable`, {
-        method: 'POST',
+        method: isDelete ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -1609,16 +1611,17 @@ async function handleApplyChange(e) {
 
   // DAILY Tab Case
   const isTeacher = currentUser?.role === 'TEACHER';
+  const isDelete = (changedSubjectId === 'DELETE');
   const payload = {
     schoolId: currentUser.schoolId,
     targetDate: selectedSlotData.targetDate || new Date().toISOString().split('T')[0],
     period: selectedSlotData.period,
     gradeClassId: selectedSlotData.gradeClassId,
-    changeType: 'SUBSTITUTE',
-    changedTeacherId,
-    changedSubjectId,
+    changeType: isDelete ? 'CANCEL' : 'SUBSTITUTE',
+    changedTeacherId: isDelete ? null : changedTeacherId,
+    changedSubjectId: isDelete ? null : changedSubjectId,
     changedRoomId: null,
-    reason: isTeacher ? '[교사 테스트] 시간표 모의 수업 교체' : '일과계 시간표 조정',
+    reason: isTeacher ? '[교사 테스트] 시간표 ' + (isDelete ? '해당 교시 삭제' : '모의 수업 교체') : '일과계 시간표 ' + (isDelete ? '해당 교시 삭제' : '조정'),
     createdBy: currentUser.name || '관리자',
     force: false,
     sandbox: isTeacher
@@ -2793,3 +2796,38 @@ window.closePendingApprovalsOverlay = () => {
   if (el) el.classList.add('hidden');
 };
 
+
+// 🗑️ Delete button in Modal
+document.getElementById('btn-modal-delete')?.addEventListener('click', () => {
+  if (confirm('정말로 해당 교시를 삭제(빈 시간)하시겠습니까?')) {
+    document.getElementById('modal-change-subject').value = 'DELETE';
+    document.getElementById('modal-change-teacher').value = ''; // Teacher not needed for delete
+    handleApplyChange();
+  }
+});
+
+// 🔍 Load Base Timetable button in Generator
+document.getElementById('btn-load-base-timetable')?.addEventListener('click', async () => {
+  if (!currentUser || !currentUser.schoolId) return;
+  if (!confirm('기존 생성된 학기 시간표를 불러오시겠습니까? 현재 생성 중인 시간표를 덮어씁니다.')) return;
+  try {
+    const res = await fetch(API_BASE + '/admin/base-timetable-all?schoolId=' + currentUser.schoolId);
+    if (!res.ok) throw new Error('Failed to load base timetable');
+    const data = await res.json();
+    
+    // Format data into genClassMap
+    generatorData.baseTimetable = data;
+    genClassMap = {};
+    data.forEach(item => {
+      if (!genClassMap[item.gradeClassId]) genClassMap[item.gradeClassId] = {};
+      if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
+      genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
+    });
+    
+    alert('기존 시간표를 성공적으로 불러왔습니다.');
+    renderGeneratorGrid();
+  } catch (err) {
+    console.error(err);
+    alert('기존 시간표를 불러오는 중 오류가 발생했습니다.');
+  }
+});
