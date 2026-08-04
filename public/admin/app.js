@@ -121,7 +121,7 @@ init();
         alert('기준 일자를 먼저 선택해주세요.');
         return;
       }
-      window.open(`daily-all.html?date=${selectedDate}`, '_blank');
+      window.open(`daily-all.html?schoolId=${currentUser.schoolId}&date=${selectedDate}`, '_blank');
     });
   }
 

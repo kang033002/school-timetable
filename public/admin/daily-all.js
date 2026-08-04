@@ -1,6 +1,7 @@
 const API_BASE = '/api';
 const urlParams = new URLSearchParams(window.location.search);
 const targetDate = urlParams.get('date');
+const schoolIdParam = urlParams.get('schoolId');
 
 let currentUser = null;
 let allData = null; // { timetable: [...], maxPeriods: N, ... }
@@ -12,11 +13,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/auth/me`);
-    if (res.ok) {
-      currentUser = await res.json();
-    } else {
-      alert('로그인이 필요합니다.');
+    const userStr = sessionStorage.getItem('user');
+    if (userStr) {
+      currentUser = JSON.parse(userStr);
+    } else if (schoolIdParam) {
+      // If no session but schoolId is provided in URL, we can proceed anonymously for viewing
+      currentUser = { schoolId: schoolIdParam };
+    }
+
+    if (!currentUser || !currentUser.schoolId) {
+      alert('로그인이 필요하거나 학교 ID가 없습니다.');
       window.close();
       return;
     }
