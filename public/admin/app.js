@@ -25,7 +25,7 @@ const datePicker = document.getElementById('date-picker');
 const btnRefresh = document.getElementById('btn-refresh');
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
 
-const timetableTitle = null; // ??���??�적?�로 ?�용 (?�래 loadTimetable 참조)
+const timetableTitle = null; // 탭별로 동적으로 사용 (아래 loadTimetable 참조)
 const weekDateSubtext = document.getElementById('week-date-subtext');
 const timetableBody = document.getElementById('timetable-body');
 
@@ -118,7 +118,7 @@ init();
     btnDailyAll.addEventListener('click', () => {
       const selectedDate = datePicker.value;
       if (!selectedDate) {
-        alert('기�? ?�자�?먼�? ?�택?�주?�요.');
+        alert('기준 일자를 먼저 선택해주세요.');
         return;
       }
       window.open(`daily-all.html?schoolId=${currentUser.schoolId}&date=${selectedDate}`, '_blank');
@@ -150,7 +150,7 @@ teacherTitleSelect.addEventListener('change', () => {
   document.getElementById('btn-delete-selected-students')?.addEventListener('click', () => {
     const selectedIds = Array.from(document.querySelectorAll('.chk-student:checked')).map(chk => chk.value);
     if (selectedIds.length === 0) {
-      alert('??��???�생???�택?�주?�요.');
+      alert('삭제할 학생을 선택해주세요.');
       return;
     }
     deleteStudents(selectedIds);
@@ -174,14 +174,14 @@ teacherTitleSelect.addEventListener('change', () => {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('계정 ?�보가 ?�공?�으�?변경되?�습?�다. 보안???�해 ?�시 로그?�해주세??');
+        alert('계정 정보가 성공적으로 변경되었습니다. 보안을 위해 다시 로그인해주세요.');
         handleLogout();
       } else {
-        alert(data.error || '계정 ?�보 변�??�패');
+        alert(data.error || '계정 정보 변경 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�류가 발생?�습?�다.');
+      alert('오류가 발생했습니다.');
     }
   });
 
@@ -252,11 +252,11 @@ teacherTitleSelect.addEventListener('change', () => {
         schoolSignupForm.classList.add('hidden');
         loginForm.classList.remove('hidden');
       } else {
-        alert(data.error || '?�교 ?�록 ?�청 ?�패');
+        alert(data.error || '학교 등록 신청 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+      alert('서버 통신 오류가 발생했습니다.');
     }
   });
 
@@ -284,16 +284,16 @@ teacherTitleSelect.addEventListener('change', () => {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('?�생??가???�청???�료?�었?�니?? 관리자 ?�인 ?��?중입?�다.');
+        alert('선생님 가입 신청이 완료되었습니다! 관리자 승인 대기 중입니다.');
         teacherSignupFormPublic.reset();
         teacherSignupFormPublic.classList.add('hidden');
         loginForm.classList.remove('hidden');
       } else {
-        alert(data.error || '가???�청 ?�패');
+        alert(data.error || '가입 신청 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+      alert('서버 통신 오류가 발생했습니다.');
     }
   });
 
@@ -322,16 +322,16 @@ teacherTitleSelect.addEventListener('change', () => {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('?�생 가???�청???�료?�었?�니?? 관리자 ?�인 ?�료 ??조회가 가?�합?�다.');
+        alert('학생 가입 신청이 완료되었습니다! 관리자 승인 완료 후 조회가 가능합니다.');
         studentSignupForm.reset();
         studentSignupForm.classList.add('hidden');
         loginForm.classList.remove('hidden');
       } else {
-        alert(data.error || '가???�청 ?�패');
+        alert(data.error || '가입 신청 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�신 �??�류가 발생?�습?�다.');
+      alert('통신 중 오류가 발생했습니다.');
     }
   });
 });
@@ -348,7 +348,7 @@ async function handleLogin(e) {
   const schoolCode = schoolCodeInput ? schoolCodeInput.value.trim() : '';
 
   if (!email || !password) {
-    alert('?�이???�메???� 비�?번호�?모두 ?�력?�주?�요!');
+    alert('아이디(이메일)와 비밀번호를 모두 입력해주세요!');
     return;
   }
 
@@ -361,11 +361,11 @@ async function handleLogin(e) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || '로그???�패: ?�이???�는 비�?번호�??�인?�주?�요.');
+      alert(data.error || '로그인 실패: 아이디 또는 비밀번호를 확인해주세요.');
       return;
     }
 
-    // 마스??계정??경우 마스???�이지�??�내
+    // 마스터 계정일 경우 마스터 페이지로 안내
     if (data.user && data.user.role === 'MASTER_ADMIN') {
       window.location.href = '/master';
       return;
@@ -378,7 +378,7 @@ async function handleLogin(e) {
     showDashboard();
   } catch (err) {
     console.error('Login error:', err);
-    alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+    alert('서버 통신 오류가 발생했습니다.');
   }
 }
 
@@ -406,13 +406,13 @@ async function showDashboard() {
     const navSchoolNameElem = document.getElementById('nav-school-name');
 
     if (navSchoolNameElem) {
-      const schoolTitle = currentUser?.schoolName || '?�간??;
-      const codeStr = currentUser?.schoolCode ? ` (?�교 코드 번호 ${currentUser.schoolCode})` : '';
+      const schoolTitle = currentUser?.schoolName || '시간표';
+      const codeStr = currentUser?.schoolCode ? ` (학교 코드 번호 ${currentUser.schoolCode})` : '';
       
       if (currentUser?.role === 'STUDENT') {
-        navSchoolNameElem.textContent = `?�� ${schoolTitle} ?�생 ?�간??{codeStr}`;
+        navSchoolNameElem.textContent = `🏫 ${schoolTitle} 학생 시간표${codeStr}`;
       } else {
-        navSchoolNameElem.textContent = `?�� ${schoolTitle} 관리자 ?�스??{codeStr}`;
+        navSchoolNameElem.textContent = `🏫 ${schoolTitle} 관리자 시스템${codeStr}`;
       }
     }
     
@@ -438,12 +438,12 @@ async function showDashboard() {
     if (currentUser?.role === 'TEACHER') {
       if (tabDaily) {
         tabDaily.style.display = 'inline-block';
-        tabDaily.textContent = '?�� ?�급 ?�간??;
+        tabDaily.textContent = '📅 학급 시간표';
       }
       if (tabBase) tabBase.style.display = 'none';
       if (tabTeacher) {
         tabTeacher.style.display = 'inline-block';
-        tabTeacher.textContent = '?��?��??�기 ?�업 ?�간??;
+        tabTeacher.textContent = '👩‍🏫 자기 수업 시간표';
       }
       if (tabGen) tabGen.style.display = 'none';
       if (btnSettings) btnSettings.style.display = 'inline-block';
@@ -456,7 +456,7 @@ async function showDashboard() {
     } else if (currentUser?.role === 'STUDENT') {
       if (tabDaily) {
         tabDaily.style.display = 'inline-block';
-        tabDaily.textContent = '?�� ?�급 ?�간??;
+        tabDaily.textContent = '📅 학급 시간표';
       }
       if (tabBase) tabBase.style.display = 'none';
       if (tabTeacher) {
@@ -472,18 +472,18 @@ async function showDashboard() {
     } else {
       if (tabDaily) {
         tabDaily.style.display = 'inline-block';
-        tabDaily.textContent = '?�� ?�자�??�간??;
+        tabDaily.textContent = '📅 일자별 시간표';
       }
       if (tabBase) tabBase.style.display = 'inline-block';
       if (tabTeacher) {
         tabTeacher.style.display = 'inline-block';
-        tabTeacher.textContent = '?��?��?교사 ?�간??;
+        tabTeacher.textContent = '👩‍🏫 교사 시간표';
       }
       if (tabGen) tabGen.style.display = 'inline-block';
       if (btnSettings) btnSettings.style.display = 'inline-block';
     }
 
-    // 1~10교시 그리??즉시 ??�� ?�더�?
+    // 1~10교시 그리드 즉시 항시 렌더링
     renderGrid([], 'CLASS');
 
     await loadSchoolMetadata();
@@ -504,22 +504,22 @@ function renderAdminClassesTable() {
   const teachers = currentSchoolMeta?.teachers || [];
 
   if (gradeClasses.length === 0) {
-    cTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-sub); padding:1rem;">?�록???�년/?�급???�습?�다. ?�단 [?�급 ?�성/?�정 ?�???�서 ?�년�?반을 ?�록?�주?�요.</td></tr>`;
+    cTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다. 상단 [학급 생성/수정 저장]에서 학년과 반을 등록해주세요.</td></tr>`;
     return;
   }
 
   gradeClasses.forEach(c => {
     const tr = document.createElement('tr');
     
-    let optionsHtml = '<option value="">?�임 미�???/option>';
+    let optionsHtml = '<option value="">담임 미지정</option>';
     teachers.forEach(t => {
       const isSelected = t.id === c.homeroom_teacher_id ? 'selected' : '';
-      optionsHtml += `<option value="${t.id}" ${isSelected}>${t.name} (${t.subject_name || '과목?�음'})</option>`;
+      optionsHtml += `<option value="${t.id}" ${isSelected}>${t.name} (${t.subject_name || '과목없음'})</option>`;
     });
 
     tr.innerHTML = `
-      <td><strong>${c.grade}?�년</strong></td>
-      <td><strong>${c.class_number}�?/strong></td>
+      <td><strong>${c.grade}학년</strong></td>
+      <td><strong>${c.class_number}반</strong></td>
       <td>
         <select id="class-homeroom-${c.id}" class="form-select" style="padding: 4px 8px; font-size: 0.9em; height: auto;" onchange="updateClassHomeroom('${c.id}', ${c.grade}, ${c.class_number})">
           ${optionsHtml}
@@ -548,7 +548,7 @@ async function loadSchoolMetadata() {
           const opt = document.createElement('option');
           opt.value = `${gc.class_number}`;
           opt.dataset.id = gc.id;
-          opt.textContent = `${gc.class_number}�?(${gc.homeroom_teacher_name ? gc.homeroom_teacher_name + ' ?�생?? : '공석'})`;
+          opt.textContent = `${gc.class_number}반 (${gc.homeroom_teacher_name ? gc.homeroom_teacher_name + ' 선생님' : '공석'})`;
           filterClassSelect.appendChild(opt);
         });
       };
@@ -570,7 +570,7 @@ async function loadSchoolMetadata() {
       teacherTitleSelect.innerHTML = '';
       const defTeacherOpt = document.createElement('option');
       defTeacherOpt.value = '';
-      defTeacherOpt.textContent = '교사 ?�택';
+      defTeacherOpt.textContent = '교사 선택';
       teacherTitleSelect.appendChild(defTeacherOpt);
 
       if (currentSchoolMeta.teachers) {
@@ -593,7 +593,7 @@ async function loadSchoolMetadata() {
       // Add default empty option for homeroom selection
       const optNone = document.createElement('option');
       optNone.value = '';
-      optNone.textContent = '?�임 ?�음';
+      optNone.textContent = '담임 없음';
       classSetupHomeroom.appendChild(optNone);
 
       if (currentSchoolMeta.teachers) {
@@ -645,18 +645,18 @@ async function loadSchoolMetadata() {
     if (tTableBody) {
       tTableBody.innerHTML = '';
       if (!currentSchoolMeta.teachers || currentSchoolMeta.teachers.length === 0) {
-        tTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub); padding:1rem;">?�록??교사가 ?�습?�다.</td></tr>`;
+        tTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 교사가 없습니다.</td></tr>`;
       } else {
         currentSchoolMeta.teachers.forEach(t => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td><input type="text" class="form-input" id="teacher-name-${t.id}" value="${t.name}" style="padding: 4px; font-size: 0.9em;"></td>
-            <td><input type="text" class="form-input" id="teacher-subject-${t.id}" value="${t.subject_name || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="과목 ?�력"></td>
-            <td><input type="text" class="form-input" id="teacher-email-${t.id}" value="${t.email || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="?�이???�성"></td>
-            <td><input type="text" class="form-input" id="teacher-pwd-${t.id}" value="${t.password_hash || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="비�?번호 ?�정"></td>
+            <td><input type="text" class="form-input" id="teacher-subject-${t.id}" value="${t.subject_name || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="과목 입력"></td>
+            <td><input type="text" class="form-input" id="teacher-email-${t.id}" value="${t.email || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="아이디 생성"></td>
+            <td><input type="text" class="form-input" id="teacher-pwd-${t.id}" value="${t.password_hash || ''}" style="padding: 4px; font-size: 0.9em;" placeholder="비밀번호 설정"></td>
             <td style="text-align:center; white-space: nowrap;">
-              <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateTeacherCredentials('${t.id}', '${t.code || ''}')">?�정</button>
-              <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteTeacher('${t.id}')">??��</button>
+              <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateTeacherCredentials('${t.id}', '${t.code || ''}')">수정</button>
+              <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteTeacher('${t.id}')">삭제</button>
             </td>
           `;
           tTableBody.appendChild(tr);
@@ -673,14 +673,14 @@ async function loadSchoolMetadata() {
 }
 
 window.deleteClass = async function(id) {
-  if (!confirm('?�당 ?�급????��?�시겠습?�까? 관???�간???�이?�도 ??��?????�습?�다.')) return;
+  if (!confirm('해당 학급을 삭제하시겠습니까? 관련 시간표 데이터도 삭제될 수 있습니다.')) return;
   try {
     const res = await fetch(`${API_BASE}/admin/classes/${id}`, { method: 'DELETE' });
     if (res.ok) {
-      alert('?�급????��?�었?�니??');
+      alert('학급이 삭제되었습니다.');
       await loadSchoolMetadata();
     } else {
-      alert('?�급 ??�� ?�패');
+      alert('학급 삭제 실패');
     }
   } catch (err) {
     console.error(err);
@@ -688,14 +688,14 @@ window.deleteClass = async function(id) {
 };
 
 window.deleteTeacher = async function(id) {
-  if (!confirm('?�말�???교사�???��?�시겠습?�까? 관???�간???�이?��? ?�실?�거??초기?�될 ???�습?�다.')) return;
+  if (!confirm('정말로 이 교사를 삭제하시겠습니까? 관련 시간표 데이터가 소실되거나 초기화될 수 있습니다.')) return;
   try {
     const res = await fetch(`${API_BASE}/admin/teachers/${id}`, { method: 'DELETE' });
     if (res.ok) {
-      alert('?�공?�으�???��?�었?�니??');
+      alert('성공적으로 삭제되었습니다.');
       await loadSchoolMetadata();
     } else {
-      alert('교사 ??�� ?�패');
+      alert('교사 삭제 실패');
     }
   } catch (err) {
     console.error(err);
@@ -709,7 +709,7 @@ window.updateTeacherCredentials = async function(teacherId, code) {
   const pwdVal = document.getElementById(`teacher-pwd-${teacherId}`).value.trim();
 
   if (!nameVal) {
-    alert('교사명을 ?�력?�주?�요.');
+    alert('교사명을 입력해주세요.');
     return;
   }
 
@@ -729,14 +729,14 @@ window.updateTeacherCredentials = async function(teacherId, code) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert('?�공?�으�??�정?�었?�니??');
+      alert('성공적으로 수정되었습니다.');
       await loadSchoolMetadata();
     } else {
-      alert(data.error || '?�정 ?�패');
+      alert(data.error || '수정 실패');
     }
   } catch (err) {
     console.error(err);
-    alert('?�정 �??�류 발생');
+    alert('수정 중 오류 발생');
   }
 };
 
@@ -757,27 +757,27 @@ window.updateClassHomeroom = async function(classId, grade, classNumber) {
       })
     });
     if (res.ok) {
-      alert('?�임 교사가 ?�공?�으�??�정?�었?�니??');
+      alert('담임 교사가 성공적으로 수정되었습니다.');
       await loadSchoolMetadata();
     } else {
-      alert('?�임 교사 ?�정 ?�패');
+      alert('담임 교사 수정 실패');
     }
   } catch (err) {
     console.error(err);
-    alert('?�정 �??�류 발생');
+    alert('수정 중 오류 발생');
   }
 };
 
 
 window.deleteSubject = async function(id) {
-  if (!confirm('?�말�???과목????��?�시겠습?�까? 관???�간???�이?��? ?�실?�거??초기?�될 ???�습?�다.')) return;
+  if (!confirm('정말로 이 과목을 삭제하시겠습니까? 관련 시간표 데이터가 소실되거나 초기화될 수 있습니다.')) return;
   try {
     const res = await fetch(`${API_BASE}/admin/subjects/${id}`, { method: 'DELETE' });
     if (res.ok) {
-      alert('?�공?�으�???��?�었?�니??');
+      alert('성공적으로 삭제되었습니다.');
       await loadSchoolMetadata();
     } else {
-      alert('과목 ??�� ?�패');
+      alert('과목 삭제 실패');
     }
   } catch (err) {
     console.error(err);
@@ -790,7 +790,7 @@ function toggleSettingsPanel() {
   if (isHidden) {
     settingsPanel.classList.remove('hidden');
     timetableDisplayContainer.classList.add('hidden');
-    btnSettingsToggle.textContent = '?�� ?�간??보기';
+    btnSettingsToggle.textContent = '📅 시간표 보기';
     
     const isTeacher = currentUser?.role === 'TEACHER';
     const cardPending = document.getElementById('card-pending-approvals');
@@ -828,7 +828,7 @@ function toggleSettingsPanel() {
   } else {
     settingsPanel.classList.add('hidden');
     timetableDisplayContainer.classList.remove('hidden');
-    btnSettingsToggle.textContent = '?�️ ?�교/교사 ?�정';
+    btnSettingsToggle.textContent = '⚙️ 학교/교사 설정';
   }
 }
 
@@ -849,13 +849,13 @@ async function loadPendingUsers() {
     const teachers = users.filter(u => u.role === 'TEACHER');
 
     if (students.length === 0) {
-      studentsList.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-sub);">?��?중인 ?�인 ?�청???�습?�다.</td></tr>`;
+      studentsList.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-sub);">대기 중인 승인 요청이 없습니다.</td></tr>`;
     } else {
       students.forEach(u => {
-        const match = u.name.match(/^(.*?)\s*\((\d+)?�년\s*(\d+)�?s*?�생\)$/);
+        const match = u.name.match(/^(.*?)\s*\((\d+)학년\s*(\d+)반\s*학생\)$/);
         const name = match ? match[1] : u.name;
-        const grade = match ? match[2] + '?�년' : '-';
-        const classNum = match ? match[3] + '�? : '-';
+        const grade = match ? match[2] + '학년' : '-';
+        const classNum = match ? match[3] + '반' : '-';
 
         const tr = document.createElement('tr');
         tr.dataset.id = u.id;
@@ -865,14 +865,14 @@ async function loadPendingUsers() {
           <td>${classNum}</td>
           <td>${name}</td>
           <td><input type="text" class="form-input pending-email" value="${u.email}" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
-          <td><input type="text" class="form-input pending-password" placeholder="변�????�력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+          <td><input type="text" class="form-input pending-password" placeholder="변경 시 입력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
         `;
         studentsList.appendChild(tr);
       });
     }
 
     if (teachers.length === 0) {
-      teachersList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">?��?중인 ?�인 ?�청???�습?�다.</td></tr>`;
+      teachersList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">대기 중인 승인 요청이 없습니다.</td></tr>`;
     } else {
       teachers.forEach(u => {
         const match = u.name.match(/^(.*?)\s*\((.*?)\s*교사\)$/);
@@ -886,7 +886,7 @@ async function loadPendingUsers() {
           <td>${subject}</td>
           <td>${name}</td>
           <td><input type="text" class="form-input pending-email" value="${u.email}" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
-          <td><input type="text" class="form-input pending-password" placeholder="변�????�력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
+          <td><input type="text" class="form-input pending-password" placeholder="변경 시 입력" style="width:100%; padding:0.3rem 0.5rem; font-size:0.9rem;"></td>
         `;
         teachersList.appendChild(tr);
       });
@@ -937,7 +937,7 @@ async function processPendingUsers(role, status, all) {
   });
 
   if (userIds.length === 0) {
-    alert('?�택???�용?��? ?�습?�다.');
+    alert('선택된 사용자가 없습니다.');
     return;
   }
 
@@ -948,14 +948,14 @@ async function processPendingUsers(role, status, all) {
       body: JSON.stringify({ userIds, status, updates })
     });
     if (res.ok) {
-      alert(`?�공?�으�?처리?�었?�니??(${status})`);
+      alert(`성공적으로 처리되었습니다.(${status})`);
       loadPendingUsers();
       if (status === 'APPROVED') {
         if (role === 'STUDENT') loadApprovedStudents();
         else loadTeachers();
       }
     } else {
-      alert('?�청 처리???�패?�습?�다.');
+      alert('요청 처리에 실패했습니다.');
     }
   } catch (err) {
     console.error('Approve user fetch error:', err);
@@ -970,12 +970,12 @@ async function loadApprovedStudents() {
     listUI.innerHTML = '';
 
     if (students.length === 0) {
-      listUI.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-sub);">가?�된 ?�생???�습?�다.</td></tr>`;
+      listUI.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-sub);">가입된 학생이 없습니다.</td></tr>`;
       return;
     }
 
     students.forEach(s => {
-      const nameMatch = s.name.match(/^(.*?)\s*\((\d+)?�년\s*(\d+)�?s*?�생\)$/);
+      const nameMatch = s.name.match(/^(.*?)\s*\((\d+)학년\s*(\d+)반\s*학생\)$/);
       let actualName = s.name;
       let grade = '-';
       let classNum = '-';
@@ -994,8 +994,8 @@ async function loadApprovedStudents() {
         <td><input type="text" class="form-input" id="student-email-${s.id}" value="${s.email}" style="padding: 4px; font-size: 0.9em;"></td>
         <td><input type="text" class="form-input" id="student-pwd-${s.id}" value="${s.password_hash || ''}" style="padding: 4px; font-size: 0.9em;"></td>
         <td style="text-align:center; white-space: nowrap;">
-          <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateStudent('${s.id}')">?�정</button>
-          <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteStudents(['${s.id}'])">??��</button>
+          <button class="btn btn-sm btn-outline" style="border-color:var(--primary-color); color:var(--primary-color); margin-right: 4px;" onclick="updateStudent('${s.id}')">수정</button>
+          <button class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color);" onclick="deleteStudents(['${s.id}'])">삭제</button>
         </td>
       `;
       listUI.appendChild(tr);
@@ -1018,7 +1018,7 @@ window.updateStudent = async function(userId) {
   const password = pwdElem.value.trim();
   
   if (!email || !password) {
-    alert('?�이?��? 비�?번호�?모두 ?�력?�주?�요.');
+    alert('아이디와 비밀번호를 모두 입력해주세요.');
     return;
   }
   
@@ -1030,28 +1030,28 @@ window.updateStudent = async function(userId) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert('?�공?�으�??�정?�었?�니??');
+      alert('성공적으로 수정되었습니다.');
       loadApprovedStudents();
     } else {
-      alert(data.error || '?�정 �??�류가 발생?�습?�다.');
+      alert(data.error || '수정 중 오류가 발생했습니다.');
     }
   } catch (err) {
     console.error('Update student error:', err);
-    alert('?�정 �??�류가 발생?�습?�다.');
+    alert('수정 중 오류가 발생했습니다.');
   }
 };
 
 window.deleteStudents = async function(ids) {
-  if (!confirm(`?�택??${ids.length}명의 ?�생????��?�시겠습?�까?`)) return;
+  if (!confirm(`선택한 ${ids.length}명의 학생을 삭제하시겠습니까?`)) return;
   try {
     const res = await fetch(`${API_BASE}/admin/users?ids=${ids.join(',')}`, {
       method: 'DELETE'
     });
     if (res.ok) {
-      alert('?�공?�으�???��?�었?�니??');
+      alert('성공적으로 삭제되었습니다.');
       loadApprovedStudents();
     } else {
-      alert('??�� 처리 �??�패?�습?�다.');
+      alert('삭제 처리 중 실패했습니다.');
     }
   } catch (err) {
     console.error('Delete students error:', err);
@@ -1076,11 +1076,11 @@ async function handleTeacherSetup(e) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert('?�생???�보가 ?�상?�으�??�?�되?�습?�다.');
+      alert('선생님 정보가 정상적으로 저장되었습니다.');
       teacherSetupForm.reset();
       await loadSchoolMetadata();
     } else {
-      alert(data.error || '?�생???�록 ?�패');
+      alert(data.error || '선생님 등록 실패');
     }
   } catch (err) {
     console.error(err);
@@ -1103,19 +1103,19 @@ async function handleClassSetup(e) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert('?�� ?�급 ?�정???�공?�으�??�?�되?�습?�다.');
+      alert('🎉 학급 설정이 성공적으로 저장되었습니다.');
       classSetupForm.reset();
       await loadSchoolMetadata();
     } else {
-      let errorMsg = data.error || '?�급 ?�성/?�정 ?�패';
+      let errorMsg = data.error || '학급 생성/수정 실패';
       if (typeof errorMsg === 'string' && errorMsg.includes('already exists')) {
-        errorMsg = '?�️ ?��? 개설???�년/반입?�다. ?�래 [?�� ?�년/?�급 ?�성 �??�임 관�? 목록?�서 ?�인 �??�정??가?�합?�다.';
+        errorMsg = '⚠️ 이미 개설된 학년/반입니다. 아래 [🏫 학년/학급 생성 및 담임 관리] 목록에서 확인 및 수정이 가능합니다.';
       }
       alert(errorMsg);
     }
   } catch (err) {
     console.error(err);
-    alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+    alert('서버 통신 오류가 발생했습니다.');
   }
 }
 
@@ -1147,7 +1147,7 @@ async function loadTimetable() {
       mode = 'TEACHER';
       const teacherId = teacherTitleSelect.value;
       if (!teacherId) {
-        weekDateSubtext.textContent = `기�?주간 ?�작: -`;
+        weekDateSubtext.textContent = `기준주간 시작: -`;
         renderGrid([], mode);
         return;
       }
@@ -1156,7 +1156,7 @@ async function loadTimetable() {
     } else {
       mode = 'CLASS';
       if (!filterGradeSelect.value || !filterClassSelect.value) {
-        weekDateSubtext.textContent = `기�?주간 ?�작: -`;
+        weekDateSubtext.textContent = `기준주간 시작: -`;
         renderGrid([], mode);
         return;
       }
@@ -1164,9 +1164,9 @@ async function loadTimetable() {
       const classNum = filterClassSelect.value;
       url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
       if (activeTab === 'BASE') {
-        if (titleElemBase) titleElemBase.textContent = `?�� ${grade}?�년 ${classNum}�?기본 ?�간???�본 ?�정`;
+        if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
       } else {
-        if (titleElemDaily) titleElemDaily.textContent = `?�� ${grade}?�년 ${classNum}�??�자�??�간??;
+        if (titleElemDaily) titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 일자별 시간표`;
       }
     }
 
@@ -1197,7 +1197,7 @@ async function loadTimetable() {
       });
     }
 
-    weekDateSubtext.textContent = `기�?주간 ?�작: ${data.mondayDate}`;
+    weekDateSubtext.textContent = `기준주간 시작: ${data.mondayDate}`;
     renderGrid(data.timetable, mode);
   } catch (err) {
     console.error('Timetable load error:', err);
@@ -1269,15 +1269,15 @@ function renderGrid(weeklyData, mode) {
     for (let d = 0; d < 5; d++) {
       if (weeklyData && weeklyData[d] && weeklyData[d].date) {
         const parts = weeklyData[d].date.split('-');
-        const dateStr = `${parts[0]}??${parseInt(parts[1], 10)}??${parseInt(parts[2], 10)}??;
-        theadThs[d + 1].innerHTML = `${['?�요??, '?�요??, '?�요??, '목요??, '금요??][d]}<br><span style="font-size:0.85em;font-weight:normal;">(${dateStr})</span>`;
+        const dateStr = `${parts[0]}년 ${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일`;
+        theadThs[d + 1].innerHTML = `${['월요일', '화요일', '수요일', '목요일', '금요일'][d]}<br><span style="font-size:0.85em;font-weight:normal;">(${dateStr})</span>`;
       } else {
-        theadThs[d + 1].textContent = ['??, '??, '??, '�?, '�?][d];
+        theadThs[d + 1].textContent = ['월', '화', '수', '목', '금'][d];
       }
     }
   }
 
-  const maxPeriods = 10; // 고등?�교 ?��? 10교시 고정 ?�출
+  const maxPeriods = 10; // 고등학교 표준 10교시 고정 표출
 
     for (let p = 1; p <= maxPeriods; p++) {
       const tr = document.createElement('tr');
@@ -1287,7 +1287,7 @@ function renderGrid(weeklyData, mode) {
       th.textContent = `${p}교시`;
       tr.appendChild(th);
 
-      // Days 1 to 5 (??�?
+      // Days 1 to 5 (월~금)
       for (let d = 0; d < 5; d++) {
         const dayOfWeek = d + 1;
         const dayData = (weeklyData && Array.isArray(weeklyData) && weeklyData.length > d) ? weeklyData[d] : null;
@@ -1301,12 +1301,12 @@ function renderGrid(weeklyData, mode) {
           if (currentUser?.role !== 'STUDENT') {
             const badge = document.createElement('span');
             badge.className = 'change-badge';
-            badge.textContent = slot.changeType === 'SUBSTITUTE' ? '변?? : '결강';
+            badge.textContent = slot.changeType === 'SUBSTITUTE' ? '변동' : '결강';
             td.appendChild(badge);
           }
         }
 
-        // ?�업 ?�용???�거??subjectName/gradeName), 변�?보강 ?�력???�으�??�시
+        // 수업 내용이 있거나(subjectName/gradeName), 변경/보강 이력이 있으면 표시
         const hasContent = slot && (slot.subjectName || slot.gradeName || slot.teacherName);
         const hasChange = slot && slot.isChanged;
 
@@ -1314,25 +1314,25 @@ function renderGrid(weeklyData, mode) {
           const subDiv = document.createElement('div');
           subDiv.className = 'cell-subject';
           if (mode === 'CLASS') {
-            subDiv.textContent = slot.subjectName || (slot.changeType === 'CANCEL' ? '결강' : slot.changeType === 'SUBSTITUTE' ? '보강' : '?�업?�음');
+            subDiv.textContent = slot.subjectName || (slot.changeType === 'CANCEL' ? '결강' : slot.changeType === 'SUBSTITUTE' ? '보강' : '수업없음');
           } else {
-            subDiv.textContent = slot.gradeName || slot.subjectName || (hasChange ? '변경됨' : '빈교??);
+            subDiv.textContent = slot.gradeName || slot.subjectName || (hasChange ? '변경됨' : '빈교시');
           }
           td.appendChild(subDiv);
 
           const infoDiv = document.createElement('div');
           infoDiv.className = 'cell-subinfo';
           if (mode === 'CLASS') {
-            infoDiv.textContent = slot.teacherName || (hasChange ? '변�? : '');
+            infoDiv.textContent = slot.teacherName || (hasChange ? '변경' : '');
           } else {
             infoDiv.textContent = slot.subjectName || '';
           }
           td.appendChild(infoDiv);
 
-          if (slot.roomName && slot.roomName !== '?�반교실') {
+          if (slot.roomName && slot.roomName !== '일반교실') {
             const roomDiv = document.createElement('div');
             roomDiv.className = 'cell-room';
-            roomDiv.textContent = `?�� ${slot.roomName}`;
+            roomDiv.textContent = `📍 ${slot.roomName}`;
             td.appendChild(roomDiv);
           }
         } else {
@@ -1357,23 +1357,23 @@ function renderGrid(weeklyData, mode) {
     }
 }
 
-// Open Change Modal (?�자�?기본 ?�간??교시 ?� ?�동 ?�릭 ?�정)
+// Open Change Modal (일자별/기본 시간표 교시 셀 수동 클릭 수정)
 function populateModalDropdowns(slot) {
   const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
   const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
 
   if (changeSubjectSelect) {
-    changeSubjectSelect.innerHTML = '<option value="">-- 변경할 과목 ?�택 --</option>';
-    changeSubjectSelect.innerHTML += '<option value="DELETE" style="color:red; font-weight:bold;">-- ?���??�당 교시 ??�� (�??�간?�로 만들�? --</option>';
+    changeSubjectSelect.innerHTML = '<option value="">-- 변경할 과목 선택 --</option>';
+    changeSubjectSelect.innerHTML += '<option value="DELETE" style="color:red; font-weight:bold;">-- 🗑️ 해당 교시 삭제 (빈 시간으로 만들기) --</option>';
     changeSubjectSelect.innerHTML += subs.map(s => `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
   }
   if (changeTeacherSelect) {
-    changeTeacherSelect.innerHTML = '<option value="">-- 교사 ?�택 --</option>' +
-      tchs.map(t => `<option value="${t.id}" ${slot?.teacherId === t.id ? 'selected' : ''}>${t.name} ?�생??(${t.subject_name || t.subjectName || ''})</option>`).join('');
+    changeTeacherSelect.innerHTML = '<option value="">-- 교사 선택 --</option>' +
+      tchs.map(t => `<option value="${t.id}" ${slot?.teacherId === t.id ? 'selected' : ''}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`).join('');
   }
 }
 
-// 모달 ?�롭?�운 ?�방???�동 ?�결
+// 모달 드롭다운 양방향 자동 연결
 if (changeSubjectSelect && changeTeacherSelect) {
   changeSubjectSelect.addEventListener('change', (e) => {
     const selectedSubjId = e.target.value;
@@ -1404,7 +1404,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
     return;
   }
   if (activeTab === 'TEACHER') {
-    alert('?��?��?교사 ?�간????? 조회 ?�용?�니?? ?�간??변경�? [?�자�??�간?? ?�는 [?�기 기본 ?�간?? ??��??진행?�주?�요.');
+    alert('👩‍🏫 교사 시간표 탭은 조회 전용입니다. 시간표 변경은 [일자별 시간표] 또는 [학기 기본 시간표] 탭에서 진행해주세요.');
     return;
   }
 
@@ -1429,16 +1429,16 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
 
   selectedSlotData = { targetDate, dayOfWeek, period, slot, mode, gradeClassId: selectedGcId };
 
-  const daysKor = ['??, '??, '??, '??, '�?, '�?, '??];
-  const dayName = daysKor[dayOfWeek] || '??;
+  const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayName = daysKor[dayOfWeek] || '월';
   const headerStr = activeTab === 'BASE' 
-    ? `?�기 기본 ?�간???�본 ?�정 (${dayName}?�일 ${period}교시)` 
-    : `?�자�??�업 조정 (${targetDate || '기본주간'} ${period}교시)`;
+    ? `학기 기본 시간표 원본 설정 (${dayName}요일 ${period}교시)` 
+    : `일자별 수업 조정 (${targetDate || '기본주간'} ${period}교시)`;
 
   if (slotInfoSummary) {
     slotInfoSummary.innerHTML = `
-      <strong>[?�택 교시]</strong> ${headerStr} - ${gradeStr}?�년 ${classNumStr}�?br>
-      <strong>[?�재 배정 ?�업]</strong> ${slot && slot.subjectName ? `${slot.subjectName} (${slot.teacherName || '교사미정'} ?�생??` : '배정 ?�음'}
+      <strong>[선택 교시]</strong> ${headerStr} - ${gradeStr}학년 ${classNumStr}반<br>
+      <strong>[현재 배정 수업]</strong> ${slot && slot.subjectName ? `${slot.subjectName} (${slot.teacherName || '교사미정'} 선생님)` : '배정 없음'}
     `;
   }
 
@@ -1446,7 +1446,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   if (conflictAlert) conflictAlert.classList.add('hidden');
   pendingForcePayload = null;
 
-  // 과목/교사 ?�롭?�운 채우�?
+  // 과목/교사 드롭다운 채우기
   populateModalDropdowns(slot);
 
   // Show Modal
@@ -1455,7 +1455,7 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
   const btnSave = document.getElementById('btn-modal-save');
   if (btnSave) {
     if (slot && slot.changeType === 'HOLIDAY') {
-      if (conflictList) conflictList.innerHTML = '<li>?�당 ?�자??지?�된 ?�업???�일)?��?�??�간???�정??불�??�합?�다.</li>';
+      if (conflictList) conflictList.innerHTML = '<li>해당 일자는 지정된 휴업일(휴일)이므로 시간표 수정이 불가능합니다.</li>';
       if (conflictAlert) conflictAlert.classList.remove('hidden');
       btnSave.disabled = true;
     } else {
@@ -1471,7 +1471,7 @@ async function handleApplyChange(e) {
   e.preventDefault();
 
   if (!selectedSlotData || !selectedSlotData.gradeClassId) {
-    alert('?�택???�급 ?�보가 ?�바르�? ?�습?�다. ?�급???�택?????�시 ?�도??주세??');
+    alert('선택된 학급 정보가 올바르지 않습니다. 학급을 선택한 후 다시 시도해 주세요.');
     return;
   }
 
@@ -1497,17 +1497,17 @@ async function handleApplyChange(e) {
         generatedResult = generatedResult.filter(r => !(r.gradeClassId === gradeClassId && r.dayOfWeek === dayOfWeek && r.period === period));
       }
     } else {
-      // 1. 교사 ?�른 ?�년/�?중복 배정 검??(모든 ?�년/�?검??
+      // 1. 교사 다른 학년/반 중복 배정 검사 (모든 학년/반 검사)
       let teacherConflict = null;
       Object.keys(genClassMap).forEach(gcId => {
         if (gcId !== gradeClassId && genClassMap[gcId]?.[dayOfWeek]?.[period]) {
           const otherSlot = genClassMap[gcId][dayOfWeek][period];
           if (otherSlot.teacherId === changedTeacherId) {
             const otherGc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
-            const otherGcName = otherGc ? `${otherGc.grade}?�년 ${otherGc.class_number || otherGc.classNumber}�? : gcId;
-            const tchName = otherSlot.teacherName || teacherName || '?�당 교사';
-            const daysKor = ['??, '??, '??, '??, '�?, '�?, '??];
-            teacherConflict = `??[교사 중복 배정 ?�류] ${tchName} ?�생?��? ${daysKor[dayOfWeek]}?�일 ${period}교시???��? [${otherGcName}] ?�업??배정?�어 ?�습?�다!`;
+            const otherGcName = otherGc ? `${otherGc.grade}학년 ${otherGc.class_number || otherGc.classNumber}반` : gcId;
+            const tchName = otherSlot.teacherName || teacherName || '해당 교사';
+            const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
+            teacherConflict = `❌ [교사 중복 배정 오류] ${tchName} 선생님은 ${daysKor[dayOfWeek]}요일 ${period}교시에 이미 [${otherGcName}] 수업에 배정되어 있습니다!`;
           }
         }
       });
@@ -1521,7 +1521,7 @@ async function handleApplyChange(e) {
         return;
       }
 
-      // 2. ?�일 과목 ?�루 중복 ?�속배정 경고
+      // 2. 동일 과목 하루 중복 연속배정 경고
       let sameSubjToday = 0;
       if (genClassMap[gradeClassId]?.[dayOfWeek]) {
         Object.keys(genClassMap[gradeClassId][dayOfWeek]).forEach(p => {
@@ -1531,7 +1531,7 @@ async function handleApplyChange(e) {
         });
       }
       if (sameSubjToday >= 2) {
-        const warnMsg = `?�️ [?�일 과목 중복 경고] ?�루??[${subjectName}] 과목???��? 2?�간 ?�상 배정?�어 ?�습?�다. 추�? 배치?�시겠습?�까?`;
+        const warnMsg = `⚠️ [동일 과목 중복 경고] 하루에 [${subjectName}] 과목이 이미 2시간 이상 배정되어 있습니다. 추가 배치하시겠습니까?`;
         if (!confirm(warnMsg)) return;
       }
 
@@ -1581,7 +1581,7 @@ async function handleApplyChange(e) {
       });
       const data = await res.json();
       if (res.status === 409) {
-        // 충돌 감�? ??버튼 ?�시
+        // 충돌 감지 → 버튼 표시
         if (conflictList) {
           conflictList.innerHTML = '';
           (data.conflicts || []).forEach(c => {
@@ -1595,16 +1595,16 @@ async function handleApplyChange(e) {
         return;
       }
       if (res.ok) {
-        alert('?�� ?�기 기본 ?�간???�업 ?�정???�공?�으�??�?�되?�습?�다!');
+        alert('🎉 학기 기본 시간표 수업 설정이 성공적으로 저장되었습니다!');
         if (changeModal) changeModal.classList.add('hidden');
         loadTimetable();
 
       } else {
-        alert(data.error || '기본 ?�간???�???�패');
+        alert(data.error || '기본 시간표 저장 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�류가 발생?�습?�다.');
+      alert('오류가 발생했습니다.');
     }
     return;
   }
@@ -1621,7 +1621,7 @@ async function handleApplyChange(e) {
     changedTeacherId: isDelete ? null : changedTeacherId,
     changedSubjectId: isDelete ? null : changedSubjectId,
     changedRoomId: null,
-    reason: isTeacher ? '[교사 ?�스?? ?�간??' + (isDelete ? '?�당 교시 ??��' : '모의 ?�업 교체') : '?�과�??�간??' + (isDelete ? '?�당 교시 ??��' : '조정'),
+    reason: isTeacher ? '[교사 테스트] 시간표 ' + (isDelete ? '해당 교시 삭제' : '모의 수업 교체') : '일과계 시간표 ' + (isDelete ? '해당 교시 삭제' : '조정'),
     createdBy: currentUser.name || '관리자',
     force: false,
     sandbox: isTeacher
@@ -1667,29 +1667,29 @@ async function handleApplyChange(e) {
           teacherId: changedTeacherId,
           teacherName: currentSchoolMeta.teachers.find(t => t.id === changedTeacherId)?.name || ''
         });
-        alert('?�� [?��??�이??모드] ?�간??변경이 ?�시 ?�용?�었?�니?? (?�버 ?�이?�에???�향???�으�? 로그?�웃 ?�는 ?�로고침 ???�래?��??�아갑니??');
+        alert('🎉 [시뮬레이션 모드] 시간표 변경이 임시 적용되었습니다! (서버 데이터에는 영향이 없으며, 로그아웃 또는 새로고침 시 원래대로 돌아갑니다)');
       } else {
-        alert('?�� ?�업 변�?보강???�공?�으�??�??�??�용?�었?�니??');
+        alert('🎉 수업 변경/보강이 성공적으로 저장 및 적용되었습니다!');
       }
       if (changeModal) changeModal.classList.add('hidden');
       loadTimetable();
     } else {
-      alert(data.error || '?�업 변�??�???�패');
+      alert(data.error || '수업 변경 저장 실패');
     }
   } catch (err) {
     console.error(err);
-    alert('?�??처리 �??�류가 발생?�습?�다.');
+    alert('저장 처리 중 오류가 발생했습니다.');
   }
 }
 
-// ?�?� 충돌 발생 ??OK/취소 버튼 처리 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ── 충돌 발생 시 OK/취소 버튼 처리 ───────────────────────────────────────────
 document.getElementById('btn-force-ok').addEventListener('click', async () => {
   if (!pendingForcePayload) return;
   const payload = pendingForcePayload;
   pendingForcePayload = null;
   conflictAlert.classList.add('hidden');
 
-  // ?�떤 API ?�드?�인?�로 보낼지 결정
+  // 어떤 API 엔드포인트로 보낼지 결정
   const isBase = payload.dayOfWeek !== undefined && payload.targetDate === undefined;
   const url = isBase
     ? `${API_BASE}/admin/base-timetable`
@@ -1721,19 +1721,19 @@ document.getElementById('btn-force-ok').addEventListener('click', async () => {
           teacherId: payload.changedTeacherId,
           teacherName: currentSchoolMeta.teachers.find(t => t.id === payload.changedTeacherId)?.name || ''
         });
-        alert('?�� [?��??�이??모드] 충돌??무시?�고 ?�시 강제 ?�용?�었?�니?? (?�버 ?�이?�에???�향???�으�? 로그?�웃 ?�는 ?�로고침 ???�래?��??�아갑니??');
+        alert('🎉 [시뮬레이션 모드] 충돌을 무시하고 임시 강제 적용되었습니다! (서버 데이터에는 영향이 없으며, 로그아웃 또는 새로고침 시 원래대로 돌아갑니다)');
       } else {
-        alert(isBase ? '기본 ?�간?��? ?�?�되?�습?�다.' : '?�간??변경이 ?�용?�었?�니??');
+        alert(isBase ? '기본 시간표가 저장되었습니다.' : '시간표 변경이 적용되었습니다.');
       }
       changeModal.classList.add('hidden');
       loadTimetable();
     } else {
       const d = await res.json();
-      alert(d.error || '?�???�패');
+      alert(d.error || '저장 실패');
     }
   } catch (err) {
     console.error('Force save error:', err);
-    alert('?�버 ?�류가 발생?�습?�다.');
+    alert('서버 오류가 발생했습니다.');
   }
 });
 
@@ -1755,7 +1755,7 @@ async function openLogsModal() {
         <td>${log.created_at}</td>
         <td>${log.target_date}</td>
         <td>${log.period}교시</td>
-        <td>${log.grade}?�년 ${log.class_number}�?/td>
+        <td>${log.grade}학년 ${log.class_number}반</td>
         <td><span class="badge ${log.change_type === 'CANCEL' ? 'badge-admin' : 'badge-admin'}">${log.change_type}</span></td>
         <td>${log.orig_subject_name || '-'} (${log.orig_teacher_name || '-'})</td>
         <td>${log.chg_subject_name || '결강'} (${log.chg_teacher_name || '-'})</td>
@@ -1787,12 +1787,12 @@ async function handleHolidaySetup(e) {
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      alert('?�업?�이 ?�공?�으�??�록?�었?�니??');
+      alert('휴업일이 성공적으로 등록되었습니다.');
       holidaySetupForm.reset();
       loadHolidays();
       loadTimetable();
     } else {
-      alert('?�일 ?�록 ?�패');
+      alert('휴일 등록 실패');
     }
   } catch (err) {
     console.error(err);
@@ -1806,7 +1806,7 @@ async function loadHolidays() {
     adminHolidaysListUi.innerHTML = '';
     
     if (list.length === 0) {
-      adminHolidaysListUi.innerHTML = '<p class="text-center text-muted">?�록???�일???�습?�다.</p>';
+      adminHolidaysListUi.innerHTML = '<p class="text-center text-muted">등록된 휴일이 없습니다.</p>';
       return;
     }
 
@@ -1814,8 +1814,8 @@ async function loadHolidays() {
       const div = document.createElement('div');
       div.className = 'flex justify-between items-center py-2 border-b';
       div.innerHTML = `
-        <span>?�� <strong>${h.target_date}</strong>: ${h.name}</span>
-        <button class="btn btn-danger btn-xs" onclick="deleteHoliday('${h.id}')" style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">??��</button>
+        <span>📅 <strong>${h.target_date}</strong>: ${h.name}</span>
+        <button class="btn btn-danger btn-xs" onclick="deleteHoliday('${h.id}')" style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">삭제</button>
       `;
       adminHolidaysListUi.appendChild(div);
     });
@@ -1825,35 +1825,35 @@ async function loadHolidays() {
 }
 
 window.deleteHoliday = async function(id) {
-  if (!confirm('?�당 ?�일????��?�시겠습?�까?')) return;
+  if (!confirm('해당 휴일을 삭제하시겠습니까?')) return;
   try {
     const res = await fetch(`${API_BASE}/admin/holidays/${id}`, {
       method: 'DELETE'
     });
     if (res.ok) {
-      alert('?�일????��?�었?�니??');
+      alert('휴일이 삭제되었습니다.');
       loadHolidays();
       loadTimetable();
     } else {
-      alert('?�일 ??�� ?�패');
+      alert('휴일 삭제 실패');
     }
   } catch (err) {
     console.error(err);
   }
 };
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�� ?�간???�동 ?�성�????�론?�엔???�동 Logic
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ────────────────────────────────────────────────────────────────────────────
+// 🤖 시간표 자동 생성기 탭 프론트엔드 연동 Logic
+// ────────────────────────────────────────────────────────────────────────────
 let generatorData = null;
 let generatedResult = null;
 let genClassMap = {};       // { gradeClassId: { day: { period: slot } } }
-let genCurrentClassId = null; // 미리보기?�서 ?�재 ?�택???�급
+let genCurrentClassId = null; // 미리보기에서 현재 선택된 학급
 
 async function initGeneratorTab() {
   if (!currentUser || !currentUser.schoolId) return;
   try {
-    // 기본 �?그리???�출 (?�택??최�? 교시 기�?)
+    // 기본 빈 그리드 표출 (선택된 최대 교시 기준)
     const maxPeriodSelect = document.getElementById('gen-max-period-select');
     const defaultMaxPeriods = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
     renderGenGrid(null, defaultMaxPeriods);
@@ -1894,30 +1894,30 @@ async function initGeneratorTab() {
       };
     }
 
-    // 모든 ?�록??교사??과목명이 과목 ?�택 목록(subjects)??100% ?�락 ?�이 ?�어가?�록 ?�동 ?�합 (sports ?�외)
+    // 모든 등록된 교사의 과목명이 과목 선택 목록(subjects)에 100% 누락 없이 들어가도록 자동 융합 (sports 제외)
     if (generatorData && generatorData.teachers && generatorData.subjects) {
       generatorData.subjects = generatorData.subjects.filter(s => (s.name || '').toLowerCase() !== 'sports');
       const existingSubNames = new Set(generatorData.subjects.map(s => s.name));
       generatorData.teachers.forEach(t => {
         const subName = (t.subject_name || t.subjectName || '').trim();
-        if (subName && subName !== '미�??? && subName.toLowerCase() !== 'sports' && !existingSubNames.has(subName)) {
+        if (subName && subName !== '미지정' && subName.toLowerCase() !== 'sports' && !existingSubNames.has(subName)) {
           const newSub = { id: `sub-gen-${t.id}`, name: subName };
           generatorData.subjects.push(newSub);
           existingSubNames.add(subName);
         }
       });
-      // 과목�????�렬
+      // 과목명 순 정렬
       generatorData.subjects.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     }
 
-    // 과목 ?�터 체크박스 ?�더�?
+    // 과목 필터 체크박스 렌더링
     window.renderGenSubjectFilter = function() {
       const container = document.getElementById('gen-subject-filter-container');
       if (!container) return;
       
       const subs = generatorData?.subjects || [];
       if (subs.length === 0) {
-        container.innerHTML = '<span style="color:var(--text-sub);">?�록??과목???�습?�다.</span>';
+        container.innerHTML = '<span style="color:var(--text-sub);">등록된 과목이 없습니다.</span>';
         return;
       }
 
@@ -1952,7 +1952,7 @@ async function initGeneratorTab() {
 
     renderGenSubjectFilter();
 
-    // ???�성???�급 박스 ?�더�?�??�태 관�?
+    // ① 생성된 학급 박스 렌더링 및 상태 관리
     window.activeGenClassIds = classesList.map(c => c.id);
     const savedGenClassesStr = localStorage.getItem('genSelectedClassIds');
     if (savedGenClassesStr) {
@@ -1972,18 +1972,18 @@ async function initGeneratorTab() {
       if (!box) return;
 
       if (!window.activeGenClassIds || window.activeGenClassIds.length === 0) {
-        box.innerHTML = '<span style="font-size:0.88rem; color:var(--text-sub);">?�록???�급???�습?�다. ?�단?�서 ?�년�?반을 ?�택 ??[?�성] 버튼???�러주세??</span>';
+        box.innerHTML = '<span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 상단에서 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>';
         return;
       }
 
       box.innerHTML = window.activeGenClassIds.map(gcId => {
         const gc = classesList.find(c => c.id === gcId);
-        const gcName = gc ? `${gc.grade}?�년 ${gc.class_number || gc.classNumber}�? : gcId;
+        const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : gcId;
         const isSelected = gcId === genCurrentClassId;
         return `
           <span class="gen-class-badge" style="display:inline-flex; align-items:center; gap:0.4rem; background:${isSelected ? 'var(--primary-color)' : 'var(--bg-card)'}; color:${isSelected ? '#ffffff' : 'var(--text-main)'}; padding:0.35rem 0.75rem; border-radius:20px; border:1px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}; font-weight:700; font-size:0.88rem; cursor:pointer; user-select:none; transition:all 0.2s;">
             <span onclick="window.selectActiveGenClass('${gcId}')">${gcName}</span>
-            <span onclick="event.stopPropagation(); window.removeActiveGenClass('${gcId}')" style="font-size:0.9rem; opacity:0.8; margin-left:0.2rem; cursor:pointer;" title="목록?�서 ??��">&times;</span>
+            <span onclick="event.stopPropagation(); window.removeActiveGenClass('${gcId}')" style="font-size:0.9rem; opacity:0.8; margin-left:0.2rem; cursor:pointer;" title="목록에서 삭제">&times;</span>
           </span>
         `;
       }).join('');
@@ -2030,7 +2030,7 @@ async function initGeneratorTab() {
         const classObj = classesList.find(c => String(c.grade) === String(grade) && (String(c.class_number) === String(classNum) || String(c.classNumber) === String(classNum)));
         
         if (!classObj) {
-          alert(`${grade}?�년 ${classNum}반�? ?�교 ?�정???�록?�어 ?��? ?�습?�다. [?�️ ?�교/교사 ?�정] ??��??먼�? 반을 ?�록?�주?�요.`);
+          alert(`${grade}학년 ${classNum}반은 학교 설정에 등록되어 있지 않습니다. [⚙️ 학교/교사 설정] 탭에서 먼저 반을 등록해주세요.`);
           return;
         }
 
@@ -2061,7 +2061,7 @@ async function initGeneratorTab() {
       });
     }
 
-    // ??과목/교사/?�수 ?�력???�성
+    // ② 과목/교사/시수 입력표 생성
     const subjectBody = document.getElementById('gen-subject-body');
     if (subjectBody) {
       subjectBody.innerHTML = '';
@@ -2082,6 +2082,9 @@ async function initGeneratorTab() {
         tr.className = 'gen-row';
         
         let valHours = defaultHours;
+        if (valHours === 3 || valHours === '3') {
+          valHours = '';
+        }
 
         const subjectOptions = (generatorData.subjects || []).map(s => {
           const isSelected = (String(s.id) === String(defaultSubjectId)) ? 'selected' : '';
@@ -2090,27 +2093,27 @@ async function initGeneratorTab() {
         
         const teacherOptions = (generatorData.teachers || []).map(t => {
           const isSelected = (String(t.id) === String(defaultTeacherId)) ? 'selected' : '';
-          return `<option value="${t.id}" ${isSelected}>${t.name} ?�생??(${t.subject_name || t.subjectName || ''})</option>`;
+          return `<option value="${t.id}" ${isSelected}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`;
         }).join('');
 
         tr.innerHTML = `
           <td>
             <select class="form-select gen-subject-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
-              <option value="">-- ?�택 --</option>
+              <option value="">-- 선택 --</option>
               ${subjectOptions}
             </select>
           </td>
           <td>
             <select class="form-select gen-teacher-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
-              <option value="">-- ?�택 --</option>
+              <option value="">-- 선택 --</option>
               ${teacherOptions}
             </select>
           </td>
           <td>
-            <input type="number" class="form-input gen-hours-input" min="0" max="10" value="${valHours}" placeholder="?�수 ?�력" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> ?�간/�?
+            <input type="number" class="form-input gen-hours-input" min="0" max="10" value="${valHours}" placeholder="시수 입력" style="width:70px; padding:0.35rem; font-size:0.9rem; text-align:center;"> 시간/주
           </td>
           <td style="text-align:center;">
-            <button type="button" class="btn btn-sm btn-outline btn-row-delete" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">??��</button>
+            <button type="button" class="btn btn-sm btn-outline btn-row-delete" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">삭제</button>
           </td>
         `;
         
@@ -2217,7 +2220,7 @@ async function initGeneratorTab() {
         loadDefaultRows();
       }
 
-      // ?�급�??�립 ?�수 ?�?�소
+      // 학급별 독립 시수 저장소
       window.genClassHoursMap = window.genClassHoursMap || {};
 
       window.saveCurrentClassHours = function(classId) {
@@ -2261,7 +2264,7 @@ async function initGeneratorTab() {
       };
     }
     
-    // 로컬 ?�토리�??�서 ?�전 ?�태 복원
+    // 로컬 스토리지에서 이전 상태 복원
     const savedClassIds = localStorage.getItem('genSelectedClassIds');
     const savedClassMap = localStorage.getItem('genClassMap');
     const savedResult = localStorage.getItem('genResult');
@@ -2271,7 +2274,7 @@ async function initGeneratorTab() {
         genClassMap = JSON.parse(savedClassMap);
         generatedResult = JSON.parse(savedResult);
         
-        // 미리보기 �?�????�더�?
+        // 미리보기 칩 및 표 렌더링
         if (parsedIds.length > 0) {
           if (!genCurrentClassId) genCurrentClassId = parsedIds[0];
           buildPreviewChips(parsedIds);
@@ -2287,21 +2290,21 @@ async function initGeneratorTab() {
   }
 }
 
-// (?�체 ?�택/?�제 기능 ?�거??
+// (전체 선택/해제 기능 제거됨)
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// AI ?�동 ?�성 ?�작
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ────────────────────────────────────────────────────────────────────────────
+// AI 자동 생성 시작
+// ────────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-generate')?.addEventListener('click', async () => {
   const selectedClassIds = window.activeGenClassIds && window.activeGenClassIds.length > 0 ? window.activeGenClassIds : [];
   if (selectedClassIds.length === 0) {
-    alert('?�간?��? ?�용???�급??최소 1�??�상 ?�성?�주?�요!');
+    alert('시간표를 적용할 학급을 최소 1개 이상 생성해주세요!');
     return;
   }
 
   const targetSubjectIds = Array.from(document.querySelectorAll('.gen-subject-chk:checked')).map(c => c.value);
   if (targetSubjectIds.length === 0) {
-    alert('?�동 ?�성 ?�??과목??최소 1�??�상 ?�택??주세??');
+    alert('자동 생성 대상 과목을 최소 1개 이상 선택해 주세요.');
     return;
   }
 
@@ -2322,13 +2325,13 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
   });
 
   if (subjectsList.length === 0) {
-    alert('주간 ?�수가 1?�간 ?�상??과목???�습?�다. ?�수�??�력?�주?�요.');
+    alert('주간 시수가 1시간 이상인 과목이 없습니다. 시수를 입력해주세요.');
     return;
   }
 
   const assignments = selectedClassIds.map(gcId => ({ gradeClassId: gcId, subjects: subjectsList }));
 
-  // 기존 ?�동 ?�성???� 고정 목록 추출
+  // 기존 수동 작성된 셀 고정 목록 추출
   const fixedSlots = [];
   if (genClassMap) {
     Object.keys(genClassMap).forEach(gcId => {
@@ -2355,7 +2358,7 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
   
   const executeGenerator = async (allowOverlap = false) => {
     try {
-      if (btnGen) { btnGen.textContent = '???�간??배정 ?�업 �?..'; btnGen.disabled = true; }
+      if (btnGen) { btnGen.textContent = '⏳ 시간표 배정 작업 중...'; btnGen.disabled = true; }
 
       const res = await fetch(`${API_BASE}/generator/generate`, {
         method: 'POST',
@@ -2370,14 +2373,14 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
         })
       });
 
-      if (btnGen) { btnGen.textContent = '?�� ?�간???�동 ?�성 ?�작'; btnGen.disabled = false; }
+      if (btnGen) { btnGen.textContent = '🤖 시간표 자동 생성 시작'; btnGen.disabled = false; }
 
-      if (!res.ok) { alert('?�동 ?�성 ?�패'); return; }
+      if (!res.ok) { alert('자동 생성 실패'); return; }
 
       const data = await res.json();
 
       if (!allowOverlap && data.unassigned && data.unassigned.length > 0) {
-        const wantsOverlap = confirm('?�아�? ?�율 ?�동 ??공통 교과�??�해 교사 배정??겹쳐 ?�성?��? 못한 ?�간???�습?�다.\n교사 중첩???�용?�여 강제�?배정?�시겠습?�까?');
+        const wantsOverlap = confirm('동아리, 자율 활동 등 공통 교과로 인해 교사 배정이 겹쳐 생성되지 못한 시간이 있습니다.\n교사 중첩을 허용하여 강제로 배정하시겠습니까?');
         if (wantsOverlap) {
           return await executeGenerator(true);
         }
@@ -2388,7 +2391,7 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
       generatedResult = generatedResult.filter(r => !newlyGeneratedClasses.includes(r.gradeClassId));
       generatedResult.push(...data.timetable);
 
-      // 기존 ?�동 배치 ?��??�며 AI ?�성 결과 ?�합 (classMap ?�데?�트)
+      // 기존 수동 배치 유지하며 AI 생성 결과 융합 (classMap 업데이트)
       if (!genClassMap) genClassMap = {};
       (data.timetable || []).forEach(t => {
         if (!genClassMap[t.gradeClassId]) genClassMap[t.gradeClassId] = {};
@@ -2396,7 +2399,7 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
         genClassMap[t.gradeClassId][t.dayOfWeek][t.period] = t;
       });
 
-      // 미배???�림
+      // 미배정 알림
       const unassignedAlert = document.getElementById('gen-unassigned-alert');
       const unassignedList = document.getElementById('gen-unassigned-list');
       if (data.unassigned && data.unassigned.length > 0) {
@@ -2406,7 +2409,7 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
           data.unassigned.forEach(u => {
             const gc = (generatorData?.classes || []).find(c => c.id === u.gradeClassId);
             const li = document.createElement('li');
-            li.textContent = `${gc ? `${gc.grade}?�년 ${gc.class_number}�? : ''} - ${u.subjectName} (${u.teacherName} ?�생??`;
+            li.textContent = `${gc ? `${gc.grade}학년 ${gc.class_number}반` : ''} - ${u.subjectName} (${u.teacherName} 선생님)`;
             unassignedList.appendChild(li);
           });
         }
@@ -2414,7 +2417,7 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
         if (unassignedAlert) unassignedAlert.classList.add('hidden');
       }
 
-      // ?�급 �?채우�?�?로컬 ?�토리�? ?�??
+      // 학급 칩 채우기 및 로컬 스토리지 저장
       localStorage.setItem('genSelectedClassIds', JSON.stringify(selectedClassIds));
       localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
       localStorage.setItem('genResult', JSON.stringify(generatedResult));
@@ -2427,33 +2430,33 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
         renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
       }
 
-      alert(`?�� AI ?�간???�동 ?�성 ?�료!\n${selectedClassIds.length}�??�급 × ${subjectsList.length}�?과목\n?�래 미리보기�??�인 ???�정?�세??`);
+      alert(`🎉 AI 시간표 자동 생성 완료!\n${selectedClassIds.length}개 학급 × ${subjectsList.length}개 과목\n아래 미리보기를 확인 후 수정하세요.`);
 
     } catch (err) {
-      if (btnGen) { btnGen.textContent = '?�� AI ?�간???�동 ?�성 ?�작'; btnGen.disabled = false; }
+      if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
       console.error('Generate error:', err);
-      alert('?�성 �??�류가 발생?�습?�다.');
+      alert('생성 중 오류가 발생했습니다.');
     }
   };
 
   await executeGenerator(false);
 });
 
-// ?�시 ?�성
+// 다시 생성
 document.getElementById('btn-regen')?.addEventListener('click', () => {
   document.getElementById('btn-generate')?.click();
 });
 
-// ?�당 ?�급 초기??
+// 해당 학급 초기화
 document.getElementById('btn-reset-current-class')?.addEventListener('click', () => {
   if (!genCurrentClassId) {
-    alert('초기?�할 ?�급???�택?��? ?�았?�니??');
+    alert('초기화할 학급이 선택되지 않았습니다.');
     return;
   }
   const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === genCurrentClassId);
-  const gcName = gc ? `${gc.grade}?�년 ${gc.class_number || gc.classNumber}�? : '?�택???�급';
+  const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : '선택된 학급';
 
-  if (!confirm(`?�️ [${gcName}] ???�간???�이?��? 초기?�하?�겠?�니�?\n?�른 ?�급???�간?�는 ?��??�고 ?�재 ?�택???�급�?초기?�됩?�다.`)) return;
+  if (!confirm(`⚠️ [${gcName}] 의 시간표 데이터를 초기화하시겠습니까?\n다른 학급의 시간표는 유지되고 현재 선택된 학급만 초기화됩니다.`)) return;
 
   if (genClassMap && genClassMap[genCurrentClassId]) {
     delete genClassMap[genCurrentClassId];
@@ -2467,12 +2470,12 @@ document.getElementById('btn-reset-current-class')?.addEventListener('click', ()
 
   const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
   renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-  alert(`?���?[${gcName}] ?�간?��? 초기?�되?�습?�다.`);
+  alert(`🗑️ [${gcName}] 시간표가 초기화되었습니다.`);
 });
 
-// ?�체 ?�년/�?초기??
+// 전체 학년/반 초기화
 document.getElementById('btn-reset-all-classes')?.addEventListener('click', () => {
-  if (!confirm('?�️ 경고: ?�체 ?�년 �??�급??미리보기 ?�간???�이?��? 모두 초기?�하?�겠?�니�?\n???�업?� ?�돌�????�습?�다.')) return;
+  if (!confirm('⚠️ 경고: 전체 학년 및 학급의 미리보기 시간표 데이터를 모두 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
 
   genClassMap = {};
   generatedResult = [];
@@ -2483,10 +2486,10 @@ document.getElementById('btn-reset-all-classes')?.addEventListener('click', () =
 
   const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
   renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-  alert('?���??�체 ?�년/반의 ?�간???�이?��? ?�전??초기?�되?�습?�다.');
+  alert('🗑️ 전체 학년/반의 시간표 데이터가 완전히 초기화되었습니다.');
 });
 
-// 버튼 ?�릭??�?변�?로직?� buildPreviewChips ?��????�함??
+// 버튼 클릭시 칩 변경 로직은 buildPreviewChips 내부에 포함됨
 document.addEventListener('change', (e) => {
   if (e.target?.id === 'gen-max-period-select') {
     const maxPeriodsPerDay = parseInt(e.target.value) || 10;
@@ -2499,11 +2502,11 @@ function buildPreviewChips(classIds) {
 
   if (targetDropdown) {
     if (!classIds || classIds.length === 0) {
-      targetDropdown.innerHTML = '<option value="">-- ?�급 ?�택 --</option>';
+      targetDropdown.innerHTML = '<option value="">-- 학급 선택 --</option>';
     } else {
       targetDropdown.innerHTML = classIds.map(gcId => {
         const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === gcId);
-        const gcName = gc ? `${gc.grade}?�년 ${gc.class_number || gc.classNumber || ''}�? : gcId;
+        const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber || ''}반` : gcId;
         return `<option value="${gcId}" ${gcId === genCurrentClassId ? 'selected' : ''}>${gcName}</option>`;
       }).join('');
     }
@@ -2527,9 +2530,9 @@ function buildPreviewChips(classIds) {
   }
 }
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�동 ?�성 ??미리보기 그리???�더�?(timetable-body-gen ?�용)
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ────────────────────────────────────────────────────────────────────────────
+// 자동 생성 탭 미리보기 그리드 렌더링 (timetable-body-gen 사용)
+// ────────────────────────────────────────────────────────────────────────────
 function renderGenGrid(gradeClassId, maxPeriods) {
   const tbody = document.getElementById('timetable-body-gen');
   if (!tbody) return;
@@ -2538,7 +2541,7 @@ function renderGenGrid(gradeClassId, maxPeriods) {
   const classMap = gradeClassId ? genClassMap[gradeClassId] : null;
   const gc = gradeClassId ? (generatorData?.classes || []).find(c => c.id === gradeClassId) : null;
 
-  // ?�수 검�??�림�??�더�?
+  // 시수 검증 알림바 렌더링
   let hoursStatusContainer = document.getElementById('gen-hours-status-container');
   if (!hoursStatusContainer) {
     hoursStatusContainer = document.createElement('div');
@@ -2563,13 +2566,13 @@ function renderGenGrid(gradeClassId, maxPeriods) {
     }
 
     const totalPlacedCount = Object.values(placedCounts).reduce((a, b) => a + b, 0);
-    const gcName = gc ? `${gc.grade}?�년 ${gc.class_number || gc.classNumber}�? : gradeClassId;
+    const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : gradeClassId;
 
     if (totalPlacedCount === 0) {
       hoursStatusContainer.innerHTML = `
         <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-          <span style="font-weight:700; color:var(--primary-color);">?�� [${gcName} ?�수 충족 ?�황]:</span>
-          <span style="color:var(--text-sub); font-size:0.85rem; font-weight:600;">?�간??배치 ??초기???�태)?�니?? [?�간???�동 ?�성] ?�는 ?�???�러 ?�동 배치?�세??</span>
+          <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
+          <span style="color:var(--text-sub); font-size:0.85rem; font-weight:600;">시간표 배치 전(초기화 상태)입니다. [시간표 자동 생성] 또는 셀을 눌러 수동 배치하세요.</span>
         </div>
       `;
     } else {
@@ -2580,17 +2583,17 @@ function renderGenGrid(gradeClassId, maxPeriods) {
         const subName = (generatorData?.subjects || []).find(s => s.id === th.subjectId)?.name || '과목';
 
         if (placed === target) {
-          return `<span style="background:rgba(16, 185, 129, 0.12); color:#059669; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">??${subName}: ${placed}/${target}?�간 (?�료)</span>`;
+          return `<span style="background:rgba(16, 185, 129, 0.12); color:#059669; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">✅ ${subName}: ${placed}/${target}시간 (완료)</span>`;
         } else if (placed < target) {
-          return `<span style="background:rgba(239, 68, 68, 0.12); color:#dc2626; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">?�️ ${subName}: ${placed}/${target}?�간 (${target - placed}?�간 부�?</span>`;
+          return `<span style="background:rgba(239, 68, 68, 0.12); color:#dc2626; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${target - placed}시간 부족)</span>`;
         } else {
-          return `<span style="background:rgba(245, 158, 11, 0.12); color:#d97706; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">?�️ ${subName}: ${placed}/${target}?�간 (${placed - target}?�간 초과)</span>`;
+          return `<span style="background:rgba(245, 158, 11, 0.12); color:#d97706; padding:0.25rem 0.55rem; border-radius:12px; font-weight:600;">⚠️ ${subName}: ${placed}/${target}시간 (${placed - target}시간 초과)</span>`;
         }
       }).filter(Boolean);
 
       hoursStatusContainer.innerHTML = `
         <div style="background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-          <span style="font-weight:700; color:var(--primary-color);">?�� [${gcName} ?�수 충족 ?�황]:</span>
+          <span style="font-weight:700; color:var(--primary-color);">📊 [${gcName} 시수 충족 현황]:</span>
           ${statusBadges.join(' ')}
         </div>
       `;
@@ -2623,14 +2626,14 @@ function renderGenGrid(gradeClassId, maxPeriods) {
       } else {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'cell-subinfo';
-        emptyDiv.textContent = gradeClassId ? '-' : '?�성 ??;
+        emptyDiv.textContent = gradeClassId ? '-' : '생성 전';
         td.appendChild(emptyDiv);
       }
 
-      // ?�릭 ???�동 ?�정 모달 ?�기 (BASE ??�� ?�일??모달 ?�사??
+      // 클릭 시 수동 수정 모달 열기 (BASE 탭과 동일한 모달 재사용)
       td.addEventListener('click', () => {
         if (!gradeClassId) {
-          alert('먼�? ?�급???�택?�주?�요.');
+          alert('먼저 학급을 선택해주세요.');
           return;
         }
         openGenCellModal(gradeClassId, d, p, slot, gc);
@@ -2642,27 +2645,27 @@ function renderGenGrid(gradeClassId, maxPeriods) {
   }
 }
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�동?�성 ???� ?�동 ?�정 모달 (기존 changeModal ?�사??
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ────────────────────────────────────────────────────────────────────────────
+// 자동생성 탭 셀 수동 수정 모달 (기존 changeModal 재사용)
+// ────────────────────────────────────────────────────────────────────────────
 function openGenCellModal(gradeClassId, dayOfWeek, period, slot, gc) {
-  const daysKor = ['??, '??, '??, '??, '�?, '�?, '??];
+  const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
   const dayName = daysKor[dayOfWeek] || '?';
-  const gcName = gc ? `${gc.grade}?�년 ${gc.class_number}�? : '';
+  const gcName = gc ? `${gc.grade}학년 ${gc.class_number}반` : '';
 
   if (slotInfoSummary) {
     slotInfoSummary.innerHTML = `
-      <strong>[?�동?�성 ?�정]</strong> ${gcName} ${dayName}?�일 ${period}교시<br>
-      <strong>[?�재 배정]</strong> ${slot ? `${slot.subjectName} (${slot.teacherName} ?�생??` : '배정 ?�음'}
+      <strong>[자동생성 수정]</strong> ${gcName} ${dayName}요일 ${period}교시<br>
+      <strong>[현재 배정]</strong> ${slot ? `${slot.subjectName} (${slot.teacherName} 선생님)` : '배정 없음'}
     `;
   }
   if (conflictAlert) conflictAlert.classList.add('hidden');
   pendingForcePayload = null;
 
-  // 과목/교사 ?�?�트 채우�?
+  // 과목/교사 셀렉트 채우기
   populateModalDropdowns(slot);
 
-  // selectedSlotData �?activeTab 바인??
+  // selectedSlotData 및 activeTab 바인딩
   activeTab = 'GENERATOR';
   selectedSlotData = {
     gradeClassId,
@@ -2681,15 +2684,15 @@ function openGenCellModal(gradeClassId, dayOfWeek, period, slot, gc) {
   if (changeModal) changeModal.classList.remove('hidden');
 }
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�체 ?�년/�?기본 ?�간?�로 최종 ?�용
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ────────────────────────────────────────────────────────────────────────────
+// 전체 학년/반 기본 시간표로 최종 적용
+// ────────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-apply-timetable')?.addEventListener('click', async () => {
   if (!generatedResult || generatedResult.length === 0) {
-    alert('?�용???�간???�이?��? ?�습?�다. AI ?�동 ?�성 ?�는 ?�동 ?�력 ???�도?�주?�요.');
+    alert('적용할 시간표 데이터가 없습니다. AI 자동 생성 또는 수동 입력 후 시도해주세요.');
     return;
   }
-  if (!confirm(`?�성???�간?��? ???�년/�?기본 ?�간?�로 최종 ?�?�할까요?\n�?${generatedResult.length}�??�업 ?�롯???�?�됩?�다.\n\n?�️ 기존 기본 ?�간?�는 ??��?�워집니??`)) return;
+  if (!confirm(`생성된 시간표를 전 학년/반 기본 시간표로 최종 저장할까요?\n총 ${generatedResult.length}개 수업 슬롯이 저장됩니다.\n\n⚠️ 기존 기본 시간표는 덮어씌워집니다.`)) return;
 
   try {
     const res = await fetch(`${API_BASE}/generator/apply`, {
@@ -2699,22 +2702,22 @@ document.getElementById('btn-apply-timetable')?.addEventListener('click', async 
     });
     const data = await res.json();
     if (res.ok) {
-      alert(`?�� ?�간???�용 ?�료!\n�?${data.applied}�??�업??기본 ?�간?�에 ?�?�되?�습?�다.\n?�제 [?�기 기본 ?�간?? ??��???�인?????�습?�다.`);
-      // ?�기 기본 ?�간????���??�동 + ?�로고침
+      alert(`🎉 시간표 적용 완료!\n총 ${data.applied}개 수업이 기본 시간표에 저장되었습니다.\n이제 [학기 기본 시간표] 탭에서 확인할 수 있습니다.`);
+      // 학기 기본 시간표 탭으로 이동 + 새로고침
       switchTab('BASE');
       loadTimetable();
 
     } else {
-      alert(data.error || '?�간???�용 ?�패');
+      alert(data.error || '시간표 적용 실패');
     }
   } catch (err) {
     console.error('Apply timetable error:', err);
-    alert('?�용 처리 �??�류가 발생?�습?�다.');
+    alert('적용 처리 중 오류가 발생했습니다.');
   }
 });
 
 document.getElementById('btn-reset-timetable')?.addEventListener('click', async () => {
-  if (!confirm('?�️ 경고: ?�간??초기?��? 진행?�시�?지금까지 ?�력 �??�성??모든 ?�급???�간???�이???�기 기본 ?�간??�??�자�??�간??변�??�역)가 ?�전????��?�니??\n\n???�업?� ?�돌�????�습?�다. ?�말�?초기?�하?�겠?�니�?')) {
+  if (!confirm('⚠️ 경고: 시간표 초기화를 진행하시면 지금까지 입력 및 생성된 모든 학급의 시간표 데이터(학기 기본 시간표 및 일자별 시간표 변경 내역)가 완전히 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다. 정말로 초기화하시겠습니까?')) {
     return;
   }
 
@@ -2726,24 +2729,24 @@ document.getElementById('btn-reset-timetable')?.addEventListener('click', async 
     });
     const data = await res.json();
     if (res.ok) {
-      alert('?�� ?�교??모든 ?�간???�이?��? ?�전??초기?�되?�습?�다.');
+      alert('🎉 학교의 모든 시간표 데이터가 완전히 초기화되었습니다.');
       window.sandboxChanges = [];
       loadTimetable();
       if (activeTab === 'GENERATOR') {
         initGeneratorTab();
       }
     } else {
-      alert(data.error || '초기???�패');
+      alert(data.error || '초기화 실패');
     }
   } catch (err) {
     console.error(err);
-    alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+    alert('서버 통신 오류가 발생했습니다.');
   }
 });
 
 document.querySelectorAll('.btn-main-reset').forEach(btn => {
   btn.addEventListener('click', async () => {
-    if (!confirm('?�️ 경고: ?�간??초기?��? 진행?�시�??�교??모든 ?�간???�이???�기 ?�간??�??�자�??�간??변�??�역)가 ?�전????��?�니??\n\n???�업?� ?�돌�????�습?�다. ?�말�?초기?�하?�겠?�니�?')) {
+    if (!confirm('⚠️ 경고: 시간표 초기화를 진행하시면 학교의 모든 시간표 데이터(학기 시간표 및 일자별 시간표 변경 내역)가 완전히 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다. 정말로 초기화하시겠습니까?')) {
       return;
     }
 
@@ -2755,18 +2758,18 @@ document.querySelectorAll('.btn-main-reset').forEach(btn => {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('?�� ?�교??모든 ?�간???�이?��? ?�전??초기?�되?�습?�다.');
+        alert('🎉 학교의 모든 시간표 데이터가 완전히 초기화되었습니다.');
         window.sandboxChanges = [];
         loadTimetable();
         if (activeTab === 'GENERATOR') {
           initGeneratorTab();
         }
       } else {
-        alert(data.error || '초기???�패');
+        alert(data.error || '초기화 실패');
       }
     } catch (err) {
       console.error(err);
-      alert('?�버 ?�신 ?�류가 발생?�습?�다.');
+      alert('서버 통신 오류가 발생했습니다.');
     }
   });
 });
@@ -2794,19 +2797,19 @@ window.closePendingApprovalsOverlay = () => {
 };
 
 
-// ?���?Delete button in Modal
+// 🗑️ Delete button in Modal
 document.getElementById('btn-modal-delete')?.addEventListener('click', () => {
-  if (confirm('?�말�??�당 교시�???��(�??�간)?�시겠습?�까?')) {
+  if (confirm('정말로 해당 교시를 삭제(빈 시간)하시겠습니까?')) {
     document.getElementById('modal-change-subject').value = 'DELETE';
     document.getElementById('modal-change-teacher').value = ''; // Teacher not needed for delete
     handleApplyChange();
   }
 });
 
-// ?�� Load Base Timetable button in Generator
+// 🔍 Load Base Timetable button in Generator
 document.getElementById('btn-load-base-timetable')?.addEventListener('click', async () => {
   if (!currentUser || !currentUser.schoolId) return;
-  if (!confirm('기존 ?�성???�기 ?�간?��? 불러?�시겠습?�까? ?�재 ?�성 중인 ?�간?��? ??��?�니??')) return;
+  if (!confirm('기존 생성된 학기 시간표를 불러오시겠습니까? 현재 생성 중인 시간표를 덮어씁니다.')) return;
   try {
     const res = await fetch(API_BASE + '/admin/base-timetable-all?schoolId=' + currentUser.schoolId);
     if (!res.ok) throw new Error('Failed to load base timetable');
@@ -2815,44 +2818,16 @@ document.getElementById('btn-load-base-timetable')?.addEventListener('click', as
     // Format data into genClassMap
     generatorData.baseTimetable = data;
     genClassMap = {};
-    window.genClassHoursMap = window.genClassHoursMap || {};
-    const newClassHoursMap = {};
-    const loadedClassIds = new Set();
-
     data.forEach(item => {
-      loadedClassIds.add(item.gradeClassId);
       if (!genClassMap[item.gradeClassId]) genClassMap[item.gradeClassId] = {};
       if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
       genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
-      
-      if (item.subjectId && item.teacherId) {
-        if (!newClassHoursMap[item.gradeClassId]) newClassHoursMap[item.gradeClassId] = {};
-        const key = item.subjectId + '_' + item.teacherId;
-        if (!newClassHoursMap[item.gradeClassId][key]) {
-          newClassHoursMap[item.gradeClassId][key] = { subjectId: item.subjectId, teacherId: item.teacherId, hours: 0 };
-        }
-        newClassHoursMap[item.gradeClassId][key].hours++;
-      }
     });
-
-    Object.keys(newClassHoursMap).forEach(gcId => {
-      window.genClassHoursMap[gcId] = Object.values(newClassHoursMap[gcId]);
-    });
-    localStorage.setItem('gen_class_hours_' + currentUser.schoolId, JSON.stringify(window.genClassHoursMap));
-
-    window.activeGenClassIds = Array.from(loadedClassIds);
-    localStorage.setItem('genSelectedClassIds', JSON.stringify(window.activeGenClassIds));
     
-    if (window.activeGenClassIds.length > 0) {
-      genCurrentClassId = window.activeGenClassIds[0];
-    }
-    if (window.renderCreatedClassBadges) window.renderCreatedClassBadges();
-    if (typeof buildPreviewChips === 'function') buildPreviewChips(window.activeGenClassIds);
-    if (window.loadClassHours && genCurrentClassId) window.loadClassHours(genCurrentClassId);
-
-    if (typeof genCurrentClassId !== 'undefined' && genCurrentClassId) { const max = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10; renderGenGrid(genCurrentClassId, max); }
+    alert('기존 시간표를 성공적으로 불러왔습니다.');
+    renderGeneratorGrid();
   } catch (err) {
     console.error(err);
-    alert('기존 ?�간?��? 불러?�는 �??�류가 발생?�습?�다.');
+    alert('기존 시간표를 불러오는 중 오류가 발생했습니다.');
   }
 });

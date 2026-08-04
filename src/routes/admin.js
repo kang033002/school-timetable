@@ -670,9 +670,9 @@ router.get('/base-timetable-all', async (req, res) => {
     const { schoolId } = req.query;
     if (!schoolId) return res.status(400).json({ error: 'schoolId is required' });
     const data = await all(`
-      SELECT bt.grade_class_id as "gradeClassId", bt.day_of_week as "dayOfWeek", bt.period,
-             bt.subject_id as "subjectId", bt.teacher_id as "teacherId", bt.room_id as "roomId",
-             s.name as "subjectName", t.name as "teacherName"
+      SELECT bt.grade_class_id as gradeClassId, bt.day_of_week as dayOfWeek, bt.period,
+             bt.subject_id as subjectId, bt.teacher_id as teacherId, bt.room_id as roomId,
+             s.name as subjectName, t.name as teacherName
       FROM base_timetable bt
       LEFT JOIN subjects s ON bt.subject_id = s.id
       LEFT JOIN teachers t ON bt.teacher_id = t.id
