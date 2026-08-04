@@ -6,7 +6,7 @@ const { get, all, run } = require('../db/database');
 // 그리디 + 백트래킹 시간표 자동 생성 알고리즘
 // ────────────────────────────────────────────────────────────────────────────
 // (generateTimetable 함수 등은 유지)
-function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSlots = [], targetSubjectIds = []) {
+function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSlots = [], targetSubjectIds = [], allowOverlap = false) {
   // schedule[gradeClassId][day][period] = { subjectId, teacherId }
   const schedule = {};
   // teacherBusy[teacherId][day] = Set<period>
@@ -88,8 +88,8 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSl
       // 이미 해당 반에 수업이 있으면 패스
       if (schedule[gradeClassId]?.[d]?.[p]) continue;
 
-      // 해당 시간에 해당 교사가 다른 반에 배정되어 있으면 패스
-      if (teacherBusy[teacherId]?.[d]?.has(p)) continue;
+      // 해당 시간에 해당 교사가 다른 반에 배정되어 있으면 패스 (중첩 허용시 건너뜀)
+      if (!allowOverlap && teacherBusy[teacherId]?.[d]?.has(p)) continue;
 
       // 하루에 같은 과목 2번 연속 방지 (같은 요일 같은 과목 최대 2회)
       const sameSubjectToday = Object.values(schedule[gradeClassId]?.[d] || {})
@@ -220,7 +220,8 @@ router.post('/generate', async (req, res) => {
       maxPeriodsPerDay,
       operatingDays,
       fixedSlots,
-      targetSubjectIds
+      targetSubjectIds,
+      req.body.allowOverlap === true
     );
 
     // 결과에 이름 추가

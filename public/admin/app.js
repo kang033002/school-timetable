@@ -2341,78 +2341,90 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
   const maxPeriodSelect = document.getElementById('gen-max-period-select');
   const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
   
-  try {
-    if (btnGen) { btnGen.textContent = '⏳ 시간표 배정 작업 중...'; btnGen.disabled = true; }
+  const executeGenerator = async (allowOverlap = false) => {
+    try {
+      if (btnGen) { btnGen.textContent = '⏳ 시간표 배정 작업 중...'; btnGen.disabled = true; }
 
-    const res = await fetch(`${API_BASE}/generator/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        schoolId: currentUser.schoolId,
-        assignments,
-        maxPeriodsPerDay,
-        fixedSlots,
-        targetSubjectIds
-      })
-    });
+      const res = await fetch(`${API_BASE}/generator/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: currentUser.schoolId,
+          assignments,
+          maxPeriodsPerDay,
+          fixedSlots,
+          targetSubjectIds,
+          allowOverlap
+        })
+      });
 
-    if (btnGen) { btnGen.textContent = '🤖 시간표 자동 생성 시작'; btnGen.disabled = false; }
+      if (btnGen) { btnGen.textContent = '🤖 시간표 자동 생성 시작'; btnGen.disabled = false; }
 
-    if (!res.ok) { alert('자동 생성 실패'); return; }
+      if (!res.ok) { alert('자동 생성 실패'); return; }
 
-    const data = await res.json();
-    
-    if (!generatedResult) generatedResult = [];
-    const newlyGeneratedClasses = [...new Set(data.timetable.map(t => t.gradeClassId))];
-    generatedResult = generatedResult.filter(r => !newlyGeneratedClasses.includes(r.gradeClassId));
-    generatedResult.push(...data.timetable);
+      const data = await res.json();
 
-    // 기존 수동 배치 유지하며 AI 생성 결과 융합 (classMap 업데이트)
-    if (!genClassMap) genClassMap = {};
-    (data.timetable || []).forEach(t => {
-      if (!genClassMap[t.gradeClassId]) genClassMap[t.gradeClassId] = {};
-      if (!genClassMap[t.gradeClassId][t.dayOfWeek]) genClassMap[t.gradeClassId][t.dayOfWeek] = {};
-      genClassMap[t.gradeClassId][t.dayOfWeek][t.period] = t;
-    });
-
-    // 미배정 알림
-    const unassignedAlert = document.getElementById('gen-unassigned-alert');
-    const unassignedList = document.getElementById('gen-unassigned-list');
-    if (data.unassigned && data.unassigned.length > 0) {
-      if (unassignedAlert) unassignedAlert.classList.remove('hidden');
-      if (unassignedList) {
-        unassignedList.innerHTML = '';
-        data.unassigned.forEach(u => {
-          const gc = (generatorData?.classes || []).find(c => c.id === u.gradeClassId);
-          const li = document.createElement('li');
-          li.textContent = `${gc ? `${gc.grade}학년 ${gc.class_number}반` : ''} - ${u.subjectName} (${u.teacherName} 선생님)`;
-          unassignedList.appendChild(li);
-        });
+      if (!allowOverlap && data.unassigned && data.unassigned.length > 0) {
+        const wantsOverlap = confirm('동아리, 자율 활동 등 공통 교과로 인해 교사 배정이 겹쳐 생성되지 못한 시간이 있습니다.\n교사 중첩을 허용하여 강제로 배정하시겠습니까?');
+        if (wantsOverlap) {
+          return await executeGenerator(true);
+        }
       }
-    } else {
-      if (unassignedAlert) unassignedAlert.classList.add('hidden');
+
+      if (!generatedResult) generatedResult = [];
+      const newlyGeneratedClasses = [...new Set(data.timetable.map(t => t.gradeClassId))];
+      generatedResult = generatedResult.filter(r => !newlyGeneratedClasses.includes(r.gradeClassId));
+      generatedResult.push(...data.timetable);
+
+      // 기존 수동 배치 유지하며 AI 생성 결과 융합 (classMap 업데이트)
+      if (!genClassMap) genClassMap = {};
+      (data.timetable || []).forEach(t => {
+        if (!genClassMap[t.gradeClassId]) genClassMap[t.gradeClassId] = {};
+        if (!genClassMap[t.gradeClassId][t.dayOfWeek]) genClassMap[t.gradeClassId][t.dayOfWeek] = {};
+        genClassMap[t.gradeClassId][t.dayOfWeek][t.period] = t;
+      });
+
+      // 미배정 알림
+      const unassignedAlert = document.getElementById('gen-unassigned-alert');
+      const unassignedList = document.getElementById('gen-unassigned-list');
+      if (data.unassigned && data.unassigned.length > 0) {
+        if (unassignedAlert) unassignedAlert.classList.remove('hidden');
+        if (unassignedList) {
+          unassignedList.innerHTML = '';
+          data.unassigned.forEach(u => {
+            const gc = (generatorData?.classes || []).find(c => c.id === u.gradeClassId);
+            const li = document.createElement('li');
+            li.textContent = `${gc ? `${gc.grade}학년 ${gc.class_number}반` : ''} - ${u.subjectName} (${u.teacherName} 선생님)`;
+            unassignedList.appendChild(li);
+          });
+        }
+      } else {
+        if (unassignedAlert) unassignedAlert.classList.add('hidden');
+      }
+
+      // 학급 칩 채우기 및 로컬 스토리지 저장
+      localStorage.setItem('genSelectedClassIds', JSON.stringify(selectedClassIds));
+      localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+      localStorage.setItem('genResult', JSON.stringify(generatedResult));
+
+      buildPreviewChips(selectedClassIds);
+      if (selectedClassIds.length > 0) {
+        genCurrentClassId = selectedClassIds[0];
+        const maxPeriodSelect = document.getElementById('gen-max-period-select');
+        const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
+        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      }
+
+      alert(`🎉 AI 시간표 자동 생성 완료!\n${selectedClassIds.length}개 학급 × ${subjectsList.length}개 과목\n아래 미리보기를 확인 후 수정하세요.`);
+
+    } catch (err) {
+      if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
+      console.error('Generate error:', err);
+      alert('생성 중 오류가 발생했습니다.');
     }
+  };
 
-    // 학급 칩 채우기 및 로컬 스토리지 저장
-    localStorage.setItem('genSelectedClassIds', JSON.stringify(selectedClassIds));
-    localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
-    localStorage.setItem('genResult', JSON.stringify(generatedResult));
-
-    buildPreviewChips(selectedClassIds);
-    if (selectedClassIds.length > 0) {
-      genCurrentClassId = selectedClassIds[0];
-      const maxPeriodSelect = document.getElementById('gen-max-period-select');
-      const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
-      renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-    }
-
-    alert(`🎉 AI 시간표 자동 생성 완료!\n${selectedClassIds.length}개 학급 × ${subjectsList.length}개 과목\n아래 미리보기를 확인 후 수정하세요.`);
-
-  } catch (err) {
-    if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
-    console.error('Generate error:', err);
-    alert('생성 중 오류가 발생했습니다.');
-  }
+  await executeGenerator(false);
 });
 
 // 다시 생성
