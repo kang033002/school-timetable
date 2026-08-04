@@ -3,7 +3,7 @@ const defaultBase = isNativeApp ? 'http://10.0.2.2:3000' : '';
 const savedServer = localStorage.getItem('api_server_url') || defaultBase;
 const API_BASE = `${savedServer}/api`;
 
-let token = localStorage.getItem('master_token');
+let token = sessionStorage.getItem('master_token');
 
 const loginScreen = document.getElementById('login-screen');
 const dashboardScreen = document.getElementById('dashboard-screen');
@@ -51,8 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (res.ok && data.user.role === 'MASTER_ADMIN') {
-        localStorage.setItem('master_token', data.token);
-        localStorage.setItem('master_userId', data.user.id);
+        sessionStorage.setItem('master_token', data.token);
+        sessionStorage.setItem('master_userId', data.user.id);
         token = data.token;
         showDashboard();
       } else {
@@ -65,8 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnLogout.addEventListener('click', () => {
-    localStorage.removeItem('master_token');
-    localStorage.removeItem('master_userId');
+    sessionStorage.removeItem('master_token');
+    sessionStorage.removeItem('master_userId');
     token = null;
     dashboardScreen.classList.add('hidden');
     loginScreen.classList.remove('hidden');
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const credentialsForm = document.getElementById('master-credentials-form');
   credentialsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const userId = localStorage.getItem('master_userId') || 'u-master';
+    const userId = sessionStorage.getItem('master_userId') || 'u-master';
     const newUsername = document.getElementById('new-master-username').value;
     const newPassword = document.getElementById('new-master-password').value;
 
@@ -91,8 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (res.ok) {
         alert('마스터 로그인 정보가 성공적으로 변경되었습니다. 다시 로그인해주세요.');
-        localStorage.removeItem('master_token');
-        localStorage.removeItem('master_userId');
+        sessionStorage.removeItem('master_token');
+        sessionStorage.removeItem('master_userId');
         token = null;
         dashboardScreen.classList.add('hidden');
         loginScreen.classList.remove('hidden');
@@ -115,7 +115,7 @@ function showDashboard() {
 }
 
 async function loadMasterInfo() {
-  const userId = localStorage.getItem('master_userId') || 'u-master';
+  const userId = sessionStorage.getItem('master_userId') || 'u-master';
   try {
     const res = await fetch(`${API_BASE}/master/me/${userId}`);
     if (res.ok) {
@@ -134,8 +134,8 @@ async function loadSchools() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (res.status === 401) {
-      localStorage.removeItem('master_token');
-      localStorage.removeItem('master_userId');
+      sessionStorage.removeItem('master_token');
+      sessionStorage.removeItem('master_userId');
       token = null;
       dashboardScreen.classList.add('hidden');
       loginScreen.classList.remove('hidden');
