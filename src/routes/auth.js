@@ -39,13 +39,38 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: '비밀번호가 일치하지 않습니다.' });
     }
 
+    let targetUser = validUsers[0];
+
     if (validUsers.length > 1) {
-      if (!req.body.schoolCode) {
-        return res.status(400).json({ error: '동일한 아이디와 비밀번호가 여러 학교에 존재합니다. 로그인 화면에서 [학교 코드]를 입력해주세요.' });
+      if (req.body.schoolCode) {
+        // If schoolCode provided, the query already filtered `users` down to the matching school.
+        targetUser = validUsers[0];
+      } else {
+        // If no schoolCode provided, try to find if there's only ONE approved school among them
+        const approvedUsers = [];
+        for (const u of validUsers) {
+          if (u.role === 'MASTER_ADMIN') {
+            approvedUsers.push(u);
+          } else {
+            const school = await get(`SELECT status FROM schools WHERE id = ?`, [u.school_id]);
+            if (school && school.status === 'APPROVED') {
+              approvedUsers.push(u);
+            }
+          }
+        }
+        
+        if (approvedUsers.length === 1) {
+          targetUser = approvedUsers[0];
+        } else if (approvedUsers.length > 1) {
+          return res.status(400).json({ error: '동일한 아이디가 여러 승인된 학교에 존재합니다. 로그인 화면에서 [학교 코드]를 입력해주세요.' });
+        } else {
+          // all are pending/rejected
+          targetUser = validUsers[0];
+        }
       }
     }
 
-    const user = validUsers[0];
+    const user = targetUser;
 
     // Validate school approval status
     if (user.role !== 'MASTER_ADMIN') {
