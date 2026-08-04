@@ -167,7 +167,7 @@
 
           <div class="filter-group" id="class-filter-group" style="display:flex; flex-direction:row !important; gap:0.5rem; align-items:center;">
             <label>학급 선택</label>
-            <select id="filter-grade-select" class="form-select" style="width:110px;">
+            <select id="filter-grade-select" class="form-select" style="width:90px;">
               <option value="1">1학년</option>
               <option value="2">2학년</option>
               <option value="3">3학년</option>
@@ -175,7 +175,7 @@
               <option value="5">5학년</option>
               <option value="6">6학년</option>
             </select>
-            <select id="filter-class-select" class="form-select" style="width:110px;">
+            <select id="filter-class-select" class="form-select" style="width:90px;">
               <!-- Dynamically populated -->
             </select>
           </div>
@@ -421,14 +421,38 @@
             <div class="timetable-header">
               <div>
                 <h3>🤖 학기초 시간표 자동 생성</h3>
-                <span class="subtext">학급 선택 후, 과목별 주간 시수와 담당 교사를 설정하고 AI 자동 생성 → 미리보기 확인 → 전체 적용하면 <strong>학기 기본 시간표가 자동 완성</strong>됩니다.</span>
+                <span class="subtext">과목별 주간 시수와 담당 교사를 설정 후 AI 자동 생성 → 미리보기 확인 → 전체 적용하면 <strong>학기 기본 시간표가 자동 완성</strong>됩니다.</span>
               </div>
+              <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 시간표 인쇄</button>
             </div>
 
-            <!-- ① 적용할 학급 선택 -->
+            <!-- ① 과목별 주간 시수 및 담당 교사 설정 -->
             <div id="gen-auto-section" class="generator-setup">
               <div class="gen-section">
-                <h4>① 시간표를 생성할 학급 선택</h4>
+                <h4>① 과목별 주간 시수 및 담당 교사 설정</h4>
+                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 시수가 0이면 자동 생성에서 제외됩니다.</p>
+                <div class="table-responsive">
+                  <table class="logs-table" id="gen-subject-table">
+                    <thead>
+                      <tr>
+                        <th>과목명</th>
+                        <th>담당 교사</th>
+                        <th>주간 시수 (시간/주)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="gen-subject-body">
+                      <!-- 동적 생성 -->
+                    </tbody>
+                  </table>
+                </div>
+                <div style="margin-top: 0.5rem; text-align: right;">
+                  <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
+                </div>
+              </div>
+
+              <!-- ② 적용할 학급 선택 -->
+              <div class="gen-section">
+                <h4>② 시간표를 생성할 학급 선택</h4>
                 <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem;">
                   <select id="gen-grade-select" class="form-select" style="width:100px;">
                     <option value="1">1학년</option>
@@ -464,29 +488,6 @@
                 <select id="gen-class-list-select" class="hidden"></select>
               </div>
 
-              <!-- ② 과목별 주간 시수 및 담당 교사 설정 -->
-              <div class="gen-section">
-                <h4>② 과목별 주간 시수 및 담당 교사 설정</h4>
-                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 시수가 0이면 자동 생성에서 제외됩니다.</p>
-                <div class="table-responsive">
-                  <table class="logs-table" id="gen-subject-table">
-                    <thead>
-                      <tr>
-                        <th>과목명</th>
-                        <th>담당 교사</th>
-                        <th>주간 시수 (시간/주)</th>
-                      </tr>
-                    </thead>
-                    <tbody id="gen-subject-body">
-                      <!-- 동적 생성 -->
-                    </tbody>
-                  </table>
-                </div>
-                <div style="margin-top: 0.5rem; text-align: right;">
-                  <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
-                </div>
-              </div>
-
               <!-- ③ 자동 생성 실행 -->
               <div class="gen-section">
                 <div style="display:flex; justify-content:center; align-items:center; gap:1rem; flex-wrap:wrap;">
@@ -508,7 +509,6 @@
                   <button type="button" id="btn-generate" class="btn btn-primary" style="padding: 0.75rem 2.5rem; font-size:1rem; font-weight:700;">
                     🤖 시간표 자동 생성 시작
                   </button>
-                  <button class="btn btn-outline print-btn" onclick="window.print()" style="padding: 0.75rem 1.5rem; font-size:1rem; font-weight:700;">🖨️ 시간표 인쇄</button>
                 </div>
 
                 <!-- 자동 생성 대상 과목 선택 구역 -->
