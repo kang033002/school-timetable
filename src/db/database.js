@@ -194,6 +194,7 @@ async function initSchema() {
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS grade INTEGER`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS class_number INTEGER`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS subject_name TEXT`);
+    await pool.query(`ALTER TABLE base_timetable ADD COLUMN IF NOT EXISTS room_id TEXT`);
     
     // Change unique constraint to allow duplicate emails across different schools
     await pool.query(`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS user_accounts_email_key`);
