@@ -2082,7 +2082,7 @@ async function initGeneratorTab() {
         tr.className = 'gen-row';
         
         let valHours = defaultHours;
-        if (valHours === 3 || valHours === '3') {
+        if (false) {
           valHours = '';
         }
 
@@ -2818,14 +2818,43 @@ document.getElementById('btn-load-base-timetable')?.addEventListener('click', as
     // Format data into genClassMap
     generatorData.baseTimetable = data;
     genClassMap = {};
+    window.genClassHoursMap = window.genClassHoursMap || {};
+    const newClassHoursMap = {};
+    const loadedClassIds = new Set();
     data.forEach(item => {
+      loadedClassIds.add(item.gradeClassId);
       if (!genClassMap[item.gradeClassId]) genClassMap[item.gradeClassId] = {};
       if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
       genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
+      
+      if (item.subjectId && item.teacherId) {
+        if (!newClassHoursMap[item.gradeClassId]) newClassHoursMap[item.gradeClassId] = {};
+        const key = item.subjectId + '_' + item.teacherId;
+        if (!newClassHoursMap[item.gradeClassId][key]) {
+          newClassHoursMap[item.gradeClassId][key] = { subjectId: item.subjectId, teacherId: item.teacherId, hours: 0 };
+        }
+        newClassHoursMap[item.gradeClassId][key].hours++;
+      }
     });
+
+    Object.keys(newClassHoursMap).forEach(gcId => {
+      window.genClassHoursMap[gcId] = Object.values(newClassHoursMap[gcId]);
+    });
+    localStorage.setItem('gen_class_hours_' + currentUser.schoolId, JSON.stringify(window.genClassHoursMap));
+
+    window.activeGenClassIds = Array.from(loadedClassIds);
+    localStorage.setItem('genSelectedClassIds', JSON.stringify(window.activeGenClassIds));
+    
+    if (window.activeGenClassIds.length > 0) {
+      genCurrentClassId = window.activeGenClassIds[0];
+    }
+    
+    if (window.renderCreatedClassBadges) window.renderCreatedClassBadges();
+    if (typeof buildPreviewChips === 'function') buildPreviewChips(window.activeGenClassIds);
+    if (window.loadClassHours && genCurrentClassId) window.loadClassHours(genCurrentClassId);
     
     alert('기존 시간표를 성공적으로 불러왔습니다.');
-    renderGeneratorGrid();
+    if (typeof genCurrentClassId !== 'undefined' && genCurrentClassId) { const max = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10; renderGenGrid(genCurrentClassId, max); }
   } catch (err) {
     console.error(err);
     alert('기존 시간표를 불러오는 중 오류가 발생했습니다.');
