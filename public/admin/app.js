@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api';
+const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 let currentUser = null;
@@ -404,6 +404,17 @@ async function showDashboard() {
     const userNameElem = document.getElementById('user-name-display');
     const userRoleElem = document.getElementById('user-role-badge');
     const navSchoolNameElem = document.getElementById('nav-school-name');
+
+    try {
+      const savedMapStr = localStorage.getItem('gen_class_hours_' + currentUser.schoolId);
+      if (savedMapStr) {
+        window.genClassHoursMap = JSON.parse(savedMapStr);
+      } else {
+        window.genClassHoursMap = {};
+      }
+    } catch(e) {
+      window.genClassHoursMap = {};
+    }
 
     if (navSchoolNameElem) {
       const schoolTitle = currentUser?.schoolName || '시간표';
@@ -2825,26 +2836,20 @@ document.getElementById('btn-load-base-timetable')?.addEventListener('click', as
       if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
       genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
       
-      if (item.subjectId && item.teacherId) {
-        if (!newClassHoursMap[item.gradeClassId]) newClassHoursMap[item.gradeClassId] = {};
-        const key = item.subjectId + '_' + item.teacherId;
-        if (!newClassHoursMap[item.gradeClassId][key]) {
-          newClassHoursMap[item.gradeClassId][key] = { subjectId: item.subjectId, teacherId: item.teacherId, hours: 0 };
-        }
-        newClassHoursMap[item.gradeClassId][key].hours++;
-      }
     });
-
-    Object.keys(newClassHoursMap).forEach(gcId => {
-      window.genClassHoursMap[gcId] = Object.values(newClassHoursMap[gcId]);
-    });
-    localStorage.setItem('gen_class_hours_' + currentUser.schoolId, JSON.stringify(window.genClassHoursMap));
 
     window.activeGenClassIds = Array.from(loadedClassIds);
     localStorage.setItem('genSelectedClassIds', JSON.stringify(window.activeGenClassIds));
     
+    const dropdown = document.getElementById('gen-target-class-dropdown');
+    const selectedClass = dropdown ? dropdown.value : null;
+
     if (window.activeGenClassIds.length > 0) {
-      genCurrentClassId = window.activeGenClassIds[0];
+      if (selectedClass && window.activeGenClassIds.includes(selectedClass)) {
+        genCurrentClassId = selectedClass;
+      } else {
+        genCurrentClassId = window.activeGenClassIds[0];
+      }
     }
     
     if (window.renderCreatedClassBadges) window.renderCreatedClassBadges();
