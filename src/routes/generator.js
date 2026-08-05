@@ -5,11 +5,10 @@ const { get, all, run } = require('../db/database');
 // ────────────────────────────────────────────────────────────────────────────
 // 그리디 + 백트래킹 시간표 자동 생성 알고리즘
 // ────────────────────────────────────────────────────────────────────────────
-// (generateTimetable 함수 등은 유지)
-function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSlots = [], targetSubjectIds = [], allowOverlap = false) {
-  // schedule[gradeClassId][day][period] = { subjectId, teacherId }
+
+// 1. 단일 시도 함수
+function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSlots, targetSubjectIds, allowOverlap) {
   const schedule = {};
-  // teacherBusy[teacherId][day] = Set<period>
   const teacherBusy = {};
   const result = [];
 
@@ -41,13 +40,12 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     fixedCounts[key] = (fixedCounts[key] || 0) + 1;
   }
 
-  // 2. 배정해야 할 잔여 슬롯 목록 생성 (선택된 과목만, 수동 고정 시수 차감)
+  // 2. 배정해야 할 잔여 슬롯 목록 생성
   const targetSet = targetSubjectIds.length > 0 ? new Set(targetSubjectIds) : null;
   const slots = [];
 
   for (const gc of assignments) {
     for (const sub of gc.subjects) {
-      // 선택된 과목 필터링 (targetSet이 정의된 경우)
       if (targetSet && !targetSet.has(sub.subjectId)) continue;
 
       const key = `${gc.gradeClassId}_${sub.subjectId}_${sub.teacherId}`;
@@ -66,7 +64,6 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     }
   }
 
-  // 무작위 섞기 (실행마다 다른 결과)
   slots.sort(() => Math.random() - 0.5);
 
   const unassigned = [];
@@ -75,7 +72,6 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     const { gradeClassId, subjectId, teacherId } = slot;
     let placed = false;
 
-    // 모든 (요일, 교시) 조합을 무작위 순서로 시도
     const options = [];
     for (let d = 1; d <= operatingDays; d++) {
       for (let p = 1; p <= maxPeriodsPerDay; p++) {
@@ -85,18 +81,13 @@ function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     options.sort(() => Math.random() - 0.5);
 
     for (const { d, p } of options) {
-      // 이미 해당 반에 수업이 있으면 패스
       if (schedule[gradeClassId]?.[d]?.[p]) continue;
-
-      // 해당 시간에 해당 교사가 다른 반에 배정되어 있으면 패스 (중첩 허용시 건너뜀)
       if (!allowOverlap && teacherBusy[teacherId]?.[d]?.has(p)) continue;
 
-      // 하루에 같은 과목 2번 연속 방지 (같은 요일 같은 과목 최대 2회)
       const sameSubjectToday = Object.values(schedule[gradeClassId]?.[d] || {})
         .filter(s => s.subjectId === subjectId).length;
       if (sameSubjectToday >= 2) continue;
 
-      // 배정 확정
       if (!schedule[gradeClassId]) schedule[gradeClassId] = {};
       if (!schedule[gradeClassId][d]) schedule[gradeClassId][d] = {};
       schedule[gradeClassId][d][p] = { subjectId, teacherId };

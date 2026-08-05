@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+﻿const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 let currentUser = null;
@@ -1241,12 +1241,12 @@ function switchTab(tabName) {
   } else if (tabName === 'DAILY') {
     if (tabBtnDaily) tabBtnDaily.classList.add('active');
     if (contentDaily) contentDaily.classList.remove('hidden');
-    datePicker.parentElement.style.display = 'block';
+    datePicker.parentElement.style.display = 'flex';
     loadTimetable();
   } else if (tabName === 'TEACHER') {
     if (tabBtnTeacher) tabBtnTeacher.classList.add('active');
     if (contentTeacher) contentTeacher.classList.remove('hidden');
-    datePicker.parentElement.style.display = 'block';
+    datePicker.parentElement.style.display = 'flex';
     loadTimetable();
   } else if (tabName === 'GENERATOR') {
     if (tabBtnGenerator) tabBtnGenerator.classList.add('active');
@@ -1699,6 +1699,32 @@ document.getElementById('btn-force-ok').addEventListener('click', async () => {
   const payload = pendingForcePayload;
   pendingForcePayload = null;
   conflictAlert.classList.add('hidden');
+
+  if (payload.mode === 'generatorForce') {
+    const tc = window.genCurrentClassId;
+    const cgc = payload.conflictGcId;
+    const d = payload.dayOfWeek;
+    const p = payload.period;
+    
+    if (genClassMap[cgc] && genClassMap[cgc][d] && genClassMap[cgc][d][p]) {
+      delete genClassMap[cgc][d][p];
+    }
+    
+    if (!genClassMap[tc]) genClassMap[tc] = {};
+    if (!genClassMap[tc][d]) genClassMap[tc][d] = {};
+    
+    genClassMap[tc][d][p] = {
+      gradeClassId: tc,
+      dayOfWeek: d,
+      period: p,
+      subjectId: payload.subjectId,
+      teacherId: payload.teacherId,
+      isFixed: true
+    };
+    
+    renderGenGrid(tc, window.generatorData.maxPeriodsPerDay);
+    return;
+  }
 
   // 어떤 API 엔드포인트로 보낼지 결정
   const isBase = payload.dayOfWeek !== undefined && payload.targetDate === undefined;
