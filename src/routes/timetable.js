@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { run, get, all } = require('../db/database');
 
@@ -50,7 +50,7 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     const school = await get(`SELECT * FROM schools WHERE id = ? OR code = ?`, [schoolId, schoolId]);
     if (!school) return res.status(404).json({ error: 'School not found' });
 
-    // sports ??젣 諛?援먯궗 紐⑸줉??怨쇰ぉ??subjects ?뚯씠釉붿뿉 ?놁쑝硫??먮룞 ?앹꽦/?숆린??
+    // sports 삭제 및 교사 목록의 과목이 subjects 테이블에 없으면 자동 생성/동기화
     await run(`DELETE FROM subjects WHERE LOWER(name) = 'sports' OR LOWER(short_name) = 'sports'`);
 
     const teacherSubjects = await all(
@@ -59,7 +59,7 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     );
     for (const ts of teacherSubjects) {
       const subName = (ts.subject_name || '').trim();
-      if (!subName || subName === '誘몄??? || subName.toLowerCase() === 'sports') continue;
+      if (!subName || subName === '미지정' || subName.toLowerCase() === 'sports') continue;
       const existing = await get(
         `SELECT id FROM subjects WHERE school_id = ? AND LOWER(name) = ?`,
         [school.id, subName.toLowerCase()]
@@ -130,7 +130,7 @@ async function getEffectiveSlot(schoolId, gradeClassId, targetDate, dayOfWeek, p
       gradeClassId,
       subjectId: null,
       subjectName: holiday.name,
-      shortSubjectName: '?댁씪',
+      shortSubjectName: '휴일',
       teacherId: null,
       teacherName: '-',
       roomId: null,
@@ -188,8 +188,8 @@ async function getEffectiveSlot(schoolId, gradeClassId, targetDate, dayOfWeek, p
         targetDate,
         gradeClassId,
         subjectId: null,
-        subjectName: '寃곌컯',
-        shortSubjectName: '寃곌컯',
+        subjectName: '결강',
+        shortSubjectName: '결강',
         teacherId: null,
         teacherName: '-',
         roomId: null,
@@ -233,7 +233,7 @@ async function getEffectiveSlot(schoolId, gradeClassId, targetDate, dayOfWeek, p
     teacherId: base.teacher_id,
     teacherName: base.teacher_name,
     roomId: base.room_id,
-    roomName: base.room_name || '?쇰컲援먯떎',
+    roomName: base.room_name || '일반교실',
     isChanged: false,
     changeType: null
   };
@@ -322,7 +322,7 @@ router.get('/timetable/class', async (req, res) => {
         teacherId: b.teacher_id,
         teacherName: b.teacher_name,
         roomId: b.room_id,
-        roomName: b.room_name || '?쇰컲援먯떎',
+        roomName: b.room_name || '일반교실',
         isChanged: false,
         changeType: null
       };
@@ -341,8 +341,8 @@ router.get('/timetable/class', async (req, res) => {
         if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
           if (effectiveMap[key]) {
              effectiveMap[key].teacherId = null;
-             effectiveMap[key].subjectName = '寃곌컯';
-             effectiveMap[key].shortSubjectName = '寃곌컯';
+             effectiveMap[key].subjectName = '결강';
+             effectiveMap[key].shortSubjectName = '결강';
              effectiveMap[key].teacherName = '-';
              effectiveMap[key].roomName = '-';
              effectiveMap[key].isChanged = true;
@@ -370,7 +370,7 @@ router.get('/timetable/class', async (req, res) => {
                teacherId: ch.changed_teacher_id,
                teacherName: ch.chg_teacher_name,
                roomId: ch.changed_room_id,
-               roomName: ch.chg_room_name || '?쇰컲援먯떎',
+               roomName: ch.chg_room_name || '일반교실',
                isChanged: true,
                changeType: ch.change_type
              };
@@ -398,7 +398,7 @@ router.get('/timetable/class', async (req, res) => {
              targetDate: curDateStr,
              gradeClassId: gc.id,
              subjectName: holiday.name,
-             shortSubjectName: '?댁씪',
+             shortSubjectName: '휴일',
              teacherName: '-',
              roomName: '-',
              isChanged: true,
@@ -508,7 +508,7 @@ router.get('/timetable/daily-all', async (req, res) => {
         teacherId: b.teacher_id,
         teacherName: b.teacher_name,
         roomId: b.room_id,
-        roomName: b.room_name || '?쇰컲援먯떎',
+        roomName: b.room_name || '일반교실',
         isChanged: false,
         changeType: null
       };
@@ -523,8 +523,8 @@ router.get('/timetable/daily-all', async (req, res) => {
       if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
         if (effectiveMap[key]) {
            effectiveMap[key].teacherId = null;
-           effectiveMap[key].subjectName = '寃곌컯';
-           effectiveMap[key].shortSubjectName = '寃곌컯';
+           effectiveMap[key].subjectName = '결강';
+           effectiveMap[key].shortSubjectName = '결강';
            effectiveMap[key].teacherName = '-';
            effectiveMap[key].roomName = '-';
            effectiveMap[key].isChanged = true;
@@ -552,7 +552,7 @@ router.get('/timetable/daily-all', async (req, res) => {
              teacherId: ch.changed_teacher_id,
              teacherName: ch.chg_teacher_name,
              roomId: ch.changed_room_id,
-             roomName: ch.chg_room_name || '?쇰컲援먯떎',
+             roomName: ch.chg_room_name || '일반교실',
              isChanged: true,
              changeType: ch.change_type
            };
@@ -572,7 +572,7 @@ router.get('/timetable/daily-all', async (req, res) => {
              targetDate: date,
              gradeClassId: gc.id,
              subjectName: holiday.name,
-             shortSubjectName: '?댁씪',
+             shortSubjectName: '휴일',
              teacherName: '-',
              roomName: '-',
              isChanged: true,
@@ -689,7 +689,7 @@ router.get('/timetable/teacher', async (req, res) => {
       if (!gc) continue;
       effectiveMap[key] = {
         gradeClassId: b.grade_class_id,
-        gradeName: `${gc.grade}?숇뀈 ${gc.class_number}諛?,
+        gradeName: `${gc.grade}학년 ${gc.class_number}반`,
         dayOfWeek: b.day_of_week,
         period: b.period,
         subjectId: b.subject_id,
@@ -698,7 +698,7 @@ router.get('/timetable/teacher', async (req, res) => {
         teacherId: b.teacher_id,
         teacherName: b.teacher_name,
         roomId: b.room_id,
-        roomName: b.room_name || '?쇰컲援먯떎',
+        roomName: b.room_name || '일반교실',
         isChanged: false,
         changeType: null
       };
@@ -728,13 +728,13 @@ router.get('/timetable/teacher', async (req, res) => {
             effectiveMap[key].teacherId = ch.changed_teacher_id;
             effectiveMap[key].teacherName = ch.teacher_name;
             effectiveMap[key].roomId = ch.changed_room_id;
-            effectiveMap[key].roomName = ch.room_name || '?쇰컲援먯떎';
+            effectiveMap[key].roomName = ch.room_name || '일반교실';
             effectiveMap[key].isChanged = true;
             effectiveMap[key].changeType = ch.change_type;
           } else {
             effectiveMap[key] = {
               gradeClassId: ch.grade_class_id,
-              gradeName: `${gc.grade}?숇뀈 ${gc.class_number}諛?,
+              gradeName: `${gc.grade}학년 ${gc.class_number}반`,
               dayOfWeek,
               period: ch.period,
               subjectId: ch.changed_subject_id,
@@ -743,7 +743,7 @@ router.get('/timetable/teacher', async (req, res) => {
               teacherId: ch.changed_teacher_id,
               teacherName: ch.teacher_name,
               roomId: ch.changed_room_id,
-              roomName: ch.room_name || '?쇰컲援먯떎',
+              roomName: ch.room_name || '일반교실',
               isChanged: true,
               changeType: ch.change_type
             };
@@ -839,26 +839,26 @@ router.post('/timetable/change', async (req, res) => {
         const slot = await getEffectiveSlot(schoolId, gc.id, targetDate, dayOfWeek, period);
         if (!slot) continue;
 
-        // a) ?숆툒 異⑸룎: ?대떦 ?숆툒???대? ?ㅻⅨ ?섏뾽??議댁옱
+        // a) 학급 충돌: 해당 학급에 이미 다른 수업이 존재
         if (gc.id === gradeClassId && slot.subjectId && slot.teacherId) {
           // If it's a replacement for the same slot, note it
         }
 
-        // b) 援먯궗 異⑸룎: ?숈씪 援먯궗媛 ?ㅻⅨ 諛??섏뾽???대? 諛곗젙?섏뼱 ?덉쓬
+        // b) 교사 충돌: 동일 교사가 다른 반 수업에 이미 배정되어 있음
         if (changedTeacherId && slot.teacherId === changedTeacherId && gc.id !== gradeClassId && slot.changeType !== 'CANCEL') {
           const teacher = await get(`SELECT name FROM teachers WHERE id = ?`, [changedTeacherId]);
           conflicts.push({
             type: 'TEACHER_DUPLICATE',
-            message: `[援먯궗 異⑸룎] ${teacher ? teacher.name : '?대떦'} ?좎깮?섏? ?숈씪 ?쒓컙(${targetDate} ${period}援먯떆)??${gc.grade}?숇뀈 ${gc.class_number}諛??섏뾽???대? 諛곗젙?섏뼱 ?덉뒿?덈떎.`
+            message: `[교사 충돌] ${teacher ? teacher.name : '해당'} 선생님은 동일 시간(${targetDate} ${period}교시)에 ${gc.grade}학년 ${gc.class_number}반 수업에 이미 배정되어 있습니다.`
           });
         }
 
-        // c) ?μ냼/?밸퀎??異⑸룎: ?숈씪 ?μ냼(?밸퀎??媛 ?ㅻⅨ 諛섏뿉 ?대? 諛곗젙?섏뼱 ?덉쓬
+        // c) 장소/특별실 충돌: 동일 장소(특별실)가 다른 반에 이미 배정되어 있음
         if (changedRoomId && slot.roomId === changedRoomId && gc.id !== gradeClassId && slot.changeType !== 'CANCEL') {
           const room = await get(`SELECT name FROM rooms WHERE id = ?`, [changedRoomId]);
           conflicts.push({
             type: 'ROOM_DUPLICATE',
-            message: `[?μ냼 異⑸룎] ${room ? room.name : '?대떦 ?μ냼'}???숈씪 ?쒓컙(${targetDate} ${period}援먯떆)??${gc.grade}?숇뀈 ${gc.class_number}諛섏뿉???대? ?ъ슜 以묒엯?덈떎.`
+            message: `[장소 충돌] ${room ? room.name : '해당 장소'}는 동일 시간(${targetDate} ${period}교시)에 ${gc.grade}학년 ${gc.class_number}반에서 이미 사용 중입니다.`
           });
         }
       }
@@ -904,8 +904,8 @@ router.post('/timetable/change', async (req, res) => {
         changedSubjectId || null,
         base ? base.room_id : null,
         changedRoomId || null,
-        reason || '?쇨낵怨??쒓컙??議곗젙',
-        createdBy || '愿由ъ옄'
+        reason || '일과계 시간표 조정',
+        createdBy || '관리자'
       ]
     );
 
