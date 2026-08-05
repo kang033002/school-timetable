@@ -249,6 +249,11 @@ router.get('/timetable/class', async (req, res) => {
 
     const refDate = date || new Date().toISOString().split('T')[0];
     const mondayStr = getMonday(refDate);
+    const monday = new Date(mondayStr);
+    
+    const fridayDate = new Date(monday);
+    fridayDate.setDate(monday.getDate() + 4);
+    const fridayStr = fridayDate.toISOString().split('T')[0];
 
     const baseOnly = req.query.baseOnly === 'true';
 
@@ -265,50 +270,148 @@ router.get('/timetable/class', async (req, res) => {
     if (!gc) return res.status(404).json({ error: 'Grade and Class not found' });
 
     // Generate weekly schedule (Days 1 to 5, Periods 1 to maxPeriods)
-    const timetable = [];
-    const monday = new Date(mondayStr);
+    const baseRows = await all(`
+      SELECT bt.*, 
+             sub.name as subject_name, sub.short_name as short_subject_name,
+             t.name as teacher_name, t.code as teacher_code,
+             r.name as room_name, r.is_special_room
+      FROM base_timetable bt
+      JOIN subjects sub ON bt.subject_id = sub.id
+      JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN rooms r ON bt.room_id = r.id
+      WHERE bt.school_id = ? AND bt.grade_class_id = ?
+    `, [schoolId, gc.id]);
 
+    let changeRows = [];
+    let holidayRows = [];
+    if (!baseOnly) {
+      changeRows = await all(`
+        SELECT tc.*,
+               orig_sub.name as orig_subject_name,
+               chg_sub.name as chg_subject_name, chg_sub.short_name as chg_short_subject_name,
+               orig_t.name as orig_teacher_name,
+               chg_t.name as chg_teacher_name,
+               orig_r.name as orig_room_name,
+               chg_r.name as chg_room_name
+        FROM timetable_changes tc
+        LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
+        LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
+        LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
+        LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
+        LEFT JOIN rooms orig_r ON tc.original_room_id = orig_r.id
+        LEFT JOIN rooms chg_r ON tc.changed_room_id = chg_r.id
+        WHERE tc.school_id = ? AND tc.grade_class_id = ? AND tc.target_date >= ? AND tc.target_date <= ?
+        ORDER BY tc.created_at DESC
+      `, [schoolId, gc.id, mondayStr, fridayStr]);
+
+      holidayRows = await all(`
+        SELECT * FROM holidays WHERE school_id = ? AND target_date >= ? AND target_date <= ?
+      `, [schoolId, mondayStr, fridayStr]);
+    }
+
+    const effectiveMap = {};
+    for (const b of baseRows) {
+      const key = \`\${b.day_of_week}_\${b.period}\`;
+      effectiveMap[key] = {
+        gradeClassId: gc.id,
+        dayOfWeek: b.day_of_week,
+        period: b.period,
+        subjectId: b.subject_id,
+        subjectName: b.subject_name,
+        shortSubjectName: b.short_subject_name,
+        teacherId: b.teacher_id,
+        teacherName: b.teacher_name,
+        roomId: b.room_id,
+        roomName: b.room_name || '일반교실',
+        isChanged: false,
+        changeType: null
+      };
+    }
+
+    if (!baseOnly) {
+      const seenChanges = new Set();
+      for (const ch of changeRows) {
+        const chDate = new Date(ch.target_date);
+        const dayOfWeek = chDate.getDay() === 0 ? 7 : chDate.getDay();
+        const key = \`\${dayOfWeek}_\${ch.period}\`;
+        
+        if (seenChanges.has(key)) continue; // We only want the latest
+        seenChanges.add(key);
+
+        if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
+          if (effectiveMap[key]) {
+             effectiveMap[key].teacherId = null;
+             effectiveMap[key].subjectName = '결강';
+             effectiveMap[key].shortSubjectName = '결강';
+             effectiveMap[key].teacherName = '-';
+             effectiveMap[key].roomName = '-';
+             effectiveMap[key].isChanged = true;
+             effectiveMap[key].changeType = ch.change_type;
+          }
+        } else {
+          if (effectiveMap[key]) {
+             effectiveMap[key].subjectId = ch.changed_subject_id || effectiveMap[key].subjectId;
+             effectiveMap[key].subjectName = ch.chg_subject_name || effectiveMap[key].subjectName;
+             effectiveMap[key].shortSubjectName = ch.chg_short_subject_name || effectiveMap[key].shortSubjectName;
+             effectiveMap[key].teacherId = ch.changed_teacher_id || effectiveMap[key].teacherId;
+             effectiveMap[key].teacherName = ch.chg_teacher_name || effectiveMap[key].teacherName;
+             effectiveMap[key].roomId = ch.changed_room_id || effectiveMap[key].roomId;
+             effectiveMap[key].roomName = ch.chg_room_name || effectiveMap[key].roomName;
+             effectiveMap[key].isChanged = true;
+             effectiveMap[key].changeType = ch.change_type;
+          } else {
+             effectiveMap[key] = {
+               gradeClassId: ch.grade_class_id,
+               dayOfWeek,
+               period: ch.period,
+               subjectId: ch.changed_subject_id,
+               subjectName: ch.chg_subject_name,
+               shortSubjectName: ch.chg_short_subject_name,
+               teacherId: ch.changed_teacher_id,
+               teacherName: ch.chg_teacher_name,
+               roomId: ch.changed_room_id,
+               roomName: ch.chg_room_name || '일반교실',
+               isChanged: true,
+               changeType: ch.change_type
+             };
+          }
+        }
+      }
+    }
+
+    const timetable = [];
     for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
       const curDate = new Date(monday);
       curDate.setDate(monday.getDate() + dayOffset);
       const curDateStr = curDate.toISOString().split('T')[0];
-      const dayOfWeek = dayOffset + 1; // 1: Mon ... 5: Fri
+      const dayOfWeek = dayOffset + 1;
+
+      const holiday = holidayRows.find(h => h.target_date === curDateStr);
 
       const daySlots = [];
       for (let period = 1; period <= maxPeriods; period++) {
         let slot = null;
-        if (baseOnly) {
-          const base = await get(
-            `SELECT bt.*, 
-                    sub.name as subject_name, sub.short_name as short_subject_name,
-                    t.name as teacher_name, t.code as teacher_code,
-                    r.name as room_name, r.is_special_room
-             FROM base_timetable bt
-             JOIN subjects sub ON bt.subject_id = sub.id
-             JOIN teachers t ON bt.teacher_id = t.id
-             LEFT JOIN rooms r ON bt.room_id = r.id
-             WHERE bt.school_id = ? AND bt.grade_class_id = ? AND bt.day_of_week = ? AND bt.period = ?`,
-            [schoolId, gc.id, dayOfWeek, period]
-          );
-          if (base) {
-            slot = {
-              dayOfWeek,
-              period,
-              targetDate: curDateStr,
-              gradeClassId: gc.id,
-              subjectId: base.subject_id,
-              subjectName: base.subject_name,
-              shortSubjectName: base.short_subject_name,
-              teacherId: base.teacher_id,
-              teacherName: base.teacher_name,
-              roomId: base.room_id,
-              roomName: base.room_name || '일반교실',
-              isChanged: false,
-              changeType: null
-            };
-          }
+        if (holiday && !baseOnly) {
+           slot = {
+             dayOfWeek,
+             period,
+             targetDate: curDateStr,
+             gradeClassId: gc.id,
+             subjectName: holiday.name,
+             shortSubjectName: '휴일',
+             teacherName: '-',
+             roomName: '-',
+             isChanged: true,
+             changeType: 'HOLIDAY'
+           };
         } else {
-          slot = await getEffectiveSlot(schoolId, gc.id, curDateStr, dayOfWeek, period);
+           const key = \`\${dayOfWeek}_\${period}\`;
+           if (effectiveMap[key]) {
+             slot = {
+               ...effectiveMap[key],
+               targetDate: curDateStr
+             };
+           }
         }
 
         daySlots.push(slot || {
@@ -352,18 +455,139 @@ router.get('/timetable/daily-all', async (req, res) => {
     }
 
     const targetDateObj = new Date(date);
-    const dayOfWeek = targetDateObj.getDay();
+    const dayOfWeek = targetDateObj.getDay() === 0 ? 7 : targetDateObj.getDay();
 
     const school = await get(`SELECT max_periods_per_day FROM schools WHERE id = ?`, [schoolId]);
     const maxPeriods = school ? school.max_periods_per_day : 9;
 
     const classes = await all(`SELECT * FROM grade_classes WHERE school_id = ? ORDER BY grade, class_number`, [schoolId]);
 
+    const holiday = await get(`SELECT name FROM holidays WHERE school_id = ? AND target_date = ?`, [schoolId, date]);
+
+    const baseRows = await all(`
+      SELECT bt.*, 
+             sub.name as subject_name, sub.short_name as short_subject_name,
+             t.name as teacher_name, t.code as teacher_code,
+             r.name as room_name, r.is_special_room
+      FROM base_timetable bt
+      JOIN subjects sub ON bt.subject_id = sub.id
+      JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN rooms r ON bt.room_id = r.id
+      WHERE bt.school_id = ? AND bt.day_of_week = ?
+    `, [schoolId, dayOfWeek]);
+
+    const changeRows = await all(`
+      SELECT tc.*,
+             orig_sub.name as orig_subject_name,
+             chg_sub.name as chg_subject_name, chg_sub.short_name as chg_short_subject_name,
+             orig_t.name as orig_teacher_name,
+             chg_t.name as chg_teacher_name,
+             orig_r.name as orig_room_name,
+             chg_r.name as chg_room_name
+      FROM timetable_changes tc
+      LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
+      LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
+      LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
+      LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
+      LEFT JOIN rooms orig_r ON tc.original_room_id = orig_r.id
+      LEFT JOIN rooms chg_r ON tc.changed_room_id = chg_r.id
+      WHERE tc.school_id = ? AND tc.target_date = ?
+      ORDER BY tc.created_at DESC
+    `, [schoolId, date]);
+
+    const effectiveMap = {};
+    for (const b of baseRows) {
+      const key = \`\${b.grade_class_id}_\${b.period}\`;
+      effectiveMap[key] = {
+        gradeClassId: b.grade_class_id,
+        dayOfWeek: b.day_of_week,
+        period: b.period,
+        subjectId: b.subject_id,
+        subjectName: b.subject_name,
+        shortSubjectName: b.short_subject_name,
+        teacherId: b.teacher_id,
+        teacherName: b.teacher_name,
+        roomId: b.room_id,
+        roomName: b.room_name || '일반교실',
+        isChanged: false,
+        changeType: null
+      };
+    }
+
+    const seenChanges = new Set();
+    for (const ch of changeRows) {
+      const key = \`\${ch.grade_class_id}_\${ch.period}\`;
+      if (seenChanges.has(key)) continue;
+      seenChanges.add(key);
+
+      if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
+        if (effectiveMap[key]) {
+           effectiveMap[key].teacherId = null;
+           effectiveMap[key].subjectName = '결강';
+           effectiveMap[key].shortSubjectName = '결강';
+           effectiveMap[key].teacherName = '-';
+           effectiveMap[key].roomName = '-';
+           effectiveMap[key].isChanged = true;
+           effectiveMap[key].changeType = ch.change_type;
+        }
+      } else {
+        if (effectiveMap[key]) {
+           effectiveMap[key].subjectId = ch.changed_subject_id || effectiveMap[key].subjectId;
+           effectiveMap[key].subjectName = ch.chg_subject_name || effectiveMap[key].subjectName;
+           effectiveMap[key].shortSubjectName = ch.chg_short_subject_name || effectiveMap[key].shortSubjectName;
+           effectiveMap[key].teacherId = ch.changed_teacher_id || effectiveMap[key].teacherId;
+           effectiveMap[key].teacherName = ch.chg_teacher_name || effectiveMap[key].teacherName;
+           effectiveMap[key].roomId = ch.changed_room_id || effectiveMap[key].roomId;
+           effectiveMap[key].roomName = ch.chg_room_name || effectiveMap[key].roomName;
+           effectiveMap[key].isChanged = true;
+           effectiveMap[key].changeType = ch.change_type;
+        } else {
+           effectiveMap[key] = {
+             gradeClassId: ch.grade_class_id,
+             dayOfWeek,
+             period: ch.period,
+             subjectId: ch.changed_subject_id,
+             subjectName: ch.chg_subject_name,
+             shortSubjectName: ch.chg_short_subject_name,
+             teacherId: ch.changed_teacher_id,
+             teacherName: ch.chg_teacher_name,
+             roomId: ch.changed_room_id,
+             roomName: ch.chg_room_name || '일반교실',
+             isChanged: true,
+             changeType: ch.change_type
+           };
+        }
+      }
+    }
+
     const timetable = [];
     for (const gc of classes) {
       const classSlots = [];
       for (let period = 1; period <= maxPeriods; period++) {
-        const slot = await getEffectiveSlot(schoolId, gc.id, date, dayOfWeek, period);
+        let slot = null;
+        if (holiday) {
+           slot = {
+             dayOfWeek,
+             period,
+             targetDate: date,
+             gradeClassId: gc.id,
+             subjectName: holiday.name,
+             shortSubjectName: '휴일',
+             teacherName: '-',
+             roomName: '-',
+             isChanged: true,
+             changeType: 'HOLIDAY'
+           };
+        } else {
+           const key = \`\${gc.id}_\${period}\`;
+           if (effectiveMap[key]) {
+             slot = {
+               ...effectiveMap[key],
+               targetDate: date
+             };
+           }
+        }
+        
         classSlots.push(slot || {
           dayOfWeek,
           period,

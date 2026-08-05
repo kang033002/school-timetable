@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+﻿const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 let currentUser = null;
@@ -2082,9 +2082,6 @@ async function initGeneratorTab() {
         tr.className = 'gen-row';
         
         let valHours = defaultHours;
-        if (false) {
-          valHours = '';
-        }
 
         const subjectOptions = (generatorData.subjects || []).map(s => {
           const isSelected = (String(s.id) === String(defaultSubjectId)) ? 'selected' : '';
@@ -2278,6 +2275,7 @@ async function initGeneratorTab() {
         if (parsedIds.length > 0) {
           if (!genCurrentClassId) genCurrentClassId = parsedIds[0];
           buildPreviewChips(parsedIds);
+          if (window.loadClassHours) window.loadClassHours(genCurrentClassId);
           renderGenGrid(genCurrentClassId, defaultMaxPeriods);
         }
       } catch (e) {
