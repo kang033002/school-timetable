@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api';
+const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 let currentUser = null;
@@ -1392,7 +1392,7 @@ if (changeSubjectSelect && changeTeacherSelect) {
     const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
     const sub = subs.find(s => s.id === selectedSubjId);
     if (sub) {
-      const match = tchs.find(t => (t.subject_name || t.subjectName || '') === sub.name);
+      const match = tchs.find(t => (t.subject_name || t.subjectName || '').split(',').map(s=>s.trim()).includes(sub.name));
       if (match) changeTeacherSelect.value = match.id;
     }
   });
@@ -1403,8 +1403,8 @@ if (changeSubjectSelect && changeTeacherSelect) {
     const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
     const tch = tchs.find(t => t.id === selectedTchId);
     if (tch) {
-      const subName = tch.subject_name || tch.subjectName;
-      const sub = subs.find(s => s.name === subName);
+      const subNames = (tch.subject_name || tch.subjectName || '').split(',').map(s=>s.trim());
+      const sub = subs.find(s => subNames.includes(s.name));
       if (sub) changeSubjectSelect.value = sub.id;
     }
   });
@@ -2160,7 +2160,7 @@ async function initGeneratorTab() {
           const selectedSubjId = e.target.value;
           const sub = (generatorData.subjects || []).find(s => s.id === selectedSubjId);
           if (sub) {
-            const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || t.subjectName || '') === sub.name);
+            const matchingTeacher = (generatorData.teachers || []).find(t => (t.subject_name || t.subjectName || '').split(',').map(s=>s.trim()).includes(sub.name));
             if (matchingTeacher) {
               teachSelect.value = matchingTeacher.id;
             }
@@ -2172,8 +2172,8 @@ async function initGeneratorTab() {
           const selectedTeacherId = e.target.value;
           const teacher = (generatorData.teachers || []).find(t => t.id === selectedTeacherId);
           if (teacher) {
-            const subName = teacher.subject_name || teacher.subjectName;
-            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            const subNames = (teacher.subject_name || teacher.subjectName || '').split(',').map(s=>s.trim());
+            const sub = (generatorData.subjects || []).find(s => subNames.includes(s.name));
             if (sub) {
               subjSelect.value = sub.id;
             }
@@ -2198,8 +2198,8 @@ async function initGeneratorTab() {
           window.addGenRow();
         } else {
           allTeachers.forEach(t => {
-            const subName = t.subject_name || t.subjectName;
-            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            const subNames = (t.subject_name || t.subjectName || '').split(',').map(s=>s.trim());
+            const sub = (generatorData.subjects || []).find(s => subNames.includes(s.name));
             window.addGenRow(sub ? sub.id : '', t.id, '');
           });
         }
@@ -2216,8 +2216,8 @@ async function initGeneratorTab() {
         let addedCount = 0;
         generatorData.teachers.forEach(t => {
           if (!currentTeacherIds.has(t.id)) {
-            const subName = t.subject_name || t.subjectName;
-            const sub = (generatorData.subjects || []).find(s => s.name === subName);
+            const subNames = (t.subject_name || t.subjectName || '').split(',').map(s=>s.trim());
+            const sub = (generatorData.subjects || []).find(s => subNames.includes(s.name));
             window.addGenRow(sub ? sub.id : '', t.id, '');
             addedCount++;
           }
@@ -2889,3 +2889,5 @@ document.getElementById('btn-load-base-timetable')?.addEventListener('click', as
     alert('기존 시간표를 불러오는 중 오류가 발생했습니다.');
   }
 });
+
+
