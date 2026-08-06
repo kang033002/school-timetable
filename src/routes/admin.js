@@ -340,23 +340,34 @@ router.post('/teachers', async (req, res) => {
       );
       // Update user_account
       if (email && password) {
-        const existing = await get(`SELECT id FROM user_accounts WHERE email = ? AND (teacher_id != ? OR teacher_id IS NULL)`, [email, teacherId]);
+        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
         if (existing) {
-          return res.status(400).json({ error: '이미 사용 중인 교사 아이디입니다.' });
-        }
-        const userAcc = await get(`SELECT id FROM user_accounts WHERE teacher_id = ?`, [teacherId]);
-        if (userAcc) {
-          await run(
-            `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
-            [email, password, name, teacherId]
-          );
+          if (existing.name !== name) {
+            return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
+          } else {
+            // It belongs to the same teacher. Just update the password and name (in case name changed).
+            await run(
+              `UPDATE user_accounts SET password_hash = ?, name = ? WHERE email = ? AND school_id = ?`,
+              [password, name, email, schoolId]
+            );
+          }
         } else {
-          const userId = `u-t-${Date.now()}`;
-          await run(
-            `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-             VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-            [userId, schoolId, email, password, teacherId, name]
-          );
+          // If no existing account for this email, maybe they are assigning a new email.
+          // But wait, does this teacher already have an account? Let's check by teacher_id.
+          const userAcc = await get(`SELECT id FROM user_accounts WHERE teacher_id = ?`, [teacherId]);
+          if (userAcc) {
+            await run(
+              `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
+              [email, password, name, teacherId]
+            );
+          } else {
+            const userId = `u-t-${Date.now()}`;
+            await run(
+              `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+               VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+              [userId, schoolId, email, password, teacherId, name]
+            );
+          }
         }
       }
     } else {
@@ -367,16 +378,19 @@ router.post('/teachers', async (req, res) => {
         [teacherId, schoolId, name, code || null, subjectName || null]
       );
       if (email && password) {
-        const existing = await get(`SELECT id FROM user_accounts WHERE email = ?`, [email]);
+        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
         if (existing) {
-          return res.status(400).json({ error: '이미 사용 중인 교사 아이디입니다.' });
+          if (existing.name !== name) {
+            return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
+          }
+        } else {
+          const userId = `u-t-${Date.now()}`;
+          await run(
+            `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+             VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+            [userId, schoolId, email, password, teacherId, name]
+          );
         }
-        const userId = `u-t-${Date.now()}`;
-        await run(
-          `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-           VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-          [userId, schoolId, email, password, teacherId, name]
-        );
       }
     }
 
@@ -566,7 +580,7 @@ router.post('/base-timetable', async (req, res) => {
          JOIN teachers t ON bt.teacher_id = t.id
          JOIN subjects s ON bt.subject_id = s.id
          WHERE bt.school_id = ? AND bt.day_of_week = ? AND bt.period = ?
-           AND bt.teacher_id = ? AND bt.grade_class_id != ?`,
+           AND t.name = (SELECT name FROM teachers WHERE id = ?) AND bt.grade_class_id != ?`,
         [schoolId, dayOfWeek, period, teacherId, gradeClassId]
       );
 

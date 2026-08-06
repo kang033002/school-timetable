@@ -641,6 +641,9 @@ router.get('/timetable/teacher', async (req, res) => {
     const teacher = await get(`SELECT * FROM teachers WHERE id = ?`, [teacherId]);
     if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
 
+    const sameNameTeachers = await all(`SELECT id FROM teachers WHERE school_id = ? AND name = ?`, [schoolId, teacher.name]);
+    const teacherIds = sameNameTeachers.map(t => String(t.id));
+
     const baseOnly = req.query.baseOnly === 'true';
 
     const school = await get(`SELECT max_periods_per_day FROM schools WHERE id = ?`, [schoolId]);
@@ -766,7 +769,7 @@ router.get('/timetable/teacher', async (req, res) => {
         for (const gcId in classMap) {
           const key = `${gcId}_${dayOfWeek}_${period}`;
           const slot = effectiveMap[key];
-          if (slot && String(slot.teacherId) === String(teacherId)) {
+          if (slot && teacherIds.includes(String(slot.teacherId))) {
             assignedSlot = {
               ...slot,
               targetDate: curDateStr
@@ -845,12 +848,14 @@ router.post('/timetable/change', async (req, res) => {
         }
 
         // b) 교사 충돌: 동일 교사가 다른 반 수업에 이미 배정되어 있음
-        if (changedTeacherId && slot.teacherId === changedTeacherId && gc.id !== gradeClassId && slot.changeType !== 'CANCEL') {
+        if (changedTeacherId && slot.teacherId && gc.id !== gradeClassId && slot.changeType !== 'CANCEL') {
           const teacher = await get(`SELECT name FROM teachers WHERE id = ?`, [changedTeacherId]);
-          conflicts.push({
-            type: 'TEACHER_DUPLICATE',
-            message: `[교사 충돌] ${teacher ? teacher.name : '해당'} 선생님은 동일 시간(${targetDate} ${period}교시)에 ${gc.grade}학년 ${gc.class_number}반 수업에 이미 배정되어 있습니다.`
-          });
+          if (teacher && teacher.name === slot.teacherName) {
+            conflicts.push({
+              type: 'TEACHER_DUPLICATE',
+              message: `[교사 충돌] ${teacher ? teacher.name : '해당 교사'}는 같은 시간(${targetDate} ${period}교시)에 ${gc.grade}학년 ${gc.class_number}반 수업에 이미 배정되어 있습니다.`
+            });
+          }
         }
 
         // c) 장소/특별실 충돌: 동일 장소(특별실)가 다른 반에 이미 배정되어 있음

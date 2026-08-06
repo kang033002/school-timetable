@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api';
+const API_BASE = '/api';
 window.API_BASE = API_BASE;
 
 let currentUser = null;
@@ -1911,6 +1911,35 @@ async function initGeneratorTab() {
       console.warn('API fetch failed, fallback to currentSchoolMeta:', e);
     }
 
+    // Auto-load base timetable if there is no saved state, to prevent wiping data on partial edits.
+    // Check localStorage directly so we don't overwrite a user's in-progress (or explicitly cleared) generator state.
+    const hasSavedState = localStorage.getItem('genResult') !== null;
+    if (!generatedResult && !hasSavedState) {
+      try {
+        const btRes = await fetch(API_BASE + '/admin/base-timetable-all?schoolId=' + currentUser.schoolId);
+        if (btRes.ok) {
+          const btData = await btRes.json();
+          if (btData && btData.length > 0) {
+            generatedResult = [...btData];
+            genClassMap = {};
+            const loadedClassIds = new Set();
+            btData.forEach(item => {
+              loadedClassIds.add(item.gradeClassId);
+              if (!genClassMap[item.gradeClassId]) genClassMap[item.gradeClassId] = {};
+              if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
+              genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
+            });
+            window.activeGenClassIds = Array.from(loadedClassIds);
+            localStorage.setItem('genSelectedClassIds', JSON.stringify(window.activeGenClassIds));
+            localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+            localStorage.setItem('genResult', JSON.stringify(generatedResult));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to auto-load base timetable:', e);
+      }
+    }
+
     if (!classesList.length && currentSchoolMeta?.gradeClasses) {
       classesList = currentSchoolMeta.gradeClasses;
     }
@@ -2852,6 +2881,7 @@ document.getElementById('btn-load-base-timetable')?.addEventListener('click', as
     
     // Format data into genClassMap
     generatorData.baseTimetable = data;
+    generatedResult = [...data];
     genClassMap = {};
     window.genClassHoursMap = window.genClassHoursMap || {};
     const newClassHoursMap = {};
