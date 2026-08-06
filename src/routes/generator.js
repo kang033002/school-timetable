@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { get, all, run } = require('../db/database');
 
@@ -287,4 +287,3 @@ router.post('/apply', async (req, res) => {
 });
 
 module.exports = router;
-

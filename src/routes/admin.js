@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { run, get, all } = require('../db/database');
 
@@ -686,4 +686,3 @@ router.get('/base-timetable-all', async (req, res) => {
 });
 
 module.exports = router;
-
