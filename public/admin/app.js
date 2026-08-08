@@ -515,7 +515,7 @@ function renderAdminClassesTable() {
   const teachers = currentSchoolMeta?.teachers || [];
 
   if (gradeClasses.length === 0) {
-    cTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다. 상단 [학급 생성/수정 저장]에서 학년과 반을 등록해주세요.</td></tr>`;
+    cTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-sub); padding:1rem;">등록된 학년/학급이 없습니다. 상단 [학급 생성/수정 저장]에서 학년과 반을 등록해주세요.</td></tr>`;
     return;
   }
 
@@ -535,6 +535,9 @@ function renderAdminClassesTable() {
         <select id="class-homeroom-${c.id}" class="form-select" style="padding: 4px 8px; font-size: 0.9em; height: auto;" onchange="updateClassHomeroom('${c.id}', ${c.grade}, ${c.class_number})">
           ${optionsHtml}
         </select>
+      </td>
+      <td style="text-align: center;">
+        <button type="button" class="btn btn-sm btn-outline" style="border-color:var(--danger-color); color:var(--danger-color); padding:0.25rem 0.6rem; border-radius:4px; font-weight:600;" onclick="deleteClass('${c.id}')">삭제</button>
       </td>
     `;
     cTableBody.appendChild(tr);
@@ -695,6 +698,26 @@ window.deleteClass = async function(id) {
     }
   } catch (err) {
     console.error(err);
+  }
+};
+
+window.deleteAllClasses = async function() {
+  if (!confirm('🚨 경고: 학교의 모든 학년/학급 및 연관된 시간표 데이터가 영구 삭제됩니다. 정말로 전체 삭제하시겠습니까?')) {
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/admin/classes?ids=ALL_CLASSES&schoolId=${currentUser.schoolId}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      alert('모든 학급 데이터가 성공적으로 삭제되었습니다.');
+      await loadSchoolMetadata();
+    } else {
+      alert('전체 삭제 처리에 실패했습니다.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('서버 통신 오류가 발생했습니다.');
   }
 };
 

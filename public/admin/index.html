@@ -250,7 +250,10 @@
 
             <!-- Row 2: Class Management (Full Width) -->
             <div class="settings-card" id="card-class-management" style="margin:0; width:100%;">
-              <h4 style="margin-bottom: 1rem;">🏫 학년/학급 생성 및 담임 관리</h4>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h4 style="margin:0;">🏫 학년/학급 생성 및 담임 관리</h4>
+                <button type="button" class="btn btn-sm" id="btn-delete-all-classes" style="background:#b91c1c; color:white; border:none; padding:0.4rem 0.8rem; border-radius:4px;" onclick="deleteAllClasses()">전체 삭제</button>
+              </div>
               <div class="table-responsive">
                 <table class="logs-table">
                   <thead>
@@ -258,6 +261,7 @@
                       <th>학년</th>
                       <th>학급</th>
                       <th>담임 교사</th>
+                      <th style="width: 80px; text-align: center;">작업</th>
                     </tr>
                   </thead>
                   <tbody id="admin-classes-table-body">

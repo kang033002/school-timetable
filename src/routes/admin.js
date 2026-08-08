@@ -502,6 +502,37 @@ router.delete('/subjects/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/admin/classes (Bulk delete or Delete all for school)
+router.delete('/classes', async (req, res) => {
+  try {
+    const { schoolId, ids } = req.query;
+    if (ids === 'ALL_CLASSES' && schoolId) {
+      const classes = await all(`SELECT id FROM grade_classes WHERE school_id = ?`, [schoolId]);
+      for (const c of classes) {
+        await run(`DELETE FROM base_timetable WHERE grade_class_id = ?`, [c.id]);
+        await run(`DELETE FROM timetable_changes WHERE grade_class_id = ?`, [c.id]);
+        await run(`DELETE FROM grade_classes WHERE id = ?`, [c.id]);
+      }
+      return res.json({ message: 'All classes deleted successfully' });
+    }
+
+    if (ids) {
+      const idList = ids.split(',');
+      for (const id of idList) {
+        await run(`DELETE FROM base_timetable WHERE grade_class_id = ?`, [id]);
+        await run(`DELETE FROM timetable_changes WHERE grade_class_id = ?`, [id]);
+        await run(`DELETE FROM grade_classes WHERE id = ?`, [id]);
+      }
+      return res.json({ message: 'Selected classes deleted successfully' });
+    }
+
+    res.status(400).json({ error: 'schoolId or ids required' });
+  } catch (err) {
+    console.error('Delete bulk classes error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // DELETE /api/admin/classes/:id
 router.delete('/classes/:id', async (req, res) => {
   try {
