@@ -430,75 +430,88 @@
             </div>
 
             <!-- ① 적용할 학급 선택 -->
+            <!-- ① & ② 통합 학급 및 과목/교사 설정 카드 -->
             <div id="gen-auto-section" class="generator-setup">
-              <div class="gen-section">
-                <h4>① 시간표를 생성할 학급 선택</h4>
-                <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem;">
-                  <select id="gen-grade-select" class="form-select" style="width:100px;">
-                    <option value="1">1학년</option>
-                    <option value="2">2학년</option>
-                    <option value="3">3학년</option>
-                    <option value="4">4학년</option>
-                    <option value="5">5학년</option>
-                    <option value="6">6학년</option>
-                  </select>
-                  <select id="gen-class-select" class="form-select" style="width:100px;">
-                    <option value="1">1반</option>
-                    <option value="2">2반</option>
-                    <option value="3">3반</option>
-                    <option value="4">4반</option>
-                    <option value="5">5반</option>
-                    <option value="6">6반</option>
-                    <option value="7">7반</option>
-                    <option value="8">8반</option>
-                    <option value="9">9반</option>
-                    <option value="10">10반</option>
-                    <option value="11">11반</option>
-                    <option value="12">12반</option>
-                    <option value="13">13반</option>
-                    <option value="14">14반</option>
-                    <option value="15">15반</option>
-                  </select>
-                  <button type="button" id="btn-gen-add-class" class="btn btn-primary" style="padding:0.4rem 1rem;">생성</button>
-                  <button type="button" id="btn-gen-delete-class" class="btn" style="padding:0.4rem 1rem; background-color:#ef4444; color:white; border:none; transition: all 0.2s;">삭제</button>
-                </div>
-                <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;">
-                  <div id="gen-class-list-box" style="flex:1; min-height:48px; background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-                    <span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>
+              <div class="gen-section" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; display:flex; flex-direction:column; gap:1.5rem;">
+                
+                <!-- ① 시간표를 생성할 학급 선택 -->
+                <div>
+                  <h4 style="margin:0 0 0.75rem 0; font-size:1.1rem; color:var(--primary-color);">① 시간표를 생성할 학급 선택</h4>
+                  <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap;">
+                    <select id="gen-grade-select" class="form-select" style="width:100px;">
+                      <option value="1">1학년</option>
+                      <option value="2">2학년</option>
+                      <option value="3">3학년</option>
+                      <option value="4">4학년</option>
+                      <option value="5">5학년</option>
+                      <option value="6">6학년</option>
+                    </select>
+                    <select id="gen-class-select" class="form-select" style="width:100px;">
+                      <option value="1">1반</option>
+                      <option value="2">2반</option>
+                      <option value="3">3반</option>
+                      <option value="4">4반</option>
+                      <option value="5">5반</option>
+                      <option value="6">6반</option>
+                      <option value="7">7반</option>
+                      <option value="8">8반</option>
+                      <option value="9">9반</option>
+                      <option value="10">10반</option>
+                      <option value="11">11반</option>
+                      <option value="12">12반</option>
+                      <option value="13">13반</option>
+                      <option value="14">14반</option>
+                      <option value="15">15반</option>
+                    </select>
+                    <button type="button" id="btn-gen-add-class" class="btn btn-primary" style="padding:0.4rem 1rem;">생성</button>
+                    <button type="button" id="btn-gen-delete-class" class="btn" style="padding:0.4rem 1rem; background-color:#ef4444; color:white; border:none; transition: all 0.2s;">삭제</button>
                   </div>
-                  <button type="button" id="btn-gen-search-class" class="btn btn-primary" style="padding:0.65rem 1.6rem; font-weight:700; white-space:nowrap; border-radius:8px; font-size:0.95rem;" onclick="executeClassQuery()">조회</button>
-                </div>
-                <select id="gen-class-list-select" class="hidden"></select>
-              </div>
 
-              <!-- ② 과목별 주간 시수 및 담당 교사 설정 -->
-              <div class="gen-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                  <h4 style="margin:0;">② 과목별 주간 시수 및 담당 교사 설정</h4>
-                  <button type="button" id="btn-load-registered-teachers" class="btn btn-sm btn-outline" style="font-weight:600; font-size:0.85rem; padding:0.35rem 0.8rem;" onclick="loadRegisteredTeachersForGenerator()">가입 완료 교사 목록 불러오기</button>
+                  <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem; flex-wrap:wrap;">
+                    <div id="gen-class-list-box" style="flex:1; min-height:48px; background:var(--bg-card); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                      <span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>
+                    </div>
+                    <!-- 조회 & 적용 버튼 -->
+                    <button type="button" id="btn-gen-search-class" class="btn btn-outline" style="padding:0.65rem 1.4rem; font-weight:700; border-color:var(--primary-color); color:var(--primary-color); white-space:nowrap; border-radius:8px; font-size:0.95rem;" onclick="executeClassQuery()">조회</button>
+                    <button type="button" id="btn-gen-apply-class" class="btn btn-primary" style="padding:0.65rem 1.6rem; font-weight:700; white-space:nowrap; border-radius:8px; font-size:0.95rem; background:#16a34a; border-color:#16a34a;" onclick="applyClassSetup()">적용</button>
+                  </div>
+                  <select id="gen-class-list-select" class="hidden"></select>
                 </div>
-                <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 시수가 0이면 자동 생성에서 제외됩니다.</p>
-                <div class="table-responsive">
-                  <table class="logs-table" id="gen-subject-table">
-                    <thead>
-                      <tr>
-                        <th>과목명</th>
-                        <th>담당 교사</th>
-                        <th>주간 시수 (시간/주)</th>
-                        <th style="width: 100px; text-align:center;">
-                          <button type="button" id="btn-gen-clear-all-rows" class="btn btn-sm" style="background:#b91c1c; color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; font-weight:600; cursor:pointer;" onclick="clearAllGenRows()">전체 삭제</button>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody id="gen-subject-body">
-                      <!-- 동적 생성 -->
-                    </tbody>
-                  </table>
+
+                <hr style="border:0; border-top:1px dashed var(--border-color); margin:0;">
+
+                <!-- ② 과목별 주간 시수 및 담당 교사 설정 -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.5rem;">
+                    <h4 style="margin:0; font-size:1.1rem; color:var(--primary-color);">② 과목별 주간 시수 및 담당 교사 설정</h4>
+                    <button type="button" id="btn-load-registered-teachers" class="btn btn-sm btn-outline" style="font-weight:700; font-size:0.85rem; padding:0.4rem 0.9rem; border-color:var(--primary-color); color:var(--primary-color);" onclick="openTeacherSelectPopup()">📋 가입 완료 교사 목록 불러오기</button>
+                  </div>
+                  <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 조회를 누른 후 상단 [적용] 버튼을 눌러야 설정이 최종 저장됩니다.</p>
+                  
+                  <div class="table-responsive">
+                    <table class="logs-table" id="gen-subject-table">
+                      <thead>
+                        <tr>
+                          <th>과목명</th>
+                          <th>담당 교사</th>
+                          <th>주간 시수 (시간/주)</th>
+                          <th style="width: 100px; text-align:center;">
+                            <button type="button" id="btn-gen-clear-all-rows" class="btn btn-sm" style="background:#b91c1c; color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; font-weight:600; cursor:pointer;" onclick="clearAllGenRows()">전체 삭제</button>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody id="gen-subject-body">
+                        <!-- 동적 생성 -->
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="margin-top: 0.5rem; text-align: right;">
+                    <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
+                  </div>
                 </div>
-                <div style="margin-top: 0.5rem; text-align: right;">
-                  <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
-                </div>
+
               </div>
+            </div>
 
               <!-- ③ 자동 생성 실행 -->
               <div class="gen-section">

@@ -2174,34 +2174,40 @@ async function initGeneratorTab() {
         }
       };
 
-      window.loadRegisteredTeachersForGenerator = async function() {
-        try {
-          const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
-          if (res.ok) {
-            generatorData = await res.json();
-            const body = document.getElementById('gen-subject-body');
-            if (body) {
-              if (body.children.length === 0) {
-                loadDefaultRows();
-              } else {
-                document.querySelectorAll('.gen-row').forEach(row => {
-                  const teacherSel = row.querySelector('.gen-teacher-select');
-                  const curVal = teacherSel ? teacherSel.value : '';
-                  if (teacherSel) {
-                    teacherSel.innerHTML = '<option value="">-- 선택 --</option>' + (generatorData.teachers || []).map(t => {
-                      const isSelected = (String(t.id) === String(curVal)) ? 'selected' : '';
-                      return `<option value="${t.id}" ${isSelected}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`;
-                    }).join('');
-                  }
-                });
-              }
-            }
-            alert('가입 완료된 교사 목록을 불러왔습니다.');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('교사 목록을 불러오는데 실패했습니다.');
+      window.openTeacherSelectPopup = function() {
+        const width = 680;
+        const height = 550;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        window.open('popup-select-teachers.html?v=' + Date.now(), 'SelectTeachersPopup', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+      };
+
+      window.addGenRowsForTeachers = function(selectedTeachers) {
+        if (!Array.isArray(selectedTeachers) || selectedTeachers.length === 0) return;
+        selectedTeachers.forEach(t => {
+          const subName = t.subject_name || t.subjectName;
+          const sub = (generatorData.subjects || []).find(s => s.name === subName);
+          window.addGenRow(sub ? sub.id : '', t.id, '');
+        });
+        window.markGenTableDirty();
+      };
+
+      window.applyClassSetup = function() {
+        if (!genCurrentClassId) {
+          alert('설정을 적용할 학급을 선택하거나 생성해 주세요.');
+          return;
         }
+
+        if (window.saveCurrentClassHours) {
+          window.saveCurrentClassHours(genCurrentClassId);
+        }
+
+        window.isGenTableDirty = false;
+
+        const gc = (generatorData.classes || []).find(c => c.id === genCurrentClassId);
+        const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : '선택한 학급';
+        
+        alert(`[${gcName}]의 과목별 시수 및 담당 교사 설정이 정상적으로 적용(저장)되었습니다!`);
       };
 
       window.executeClassQuery = function() {
