@@ -1239,6 +1239,11 @@ async function loadTimetable() {
 }
 
 function switchTab(tabName) {
+  if (activeTab === 'GENERATOR' && tabName !== 'GENERATOR' && window.isGenTableDirty) {
+    if (!confirm('작업 중인 과목별 시수 및 교사 설정이 적용(저장)되지 않았습니다.\n적용을 누르지 않으면 작업 내용이 손실됩니다.\n정말 다른 메뉴로 이동하시겠습니까?')) {
+      return;
+    }
+  }
   activeTab = tabName;
   updateFiltersForTab(tabName);
 
@@ -2155,15 +2160,66 @@ async function initGeneratorTab() {
     if (subjectBody) {
       subjectBody.innerHTML = '';
       
+      window.isGenTableDirty = false;
+
+      window.markGenTableDirty = function() {
+        window.isGenTableDirty = true;
+      };
+
+      window.clearAllGenRows = function() {
+        const body = document.getElementById('gen-subject-body');
+        if (body) {
+          body.innerHTML = '';
+          window.markGenTableDirty();
+        }
+      };
+
+      window.loadRegisteredTeachersForGenerator = async function() {
+        try {
+          const res = await fetch(`${API_BASE}/generator/data?schoolId=${currentUser.schoolId}`);
+          if (res.ok) {
+            generatorData = await res.json();
+            const body = document.getElementById('gen-subject-body');
+            if (body) {
+              if (body.children.length === 0) {
+                loadDefaultRows();
+              } else {
+                document.querySelectorAll('.gen-row').forEach(row => {
+                  const teacherSel = row.querySelector('.gen-teacher-select');
+                  const curVal = teacherSel ? teacherSel.value : '';
+                  if (teacherSel) {
+                    teacherSel.innerHTML = '<option value="">-- 선택 --</option>' + (generatorData.teachers || []).map(t => {
+                      const isSelected = (String(t.id) === String(curVal)) ? 'selected' : '';
+                      return `<option value="${t.id}" ${isSelected}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`;
+                    }).join('');
+                  }
+                });
+              }
+            }
+            alert('가입 완료된 교사 목록을 불러왔습니다.');
+          }
+        } catch (e) {
+          console.error(e);
+          alert('교사 목록을 불러오는데 실패했습니다.');
+        }
+      };
+
+      window.executeClassQuery = function() {
+        if (window.isGenTableDirty) {
+          if (!confirm('과목별 시수 및 교사 설정 작업 내용이 적용(저장)되지 않았습니다.\n적용을 누르지 않고 이동하면 수정 사항이 손실됩니다.\n정말 선택한 학급으로 이동하여 조회하시겠습니까?')) {
+            return;
+          }
+        }
+        if (window.loadClassHours && genCurrentClassId) {
+          window.loadClassHours(genCurrentClassId);
+        }
+      };
+
       window.saveGeneratorRowsState = function() {
-        const rows = [];
-        document.querySelectorAll('.gen-row').forEach(row => {
-          const subjectId = row.querySelector('.gen-subject-select')?.value || '';
-          const teacherId = row.querySelector('.gen-teacher-select')?.value || '';
-          const hours = row.querySelector('.gen-hours-input')?.value || '';
-          rows.push({ subjectId, teacherId, hours });
-        });
-        localStorage.setItem('generator_rows_' + currentUser.schoolId, JSON.stringify(rows));
+        window.markGenTableDirty();
+        if (genCurrentClassId) {
+          window.saveCurrentClassHours(genCurrentClassId);
+        }
       };
 
       window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
@@ -2243,12 +2299,10 @@ async function initGeneratorTab() {
       };
 
       function loadDefaultRows() {
-        const subjectBody = document.getElementById('gen-subject-body');
-        if (subjectBody) subjectBody.innerHTML = '';
+        const body = document.getElementById('gen-subject-body');
+        if (body) body.innerHTML = '';
         const allTeachers = generatorData.teachers || [];
-        if (allTeachers.length === 0) {
-          window.addGenRow();
-        } else {
+        if (allTeachers.length > 0) {
           allTeachers.forEach(t => {
             const subName = t.subject_name || t.subjectName;
             const sub = (generatorData.subjects || []).find(s => s.name === subName);
@@ -2286,24 +2340,8 @@ async function initGeneratorTab() {
         newBtn.addEventListener('click', (e) => {
           e.preventDefault();
           window.addGenRow();
-          if (window.saveGeneratorRowsState) window.saveGeneratorRowsState();
+          window.saveGeneratorRowsState();
         });
-      }
-
-      // Load rows state from localStorage
-      const savedRowsStr = localStorage.getItem('generator_rows_' + currentUser.schoolId);
-      if (savedRowsStr) {
-        try {
-          const savedRows = JSON.parse(savedRowsStr);
-          savedRows.forEach(r => {
-            window.addGenRow(r.subjectId, r.teacherId, r.hours);
-          });
-        } catch (err) {
-          console.error(err);
-          loadDefaultRows();
-        }
-      } else {
-        loadDefaultRows();
       }
 
       // 학급별 독립 시수 저장소
@@ -2331,16 +2369,17 @@ async function initGeneratorTab() {
           try { window.genClassHoursMap = JSON.parse(savedMapStr); } catch(e){}
         }
 
-        const subjectBody = document.getElementById('gen-subject-body');
-        if (!subjectBody) return;
-        subjectBody.innerHTML = '';
+        const body = document.getElementById('gen-subject-body');
+        if (!body) return;
+        body.innerHTML = '';
 
         const classRows = window.genClassHoursMap[classId];
         if (classRows && classRows.length > 0) {
           classRows.forEach(r => window.addGenRow(r.subjectId, r.teacherId, r.hours));
         } else {
-          loadDefaultRows();
+          // 손도 대지 않은 미설정 학급인 경우 아무것도 자동 생성하지 않고 빈 상태를 유지합니다.
         }
+        window.isGenTableDirty = false;
       };
 
       window.saveGeneratorRowsState = function() {

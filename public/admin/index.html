@@ -462,15 +462,21 @@
                   <button type="button" id="btn-gen-add-class" class="btn btn-primary" style="padding:0.4rem 1rem;">생성</button>
                   <button type="button" id="btn-gen-delete-class" class="btn" style="padding:0.4rem 1rem; background-color:#ef4444; color:white; border:none; transition: all 0.2s;">삭제</button>
                 </div>
-                <div id="gen-class-list-box" style="width:100%; min-height:48px; background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-                  <span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>
+                <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;">
+                  <div id="gen-class-list-box" style="flex:1; min-height:48px; background:var(--bg-surface); padding:0.6rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                    <span style="font-size:0.88rem; color:var(--text-sub);">등록된 학급이 없습니다. 학년과 반을 선택 후 [생성] 버튼을 눌러주세요.</span>
+                  </div>
+                  <button type="button" id="btn-gen-search-class" class="btn btn-primary" style="padding:0.65rem 1.6rem; font-weight:700; white-space:nowrap; border-radius:8px; font-size:0.95rem;" onclick="executeClassQuery()">조회</button>
                 </div>
                 <select id="gen-class-list-select" class="hidden"></select>
               </div>
 
               <!-- ② 과목별 주간 시수 및 담당 교사 설정 -->
               <div class="gen-section">
-                <h4>② 과목별 주간 시수 및 담당 교사 설정</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                  <h4 style="margin:0;">② 과목별 주간 시수 및 담당 교사 설정</h4>
+                  <button type="button" id="btn-load-registered-teachers" class="btn btn-sm btn-outline" style="font-weight:600; font-size:0.85rem; padding:0.35rem 0.8rem;" onclick="loadRegisteredTeachersForGenerator()">가입 완료 교사 목록 불러오기</button>
+                </div>
                 <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 시수가 0이면 자동 생성에서 제외됩니다.</p>
                 <div class="table-responsive">
                   <table class="logs-table" id="gen-subject-table">
@@ -479,6 +485,9 @@
                         <th>과목명</th>
                         <th>담당 교사</th>
                         <th>주간 시수 (시간/주)</th>
+                        <th style="width: 100px; text-align:center;">
+                          <button type="button" id="btn-gen-clear-all-rows" class="btn btn-sm" style="background:#b91c1c; color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; font-weight:600; cursor:pointer;" onclick="clearAllGenRows()">전체 삭제</button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody id="gen-subject-body">
