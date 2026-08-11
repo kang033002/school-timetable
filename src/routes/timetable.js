@@ -706,8 +706,8 @@ router.get('/timetable/teacher', async (req, res) => {
              t.name as teacher_name, t.code as teacher_code,
              r.name as room_name, r.is_special_room
       FROM base_timetable bt
-      JOIN subjects sub ON bt.subject_id = sub.id
-      JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN subjects sub ON bt.subject_id = sub.id
+      LEFT JOIN teachers t ON bt.teacher_id = t.id
       LEFT JOIN rooms r ON bt.room_id = r.id
       WHERE bt.school_id = ?
     `, [schoolId]);
@@ -800,6 +800,12 @@ router.get('/timetable/teacher', async (req, res) => {
       }
     }
 
+    const isMatch = (tId, tName) => {
+      if (tId && teacherIds.includes(String(tId))) return true;
+      if (tName && allNames.includes(String(tName).trim())) return true;
+      return false;
+    };
+
     const timetable = [];
     for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
       const curDate = new Date(monday);
@@ -814,7 +820,7 @@ router.get('/timetable/teacher', async (req, res) => {
         for (const gcId in classMap) {
           const key = `${gcId}_${dayOfWeek}_${period}`;
           const slot = effectiveMap[key];
-          if (slot && teacherIds.includes(String(slot.teacherId))) {
+          if (slot && isMatch(slot.teacherId, slot.teacherName)) {
             assignedSlot = {
               ...slot,
               targetDate: curDateStr
@@ -829,7 +835,7 @@ router.get('/timetable/teacher', async (req, res) => {
             const dateParts = String(ch.target_date).split('-').map(Number);
             const chDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
             const chDay = chDate.getDay() === 0 ? 7 : chDate.getDay();
-            return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && teacherIds.includes(String(ch.original_teacher_id));
+            return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && isMatch(ch.original_teacher_id, ch.teacher_name);
           });
 
           if (origChange) {

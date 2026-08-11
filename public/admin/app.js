@@ -130,6 +130,14 @@ window.executeTeacherQuery = function() {
   loadTimetable();
 };
 
+  if (teacherTitleSelect) {
+    teacherTitleSelect.addEventListener('change', () => {
+      if (activeTab === 'TEACHER') {
+        loadTimetable();
+      }
+    });
+  }
+
   if (tabBtnBase) tabBtnBase.addEventListener('click', () => switchTab('BASE'));
   if (tabBtnDaily) tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
   if (tabBtnTeacher) tabBtnTeacher.addEventListener('click', () => switchTab('TEACHER'));
