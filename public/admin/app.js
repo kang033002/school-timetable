@@ -2308,9 +2308,16 @@ async function initGeneratorTab() {
             return;
           }
         }
+        const classSelect = document.getElementById('gen-class-list-select');
+        if (classSelect && classSelect.value) {
+          genCurrentClassId = classSelect.value;
+        }
         if (window.loadClassHours && genCurrentClassId) {
           window.loadClassHours(genCurrentClassId);
         }
+        buildPreviewChips(window.activeGenClassIds || []);
+        const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
       };
 
       window.saveGeneratorRowsState = function() {
@@ -2933,9 +2940,7 @@ document.getElementById('btn-apply-timetable')?.addEventListener('click', async 
     });
     const data = await res.json();
     if (res.ok) {
-      alert(`🎉 시간표 적용 완료!\n총 ${data.applied}개 수업이 기본 시간표에 저장되었습니다.\n이제 [학기 기본 시간표] 탭에서 확인할 수 있습니다.`);
-      // 학기 기본 시간표 탭으로 이동 + 새로고침
-      switchTab('BASE');
+      alert(`🎉 시간표 적용 완료!\n총 ${data.applied}개 수업이 기본 시간표에 저장되었습니다.\n이제 [일자별 수업 시간표] 및 [교사 시간표] 탭에서 완성된 시간표를 확인할 수 있습니다.`);
       loadTimetable();
 
     } else {
