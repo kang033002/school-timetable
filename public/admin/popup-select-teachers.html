@@ -63,23 +63,26 @@
 
   <script>
     const opener = window.opener;
-    if (!opener) {
-      alert('올바르지 않은 접근입니다.');
-      window.close();
-    }
-
     let loadedTeachers = [];
 
     async function fetchTeachers() {
       const tbody = document.getElementById('select-teachers-table-body');
       try {
-        const schoolId = opener.currentUser?.schoolId;
+        let schoolId = opener?.currentUser?.schoolId;
         if (!schoolId) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">학교 정보가 올바르지 않습니다.</td></tr>';
+          try {
+            const saved = localStorage.getItem('currentUser') || localStorage.getItem('user');
+            if (saved) schoolId = JSON.parse(saved).schoolId;
+          } catch(e){}
+        }
+
+        if (!schoolId) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">학교 정보가 올바르지 않습니다. 다시 로그인해 주세요.</td></tr>';
           return;
         }
 
-        const res = await fetch(`${opener.API_BASE}/admin/teachers?schoolId=${schoolId}`);
+        const apiBase = opener?.API_BASE || '/api';
+        const res = await fetch(`${apiBase}/admin/teachers?schoolId=${schoolId}`);
         const teachers = await res.json();
         loadedTeachers = teachers || [];
 
