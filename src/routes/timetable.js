@@ -811,6 +811,36 @@ router.get('/timetable/teacher', async (req, res) => {
           }
         }
 
+        // Check if this teacher was the original teacher of a cancelled or changed class
+        if (!assignedSlot && !baseOnly) {
+          const origChange = changeRows.find(ch => {
+            const dateParts = String(ch.target_date).split('-').map(Number);
+            const chDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+            const chDay = chDate.getDay() === 0 ? 7 : chDate.getDay();
+            return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && teacherIds.includes(String(ch.original_teacher_id));
+          });
+
+          if (origChange) {
+            const gc = classMap[origChange.grade_class_id];
+            assignedSlot = {
+              gradeClassId: origChange.grade_class_id,
+              gradeName: gc ? `${gc.grade}학년 ${gc.class_number}반` : '',
+              dayOfWeek,
+              period,
+              subjectId: origChange.original_subject_id,
+              subjectName: origChange.subject_name || '수업',
+              shortSubjectName: origChange.short_subject_name || '수업',
+              teacherId: origChange.original_teacher_id,
+              teacherName: origChange.teacher_name || '',
+              roomId: origChange.original_room_id,
+              roomName: '일반교실',
+              isChanged: true,
+              changeType: origChange.change_type || 'CANCEL',
+              targetDate: curDateStr
+            };
+          }
+        }
+
         daySlots.push(assignedSlot || {
           dayOfWeek,
           period,
