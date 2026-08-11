@@ -646,36 +646,48 @@ router.get('/timetable/teacher', async (req, res) => {
     fridayDate.setDate(monday.getDate() + 4);
     const fridayStr = fridayDate.toISOString().split('T')[0];
 
-    // Parse single or comma-separated teacher IDs or name
+    // Parse single or comma-separated teacher inputs
     const rawInputs = String(teacherId || '').split(',').map(s => s.trim()).filter(Boolean);
 
-    // Find any teacher matching ID or name in database
-    let teacherNames = [];
-    if (rawInputs.length > 0) {
-      const matchByIdOrName = await all(
-        `SELECT DISTINCT name FROM teachers WHERE school_id = ? AND (id IN (${rawInputs.map(() => '?').join(',')}) OR name IN (${rawInputs.map(() => '?').join(',')}))`,
-        [schoolId, ...rawInputs, ...rawInputs]
+    let teacherIds = [];
+
+    // Separate numeric IDs from string names
+    const numericIds = rawInputs.map(Number).filter(n => !isNaN(n));
+    const textNames = rawInputs.map(s => s.replace(/\s*\([^)]*\)/g, '').trim()).filter(Boolean);
+
+    let foundTeachers = [];
+
+    // Query by numeric IDs if any
+    if (numericIds.length > 0) {
+      const byIds = await all(
+        `SELECT id, name FROM teachers WHERE school_id = ? AND id IN (${numericIds.map(() => '?').join(',')})`,
+        [schoolId, ...numericIds]
       );
-      teacherNames = matchByIdOrName.map(t => t.name);
+      foundTeachers.push(...byIds);
     }
 
-    if (teacherNames.length === 0 && teacherId) {
-      teacherNames.push(teacherId);
-    }
-
-    // Find ALL teacher IDs matching those names
-    let allTeacherRows = [];
-    if (teacherNames.length > 0) {
-      allTeacherRows = await all(
-        `SELECT id FROM teachers WHERE school_id = ? AND name IN (${teacherNames.map(() => '?').join(',')})`,
-        [schoolId, ...teacherNames]
+    // Query by text names if any
+    if (textNames.length > 0) {
+      const byNames = await all(
+        `SELECT id, name FROM teachers WHERE school_id = ? AND name IN (${textNames.map(() => '?').join(',')})`,
+        [schoolId, ...textNames]
       );
+      foundTeachers.push(...byNames);
     }
 
-    const teacherIds = Array.from(new Set([
-      ...rawInputs.map(id => String(id)),
-      ...allTeacherRows.map(t => String(t.id))
-    ]));
+    // Extract all unique teacher names found
+    const allNames = Array.from(new Set(foundTeachers.map(t => t.name)));
+
+    // Fetch ALL teacher IDs matching those names
+    if (allNames.length > 0) {
+      const allMatching = await all(
+        `SELECT id FROM teachers WHERE school_id = ? AND name IN (${allNames.map(() => '?').join(',')})`,
+        [schoolId, ...allNames]
+      );
+      teacherIds = Array.from(new Set(allMatching.map(t => String(t.id))));
+    } else if (numericIds.length > 0) {
+      teacherIds = numericIds.map(String);
+    }
 
     const baseOnly = req.query.baseOnly === 'true';
 
