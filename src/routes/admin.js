@@ -126,6 +126,7 @@ router.delete('/teachers', async (req, res) => {
         await run(`DELETE FROM user_accounts WHERE teacher_id IN (${placeholders})`, teacherIds);
       }
       await run(`DELETE FROM teachers WHERE school_id = ?`, [schoolId]);
+      await run(`DELETE FROM subjects WHERE school_id = ?`, [schoolId]);
       return res.json({ message: 'All teachers deleted successfully' });
     }
 
