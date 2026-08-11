@@ -585,7 +585,7 @@ router.post('/change-credentials', async (req, res) => {
   }
 });
 
-// POST /api/admin/reset-timetable
+// POST /api/admin/reset-timetable (전체 초기화)
 router.post('/reset-timetable', async (req, res) => {
   try {
     const { schoolId } = req.body;
@@ -599,6 +599,40 @@ router.post('/reset-timetable', async (req, res) => {
     res.json({ message: '학교의 모든 시간표 데이터가 완전히 초기화되었습니다.' });
   } catch (err) {
     console.error('Reset timetable error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/admin/reset-daily-changes (일자별 시간표 변경 내역만 초기화 -> 학기 기본 시간표 상태로 되돌림)
+router.post('/reset-daily-changes', async (req, res) => {
+  try {
+    const { schoolId } = req.body;
+    if (!schoolId) {
+      return res.status(400).json({ error: 'schoolId is required' });
+    }
+
+    await run(`DELETE FROM timetable_changes WHERE school_id = ?`, [schoolId]);
+
+    res.json({ message: '일자별 시간표의 변경 및 보강 내역이 초기화되고 학기 기본 시간표 상태로 되돌려졌습니다.' });
+  } catch (err) {
+    console.error('Reset daily changes error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/admin/reset-base-timetable (학기 기본 시간표만 초기화 -> 시간표 생성 초기 상태로 되돌림)
+router.post('/reset-base-timetable', async (req, res) => {
+  try {
+    const { schoolId } = req.body;
+    if (!schoolId) {
+      return res.status(400).json({ error: 'schoolId is required' });
+    }
+
+    await run(`DELETE FROM base_timetable WHERE school_id = ?`, [schoolId]);
+
+    res.json({ message: '학기 기본 시간표가 초기화되어 시간표 생성 초기 상태로 되돌려졌습니다.' });
+  } catch (err) {
+    console.error('Reset base timetable error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

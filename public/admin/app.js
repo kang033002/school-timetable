@@ -2648,7 +2648,7 @@ document.getElementById('btn-reset-current-class')?.addEventListener('click', ()
   const gc = (generatorData?.classes || currentSchoolMeta?.gradeClasses || []).find(c => c.id === genCurrentClassId);
   const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : '선택된 학급';
 
-  if (!confirm(`⚠️ [${gcName}] 의 시간표 데이터를 초기화하시겠습니까?\n다른 학급의 시간표는 유지되고 현재 선택된 학급만 초기화됩니다.`)) return;
+  if (!confirm(`⚠️ [${gcName}] 의 시간표 생성(미리보기) 데이터를 초기화하시겠습니까?\n\n(※ 학기 기본 시간표 및 일자별 시간표에는 전혀 영향을 주지 않습니다)`)) return;
 
   if (genClassMap && genClassMap[genCurrentClassId]) {
     delete genClassMap[genCurrentClassId];
@@ -2662,12 +2662,12 @@ document.getElementById('btn-reset-current-class')?.addEventListener('click', ()
 
   const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
   renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-  alert(`🗑️ [${gcName}] 시간표가 초기화되었습니다.`);
+  alert(`🗑️ [${gcName}] 의 시간표 생성 데이터가 초기화되었습니다. (학기 기본 시간표 및 일자별 시간표는 그대로 유지됩니다)`);
 });
 
 // 전체 학년/반 초기화
 document.getElementById('btn-reset-all-classes')?.addEventListener('click', () => {
-  if (!confirm('⚠️ 경고: 전체 학년 및 학급의 미리보기 시간표 데이터를 모두 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+  if (!confirm('⚠️ 시간표 생성 탭의 전체 학년/반 생성(미리보기) 데이터를 초기화하시겠습니까?\n\n(※ 학기 기본 시간표 및 일자별 시간표에는 전혀 영향을 주지 않습니다)')) return;
 
   genClassMap = {};
   generatedResult = [];
@@ -2678,7 +2678,7 @@ document.getElementById('btn-reset-all-classes')?.addEventListener('click', () =
 
   const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
   renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
-  alert('🗑️ 전체 학년/반의 시간표 데이터가 완전히 초기화되었습니다.');
+  alert('🗑️ 시간표 생성 탭의 전체 생성 데이터가 초기화되었습니다. (학기 기본 시간표 및 일자별 시간표는 그대로 유지됩니다)');
 });
 
 // 버튼 클릭시 칩 변경 로직은 buildPreviewChips 내부에 포함됨
@@ -2912,62 +2912,57 @@ document.getElementById('btn-apply-timetable')?.addEventListener('click', async 
   }
 });
 
-document.getElementById('btn-reset-timetable')?.addEventListener('click', async () => {
-  if (!confirm('⚠️ 경고: 시간표 초기화를 진행하시면 지금까지 입력 및 생성된 모든 학급의 시간표 데이터(학기 기본 시간표 및 일자별 시간표 변경 내역)가 완전히 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다. 정말로 초기화하시겠습니까?')) {
+// 📅 일자별 시간표 조정 내역 초기화 (학기 기본 시간표 원본 상태로 복원)
+document.getElementById('btn-reset-daily-changes')?.addEventListener('click', async () => {
+  if (!currentUser || !currentUser.schoolId) return;
+  if (!confirm('📅 [일자별 시간표] 의 변경 및 보강 내역을 초기화하시겠습니까?\n\n초기화 시 일자별 수동 조정 내역만 제거되고 [학기 기본 시간표] 상태로 되돌아갑니다.\n(※ 학기 기본 시간표 및 시간표 생성 데이터는 전혀 삭제되지 않습니다)')) {
     return;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/admin/reset-timetable`, {
+    const res = await fetch(`${API_BASE}/admin/reset-daily-changes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ schoolId: currentUser.schoolId })
     });
     const data = await res.json();
     if (res.ok) {
-      alert('🎉 학교의 모든 시간표 데이터가 완전히 초기화되었습니다.');
+      alert('🎉 일자별 시간표의 모든 변경 내역이 초기화되었으며, 학기 기본 시간표 원본으로 되돌려졌습니다.');
       window.sandboxChanges = [];
       loadTimetable();
-      if (activeTab === 'GENERATOR') {
-        initGeneratorTab();
-      }
     } else {
       alert(data.error || '초기화 실패');
     }
   } catch (err) {
-    console.error(err);
+    console.error('Reset daily changes error:', err);
     alert('서버 통신 오류가 발생했습니다.');
   }
 });
 
-document.querySelectorAll('.btn-main-reset').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    if (!confirm('⚠️ 경고: 시간표 초기화를 진행하시면 학교의 모든 시간표 데이터(학기 시간표 및 일자별 시간표 변경 내역)가 완전히 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다. 정말로 초기화하시겠습니까?')) {
-      return;
-    }
+// 🏫 학기 기본 시간표 초기화 (시간표 생성 원본 상태로 복원)
+document.getElementById('btn-reset-base-timetable')?.addEventListener('click', async () => {
+  if (!currentUser || !currentUser.schoolId) return;
+  if (!confirm('🏫 [학기 기본 시간표] 를 초기화하시겠습니까?\n\n초기화 시 학기 기본 시간표 설정이 초기화되어 [시간표 생성] 원본 상태로 되돌아갑니다.\n(※ 일자별 시간표 및 시간표 생성 데이터는 전혀 삭제되지 않습니다)')) {
+    return;
+  }
 
-    try {
-      const res = await fetch(`${API_BASE}/admin/reset-timetable`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId: currentUser.schoolId })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert('🎉 학교의 모든 시간표 데이터가 완전히 초기화되었습니다.');
-        window.sandboxChanges = [];
-        loadTimetable();
-        if (activeTab === 'GENERATOR') {
-          initGeneratorTab();
-        }
-      } else {
-        alert(data.error || '초기화 실패');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('서버 통신 오류가 발생했습니다.');
+  try {
+    const res = await fetch(`${API_BASE}/admin/reset-base-timetable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: currentUser.schoolId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('🎉 학기 기본 시간표가 초기화되었으며, 시간표 생성 초기 상태로 되돌려졌습니다.');
+      loadTimetable();
+    } else {
+      alert(data.error || '초기화 실패');
     }
-  });
+  } catch (err) {
+    console.error('Reset base timetable error:', err);
+    alert('서버 통신 오류가 발생했습니다.');
+  }
 });
 
 window.openStudentMgmtOverlay = () => {
