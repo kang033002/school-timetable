@@ -620,6 +620,43 @@ router.post('/reset-daily-changes', async (req, res) => {
   }
 });
 
+// POST /api/admin/base-timetable-batch (일괄 기본 시간표 저장)
+router.post('/base-timetable-batch', async (req, res) => {
+  try {
+    const { schoolId, timetable } = req.body;
+    if (!schoolId || !timetable || !Array.isArray(timetable)) {
+      return res.status(400).json({ error: 'schoolId and timetable array are required' });
+    }
+
+    // Begin transaction for bulk insert
+    await run('BEGIN TRANSACTION');
+
+    try {
+      // First, clear existing base_timetable for the classes that are included in this batch, or maybe the whole school.
+      // Wait, we should only clear the classes present in the payload?
+      // Actually, since it's a batch save from Generator, we clear the entire base_timetable for the school and replace it.
+      await run(`DELETE FROM base_timetable WHERE school_id = ?`, [schoolId]);
+
+      for (const slot of timetable) {
+        const id = `bt-${slot.gradeClassId}-${slot.dayOfWeek}-${slot.period}`;
+        await run(
+          `INSERT INTO base_timetable (id, school_id, grade_class_id, day_of_week, period, teacher_id, subject_id, room_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, schoolId, slot.gradeClassId, slot.dayOfWeek, slot.period, slot.teacherId, slot.subjectId, slot.roomId || null]
+        );
+      }
+      await run('COMMIT');
+      res.json({ message: 'Batch saved successfully' });
+    } catch (txErr) {
+      await run('ROLLBACK');
+      throw txErr;
+    }
+  } catch (err) {
+    console.error('Batch save error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/admin/reset-base-timetable (학기 기본 시간표만 초기화 -> 시간표 생성 초기 상태로 되돌림)
 router.post('/reset-base-timetable', async (req, res) => {
   try {
@@ -762,8 +799,8 @@ router.get('/base-timetable-all', async (req, res) => {
              bt.subject_id as "subjectId", bt.teacher_id as "teacherId", bt.room_id as "roomId",
              s.name as "subjectName", t.name as "teacherName"
       FROM base_timetable bt
-      LEFT JOIN subjects s ON bt.subject_id = s.id
-      LEFT JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN subjects s ON CAST(bt.subject_id AS VARCHAR) = CAST(s.id AS VARCHAR)
+      LEFT JOIN teachers t ON CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR)
       WHERE bt.school_id = ?
     `, [schoolId]);
     res.json(data);

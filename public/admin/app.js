@@ -125,6 +125,22 @@ init();
     });
   }
 
+  if (filterClassSelect) {
+    filterClassSelect.addEventListener('change', () => {
+      if (activeTab !== 'TEACHER' && activeTab !== 'GENERATOR') {
+        loadTimetable();
+      }
+    });
+  }
+
+  if (datePicker) {
+    datePicker.addEventListener('change', () => {
+      if (activeTab !== 'GENERATOR') {
+        // loadTimetable();
+      }
+    });
+  }
+
 window.executeTeacherQuery = function() {
   if (activeTab !== 'TEACHER') switchTab('TEACHER');
   loadTimetable();
@@ -1261,25 +1277,31 @@ async function loadTimetable() {
 
     // Patch data.timetable with window.sandboxChanges
     if (window.sandboxChanges && window.sandboxChanges.length > 0) {
-      data.timetable = data.timetable.map(slot => {
-        const patch = window.sandboxChanges.find(p => 
-          parseInt(p.period) === parseInt(slot.period) &&
-          parseInt(p.dayOfWeek) === parseInt(slot.dayOfWeek) &&
-          (p.gradeClassId === slot.gradeClassId || String(p.gradeClassId) === String(slot.gradeClassId)) &&
-          p.targetDate === slot.targetDate
-        );
-        if (patch) {
-          return {
-            ...slot,
-            subjectId: patch.subjectId,
-            subjectName: patch.subjectName,
-            teacherId: patch.teacherId,
-            teacherName: patch.teacherName,
-            isChanged: true,
-            changeType: 'SUBSTITUTE'
-          };
-        }
-        return slot;
+      data.timetable = data.timetable.map(dayObj => {
+        if (!dayObj.slots) return dayObj;
+        return {
+          ...dayObj,
+          slots: dayObj.slots.map(slot => {
+            const patch = window.sandboxChanges.find(p => 
+              parseInt(p.period) === parseInt(slot.period) &&
+              parseInt(p.dayOfWeek) === parseInt(slot.dayOfWeek) &&
+              (p.gradeClassId === slot.gradeClassId || String(p.gradeClassId) === String(slot.gradeClassId)) &&
+              p.targetDate === slot.targetDate
+            );
+            if (patch) {
+              return {
+                ...slot,
+                subjectId: patch.subjectId,
+                subjectName: patch.subjectName,
+                teacherId: patch.teacherId,
+                teacherName: patch.teacherName,
+                isChanged: true,
+                changeType: 'SUBSTITUTE'
+              };
+            }
+            return slot;
+          })
+        };
       });
     }
 
@@ -1314,12 +1336,10 @@ function switchTab(tabName) {
     if (tabBtnDaily) tabBtnDaily.classList.add('active');
     if (contentDaily) contentDaily.classList.remove('hidden');
     datePicker.parentElement.style.display = 'flex';
-    loadTimetable();
   } else if (tabName === 'TEACHER') {
     if (tabBtnTeacher) tabBtnTeacher.classList.add('active');
     if (contentTeacher) contentTeacher.classList.remove('hidden');
     datePicker.parentElement.style.display = 'flex';
-    loadTimetable();
   } else if (tabName === 'GENERATOR') {
     if (tabBtnGenerator) tabBtnGenerator.classList.add('active');
     if (contentGenerator) contentGenerator.classList.remove('hidden');
@@ -2660,11 +2680,14 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
 
       // 자동 생성 결과 서버 DB에 자동 반영 (학기 기본 시간표로 저장)
       if (generatedResult && generatedResult.length > 0) {
-        await fetch(`${API_BASE}/admin/base-timetable-batch`, {
+        const batchRes = await fetch(`${API_BASE}/admin/base-timetable-batch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ schoolId: currentUser.schoolId, timetable: generatedResult })
         });
+        if (!batchRes.ok) {
+          throw new Error('Failed to save batch timetable');
+        }
       }
 
       alert(`🎉 시간표 자동 생성이 성공적으로 완료되어 데이터베이스에 반영되었습니다!\n상단 [📅 일자별 수업 시간표] 및 [👩‍🏫 교사 시간표] 탭에서 완성된 시간표를 확인하실 수 있습니다.`);

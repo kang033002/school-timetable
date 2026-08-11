@@ -158,9 +158,9 @@ async function getEffectiveSlot(schoolId, gradeClassId, targetDate, dayOfWeek, p
             t.name as teacher_name, t.code as teacher_code,
             r.name as room_name, r.is_special_room
      FROM base_timetable bt
-     JOIN subjects sub ON bt.subject_id = sub.id
-     JOIN teachers t ON bt.teacher_id = t.id
-     LEFT JOIN rooms r ON bt.room_id = r.id
+     LEFT JOIN subjects sub ON CAST(bt.subject_id AS VARCHAR) = CAST(sub.id AS VARCHAR)
+     LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR CAST(bt.teacher_id AS VARCHAR) = t.code OR CAST(bt.teacher_id AS VARCHAR) = t.name)
+     LEFT JOIN rooms r ON CAST(bt.room_id AS VARCHAR) = CAST(r.id AS VARCHAR)
      WHERE bt.school_id = ? AND bt.grade_class_id = ? AND bt.day_of_week = ? AND bt.period = ?`,
     [schoolId, gradeClassId, dayOfWeek, period]
   );
@@ -175,12 +175,12 @@ async function getEffectiveSlot(schoolId, gradeClassId, targetDate, dayOfWeek, p
             orig_r.name as orig_room_name,
             chg_r.name as chg_room_name
      FROM timetable_changes tc
-     LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
-     LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
-     LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
-     LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
-     LEFT JOIN rooms orig_r ON tc.original_room_id = orig_r.id
-     LEFT JOIN rooms chg_r ON tc.changed_room_id = chg_r.id
+     LEFT JOIN subjects orig_sub ON CAST(tc.original_subject_id AS VARCHAR) = CAST(orig_sub.id AS VARCHAR)
+     LEFT JOIN subjects chg_sub ON CAST(tc.changed_subject_id AS VARCHAR) = CAST(chg_sub.id AS VARCHAR)
+     LEFT JOIN teachers orig_t ON (CAST(tc.original_teacher_id AS VARCHAR) = CAST(orig_t.id AS VARCHAR) OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.code OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.name)
+     LEFT JOIN teachers chg_t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(chg_t.id AS VARCHAR) OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.code OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.name)
+     LEFT JOIN rooms orig_r ON CAST(tc.original_room_id AS VARCHAR) = CAST(orig_r.id AS VARCHAR)
+     LEFT JOIN rooms chg_r ON CAST(tc.changed_room_id AS VARCHAR) = CAST(chg_r.id AS VARCHAR)
      WHERE tc.school_id = ? AND tc.grade_class_id = ? AND tc.target_date = ? AND tc.period = ?
      ORDER BY tc.created_at DESC LIMIT 1`,
     [schoolId, gradeClassId, targetDate, period]
@@ -284,9 +284,9 @@ router.get('/timetable/class', async (req, res) => {
              t.name as teacher_name, t.code as teacher_code,
              r.name as room_name, r.is_special_room
       FROM base_timetable bt
-      JOIN subjects sub ON bt.subject_id = sub.id
-      JOIN teachers t ON bt.teacher_id = t.id
-      LEFT JOIN rooms r ON bt.room_id = r.id
+      LEFT JOIN subjects sub ON CAST(bt.subject_id AS VARCHAR) = CAST(sub.id AS VARCHAR)
+      LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR CAST(bt.teacher_id AS VARCHAR) = t.code OR CAST(bt.teacher_id AS VARCHAR) = t.name)
+      LEFT JOIN rooms r ON CAST(bt.room_id AS VARCHAR) = CAST(r.id AS VARCHAR)
       WHERE bt.school_id = ? AND bt.grade_class_id = ?
     `, [schoolId, gc.id]);
 
@@ -302,12 +302,12 @@ router.get('/timetable/class', async (req, res) => {
                orig_r.name as orig_room_name,
                chg_r.name as chg_room_name
         FROM timetable_changes tc
-        LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
-        LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
-        LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
-        LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
-        LEFT JOIN rooms orig_r ON tc.original_room_id = orig_r.id
-        LEFT JOIN rooms chg_r ON tc.changed_room_id = chg_r.id
+        LEFT JOIN subjects orig_sub ON CAST(tc.original_subject_id AS VARCHAR) = CAST(orig_sub.id AS VARCHAR)
+        LEFT JOIN subjects chg_sub ON CAST(tc.changed_subject_id AS VARCHAR) = CAST(chg_sub.id AS VARCHAR)
+        LEFT JOIN teachers orig_t ON (CAST(tc.original_teacher_id AS VARCHAR) = CAST(orig_t.id AS VARCHAR) OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.code OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.name)
+        LEFT JOIN teachers chg_t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(chg_t.id AS VARCHAR) OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.code OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.name)
+        LEFT JOIN rooms orig_r ON CAST(tc.original_room_id AS VARCHAR) = CAST(orig_r.id AS VARCHAR)
+        LEFT JOIN rooms chg_r ON CAST(tc.changed_room_id AS VARCHAR) = CAST(chg_r.id AS VARCHAR)
         WHERE tc.school_id = ? AND tc.grade_class_id = ? AND tc.target_date >= ? AND tc.target_date <= ?
         ORDER BY tc.created_at DESC
       `, [schoolId, gc.id, mondayStr, fridayStr]);
@@ -478,9 +478,9 @@ router.get('/timetable/daily-all', async (req, res) => {
              t.name as teacher_name, t.code as teacher_code,
              r.name as room_name, r.is_special_room
       FROM base_timetable bt
-      JOIN subjects sub ON bt.subject_id = sub.id
-      JOIN teachers t ON bt.teacher_id = t.id
-      LEFT JOIN rooms r ON bt.room_id = r.id
+      LEFT JOIN subjects sub ON CAST(bt.subject_id AS VARCHAR) = CAST(sub.id AS VARCHAR)
+      LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR CAST(bt.teacher_id AS VARCHAR) = t.code OR CAST(bt.teacher_id AS VARCHAR) = t.name)
+      LEFT JOIN rooms r ON CAST(bt.room_id AS VARCHAR) = CAST(r.id AS VARCHAR)
       WHERE bt.school_id = ? AND bt.day_of_week = ?
     `, [schoolId, dayOfWeek]);
 
@@ -493,12 +493,12 @@ router.get('/timetable/daily-all', async (req, res) => {
              orig_r.name as orig_room_name,
              chg_r.name as chg_room_name
       FROM timetable_changes tc
-      LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
-      LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
-      LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
-      LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
-      LEFT JOIN rooms orig_r ON tc.original_room_id = orig_r.id
-      LEFT JOIN rooms chg_r ON tc.changed_room_id = chg_r.id
+      LEFT JOIN subjects orig_sub ON CAST(tc.original_subject_id AS VARCHAR) = CAST(orig_sub.id AS VARCHAR)
+      LEFT JOIN subjects chg_sub ON CAST(tc.changed_subject_id AS VARCHAR) = CAST(chg_sub.id AS VARCHAR)
+      LEFT JOIN teachers orig_t ON (CAST(tc.original_teacher_id AS VARCHAR) = CAST(orig_t.id AS VARCHAR) OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.code OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.name)
+      LEFT JOIN teachers chg_t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(chg_t.id AS VARCHAR) OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.code OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.name)
+      LEFT JOIN rooms orig_r ON CAST(tc.original_room_id AS VARCHAR) = CAST(orig_r.id AS VARCHAR)
+      LEFT JOIN rooms chg_r ON CAST(tc.changed_room_id AS VARCHAR) = CAST(chg_r.id AS VARCHAR)
       WHERE tc.school_id = ? AND tc.target_date = ?
       ORDER BY tc.created_at DESC
     `, [schoolId, date]);
@@ -699,9 +699,9 @@ router.get('/timetable/teacher', async (req, res) => {
              t.name as teacher_name, t.code as teacher_code,
              r.name as room_name, r.is_special_room
       FROM base_timetable bt
-      LEFT JOIN subjects sub ON bt.subject_id = sub.id
-      LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR bt.teacher_id = t.code OR bt.teacher_id = t.name)
-      LEFT JOIN rooms r ON bt.room_id = r.id
+      LEFT JOIN subjects sub ON CAST(bt.subject_id AS VARCHAR) = CAST(sub.id AS VARCHAR)
+      LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR CAST(bt.teacher_id AS VARCHAR) = t.code OR CAST(bt.teacher_id AS VARCHAR) = t.name)
+      LEFT JOIN rooms r ON CAST(bt.room_id AS VARCHAR) = CAST(r.id AS VARCHAR)
       WHERE bt.school_id = ?
     `, [schoolId]);
 
@@ -714,9 +714,9 @@ router.get('/timetable/teacher', async (req, res) => {
                t.name as teacher_name, t.code as teacher_code,
                r.name as room_name, r.is_special_room
         FROM timetable_changes tc
-        LEFT JOIN subjects sub ON tc.changed_subject_id = sub.id
-        LEFT JOIN teachers t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR tc.changed_teacher_id = t.code OR tc.changed_teacher_id = t.name)
-        LEFT JOIN rooms r ON tc.changed_room_id = r.id
+        LEFT JOIN subjects sub ON CAST(tc.changed_subject_id AS VARCHAR) = CAST(sub.id AS VARCHAR)
+        LEFT JOIN teachers t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR CAST(tc.changed_teacher_id AS VARCHAR) = t.code OR CAST(tc.changed_teacher_id AS VARCHAR) = t.name)
+        LEFT JOIN rooms r ON CAST(tc.changed_room_id AS VARCHAR) = CAST(r.id AS VARCHAR)
         WHERE tc.school_id = ? AND tc.target_date >= ? AND tc.target_date <= ?
       `, [schoolId, mondayStr, fridayStr]);
     }
@@ -802,7 +802,7 @@ router.get('/timetable/teacher', async (req, res) => {
 
       if (idStr && (teacherIds.includes(idStr) || teacherCodes.includes(idStr) || allNames.includes(idStr))) return true;
       if (codeStr && (teacherCodes.includes(codeStr) || teacherIds.includes(codeStr))) return true;
-      if (nameStr && allNames.includes(nameStr)) return true;
+      if (nameStr && allNames.some(n => nameStr === n || nameStr.includes(n) || n.includes(nameStr))) return true;
 
       return false;
     };
@@ -822,41 +822,72 @@ router.get('/timetable/teacher', async (req, res) => {
           const key = `${gcId}_${dayOfWeek}_${period}`;
           const slot = effectiveMap[key];
           if (slot && isMatch(slot.teacherId, slot.teacherName, slot.teacherCode)) {
-            assignedSlot = {
-              ...slot,
-              targetDate: curDateStr
-            };
-            break;
+            if (!assignedSlot) {
+              assignedSlot = {
+                ...slot,
+                targetDate: curDateStr,
+                gradeName: slot.gradeName,
+                subjectName: slot.subjectName
+              };
+            } else {
+              // Aggregate multiple classes for the same period
+              const currentGrade = assignedSlot.gradeName || '';
+              const newGrade = slot.gradeName || '';
+              if (newGrade && !currentGrade.includes(newGrade)) {
+                assignedSlot.gradeName = currentGrade ? `${currentGrade}, ${newGrade}` : newGrade;
+              }
+              const currentSub = assignedSlot.subjectName || '';
+              const newSub = slot.subjectName || '';
+              if (newSub && !currentSub.includes(newSub)) {
+                assignedSlot.subjectName = currentSub ? `${currentSub}, ${newSub}` : newSub;
+              }
+            }
           }
         }
 
         // Check if this teacher was the original teacher of a cancelled or changed class
         if (!assignedSlot && !baseOnly) {
-          const origChange = changeRows.find(ch => {
+          const origChanges = changeRows.filter(ch => {
             const dateParts = String(ch.target_date).split('-').map(Number);
             const chDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
             const chDay = chDate.getDay() === 0 ? 7 : chDate.getDay();
             return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && isMatch(ch.original_teacher_id, ch.teacher_name, ch.teacher_code);
           });
 
-          if (origChange) {
-            const gc = classMap[origChange.grade_class_id];
-            assignedSlot = {
-              gradeClassId: origChange.grade_class_id,
-              gradeName: gc ? `${gc.grade}학년 ${gc.class_number}반` : '',
-              dayOfWeek,
-              period,
-              subjectId: origChange.original_subject_id,
-              subjectName: origChange.subject_name || '수업',
-              shortSubjectName: origChange.short_subject_name || '수업',
-              teacherId: origChange.original_teacher_id,
-              teacherName: origChange.teacher_name || '',
-              roomId: origChange.original_room_id,
-              roomName: '일반교실',
-              isChanged: true,
-              changeType: origChange.change_type || 'CANCEL',
-              targetDate: curDateStr
-            };
+          if (origChanges.length > 0) {
+            origChanges.forEach(origChange => {
+              const gc = classMap[origChange.grade_class_id];
+              const gName = gc ? `${gc.grade}학년 ${gc.class_number}반` : '';
+              const sName = origChange.subject_name || '';
+              
+              if (!assignedSlot) {
+                assignedSlot = {
+                  gradeClassId: origChange.grade_class_id,
+                  gradeName: gName,
+                  dayOfWeek,
+                  period,
+                  subjectId: origChange.original_subject_id,
+                  subjectName: sName,
+                  shortSubjectName: origChange.short_subject_name || '',
+                  teacherId: origChange.original_teacher_id,
+                  teacherName: origChange.teacher_name || '',
+                  roomId: origChange.original_room_id,
+                  roomName: '일반교실',
+                  isChanged: true,
+                  changeType: origChange.change_type,
+                  targetDate: curDateStr
+                };
+              } else {
+                const currentGrade = assignedSlot.gradeName || '';
+                if (gName && !currentGrade.includes(gName)) {
+                  assignedSlot.gradeName = currentGrade ? `${currentGrade}, ${gName}` : gName;
+                }
+                const currentSub = assignedSlot.subjectName || '';
+                if (sName && !currentSub.includes(sName)) {
+                  assignedSlot.subjectName = currentSub ? `${currentSub}, ${sName}` : sName;
+                }
+              }
+            });
           }
         }
 
@@ -1021,10 +1052,10 @@ router.get('/timetable/logs', async (req, res) => {
               orig_t.name as orig_teacher_name, chg_t.name as chg_teacher_name
        FROM timetable_changes tc
        JOIN grade_classes gc ON tc.grade_class_id = gc.id
-       LEFT JOIN subjects orig_sub ON tc.original_subject_id = orig_sub.id
-       LEFT JOIN subjects chg_sub ON tc.changed_subject_id = chg_sub.id
-       LEFT JOIN teachers orig_t ON tc.original_teacher_id = orig_t.id
-       LEFT JOIN teachers chg_t ON tc.changed_teacher_id = chg_t.id
+       LEFT JOIN subjects orig_sub ON CAST(tc.original_subject_id AS VARCHAR) = CAST(orig_sub.id AS VARCHAR)
+       LEFT JOIN subjects chg_sub ON CAST(tc.changed_subject_id AS VARCHAR) = CAST(chg_sub.id AS VARCHAR)
+       LEFT JOIN teachers orig_t ON (CAST(tc.original_teacher_id AS VARCHAR) = CAST(orig_t.id AS VARCHAR) OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.code OR CAST(tc.original_teacher_id AS VARCHAR) = orig_t.name)
+       LEFT JOIN teachers chg_t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(chg_t.id AS VARCHAR) OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.code OR CAST(tc.changed_teacher_id AS VARCHAR) = chg_t.name)
        WHERE tc.school_id = ?
        ORDER BY tc.created_at DESC
        LIMIT 50`,
