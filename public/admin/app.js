@@ -2391,13 +2391,13 @@ async function initGeneratorTab() {
 
         tr.innerHTML = `
           <td>
-            <select class="form-select gen-subject-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+            <select class="form-select gen-subject-select" style="padding:0.35rem 0.5rem; font-size:0.88rem; background-color:#f1f3f5;" disabled>
               <option value="">-- 선택 --</option>
               ${subjectOptions}
             </select>
           </td>
           <td>
-            <select class="form-select gen-teacher-select" style="padding:0.35rem 0.5rem; font-size:0.88rem;">
+            <select class="form-select gen-teacher-select" style="padding:0.35rem 0.5rem; font-size:0.88rem; background-color:#f1f3f5;" disabled>
               <option value="">-- 선택 --</option>
               ${teacherOptions}
             </select>
