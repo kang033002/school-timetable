@@ -743,9 +743,9 @@ router.get('/timetable/teacher', async (req, res) => {
     // Overlay changes
     if (!baseOnly) {
       for (const ch of changeRows) {
-        // getDayOfWeek equivalent inline
-        const chDate = new Date(ch.target_date);
-        const dayOfWeek = chDate.getDay(); 
+        const dateParts = String(ch.target_date).split('-').map(Number);
+        const chDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+        const dayOfWeek = chDate.getDay() === 0 ? 7 : chDate.getDay();
         const key = `${ch.grade_class_id}_${dayOfWeek}_${ch.period}`;
         const gc = classMap[ch.grade_class_id];
         if (!gc) continue;

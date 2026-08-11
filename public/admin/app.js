@@ -1186,13 +1186,36 @@ function updateFiltersForTab(tabName) {
   }
 }
 
+let teacherSubtab = 'BASE'; // 'BASE' or 'DAILY'
+
+window.switchTeacherSubtab = function(tab) {
+  teacherSubtab = tab;
+  const btnBase = document.getElementById('teacher-subtab-base');
+  const btnDaily = document.getElementById('teacher-subtab-daily');
+
+  if (btnBase && btnDaily) {
+    if (tab === 'BASE') {
+      btnBase.style.background = 'var(--primary-color)';
+      btnBase.style.color = '#ffffff';
+      btnDaily.style.background = 'transparent';
+      btnDaily.style.color = 'var(--primary-color)';
+    } else {
+      btnDaily.style.background = 'var(--primary-color)';
+      btnDaily.style.color = '#ffffff';
+      btnBase.style.background = 'transparent';
+      btnBase.style.color = 'var(--primary-color)';
+    }
+  }
+
+  loadTimetable();
+};
+
 // Load Timetable Grid
 async function loadTimetable() {
   if (!currentSchoolMeta) return;
 
   const dateVal = datePicker.value;
   const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
-
 
   try {
     let url = '';
@@ -1210,8 +1233,8 @@ async function loadTimetable() {
         renderGrid([], mode);
         return;
       }
-      const teacherObj = currentSchoolMeta.teachers.find(t => String(t.id) === String(teacherId));
-      url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${teacherId}&date=${dateVal}${baseParam}`;
+      const isTeacherBase = teacherSubtab === 'BASE';
+      url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${encodeURIComponent(teacherId)}&date=${dateVal}${isTeacherBase ? '&baseOnly=true' : ''}`;
     } else {
       mode = 'CLASS';
       if (!filterGradeSelect.value || !filterClassSelect.value) {
@@ -3030,9 +3053,8 @@ window.exportCurrentTimetable = function(type) {
   let gridTable = null;
 
   if (activeTab === 'TEACHER') {
-    const sel = document.getElementById('teacher-title-select');
-    const tName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '교사';
-    titleStr = `${tName} 시간표`;
+    const modeLabel = teacherSubtab === 'BASE' ? '기초 학기 시간표' : '일자별 수업 시간표';
+    titleStr = `${tName} ${modeLabel}`;
     gridTable = document.querySelector('#tab-content-teacher .timetable-grid');
   } else {
     const grade = filterGradeSelect ? filterGradeSelect.value : '1';
