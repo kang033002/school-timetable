@@ -2004,14 +2004,28 @@ async function initGeneratorTab() {
       generatorData.subjects.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     }
 
-    // 과목 필터 체크박스 렌더링
+    // 과목 필터 체크박스 렌더링 (2번 과목/교사 설정표에 등록된 과목과 실시간 연동)
     window.renderGenSubjectFilter = function() {
       const container = document.getElementById('gen-subject-filter-container');
       if (!container) return;
       
-      const subs = generatorData?.subjects || [];
+      const configuredSubMap = new Map();
+      document.querySelectorAll('.gen-row').forEach(row => {
+        const subSel = row.querySelector('.gen-subject-select');
+        if (subSel && subSel.value) {
+          const subId = subSel.value;
+          const subObj = (generatorData?.subjects || []).find(s => String(s.id) === String(subId));
+          const subName = subObj ? subObj.name : (subSel.options[subSel.selectedIndex]?.text || subId);
+          if (subName && subName !== '-- 선택 --') {
+            configuredSubMap.set(subId, subName);
+          }
+        }
+      });
+
+      const subs = Array.from(configuredSubMap.entries()).map(([id, name]) => ({ id, name }));
+      
       if (subs.length === 0) {
-        container.innerHTML = '<span style="color:var(--text-sub);">등록된 과목이 없습니다.</span>';
+        container.innerHTML = '<span style="color:var(--text-sub); font-size:0.88rem;">[② 과목별 주간 시수 및 담당 교사 설정]에서 과목을 생성해 주세요.</span>';
         return;
       }
 
@@ -2024,9 +2038,9 @@ async function initGeneratorTab() {
       container.innerHTML = subs.map(s => {
         const isChecked = checkedSet ? checkedSet.has(s.id) : true;
         return `
-          <label style="display:inline-flex; align-items:center; gap:0.35rem; background:var(--bg-card); padding:0.3rem 0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; user-select:none;">
+          <label style="display:inline-flex; align-items:center; gap:0.35rem; background:var(--bg-card); padding:0.3rem 0.65rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; user-select:none; font-size:0.88rem;">
             <input type="checkbox" class="gen-subject-chk" value="${s.id}" ${isChecked ? 'checked' : ''} style="cursor:pointer;" onchange="saveGenSubjectFilters()">
-            <span style="font-weight:600;">${s.name}</span>
+            <span style="font-weight:600; color:var(--text-main);">${s.name}</span>
           </label>
         `;
       }).join('');
@@ -2173,6 +2187,7 @@ async function initGeneratorTab() {
         if (body) {
           body.innerHTML = '';
           window.markGenTableDirty();
+          if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
         }
       };
 
@@ -2192,6 +2207,7 @@ async function initGeneratorTab() {
           window.addGenRow(sub ? sub.id : '', t.id, '');
         });
         window.markGenTableDirty();
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
       };
 
       window.applyClassSetup = function() {
@@ -2225,6 +2241,7 @@ async function initGeneratorTab() {
 
       window.saveGeneratorRowsState = function() {
         window.markGenTableDirty();
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
       };
 
       window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
@@ -2301,6 +2318,7 @@ async function initGeneratorTab() {
         });
 
         subjectBody.appendChild(tr);
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
       };
 
       function loadDefaultRows() {
@@ -2385,6 +2403,7 @@ async function initGeneratorTab() {
           // 손도 대지 않은 미설정 학급인 경우 아무것도 자동 생성하지 않고 빈 상태를 유지합니다.
         }
         window.isGenTableDirty = false;
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
       };
 
       window.saveGeneratorRowsState = function() {
