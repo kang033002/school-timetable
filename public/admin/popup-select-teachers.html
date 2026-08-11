@@ -93,14 +93,22 @@
           return;
         }
 
+        // 팝업 오픈 시 부모 창에 이미 등록된 교사 ID 목록 가져오기
+        let existingIds = [];
+        if (opener && opener.document) {
+          const existingSelects = Array.from(opener.document.querySelectorAll('.gen-teacher-select'));
+          existingIds = existingSelects.map(sel => sel.value).filter(val => val);
+        }
+
         teachers.forEach((t, idx) => {
           const tr = document.createElement('tr');
           const subName = t.subject_name || t.subjectName || '-';
           const email = t.email || '-';
+          const isChecked = existingIds.includes(String(t.id)) ? 'checked' : '';
 
           tr.innerHTML = `
             <td style="text-align:center;">
-              <input type="checkbox" class="chk-teacher-item" value="${t.id}" data-index="${idx}" onchange="updateSelectedCount()" style="cursor:pointer;">
+              <input type="checkbox" class="chk-teacher-item" value="${t.id}" data-index="${idx}" onchange="updateSelectedCount()" ${isChecked} style="cursor:pointer;">
             </td>
             <td><strong style="color:var(--primary-color);">${subName}</strong></td>
             <td><strong>${t.name}</strong> 선생님</td>
@@ -130,22 +138,15 @@
 
     window.submitSelectedTeachers = function() {
       const checkedBoxes = Array.from(document.querySelectorAll('.chk-teacher-item:checked'));
-      if (checkedBoxes.length === 0) {
-        alert('추가할 교사를 최소 1명 이상 선택해 주세요.');
-        return;
-      }
 
-      const selectedList = checkedBoxes.map(chk => {
-        const idx = parseInt(chk.getAttribute('data-index'));
-        return loadedTeachers[idx];
-      });
+      const selectedIds = checkedBoxes.map(chk => chk.value);
 
-      if (opener && typeof opener.addGenRowsForTeachers === 'function') {
-        opener.addGenRowsForTeachers(selectedList);
-        alert(`선택하신 ${selectedList.length}명의 교사가 과목별 주간 시수 및 담당 교사 설정표에 추가되었습니다!`);
+      if (opener && typeof opener.syncGenRowsWithTeachers === 'function') {
+        opener.syncGenRowsWithTeachers(selectedIds);
+        alert(`선택하신 교사 정보가 표기 규칙에 맞게 동기화되었습니다!`);
         window.close();
       } else {
-        alert('부모 창과의 연동 오류가 발생했습니다.');
+        alert('부모 창을 찾을 수 없거나 동기화 함수가 없습니다.');
       }
     };
 

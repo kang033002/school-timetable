@@ -2179,15 +2179,21 @@ async function initGeneratorTab() {
       genCurrentClassId = gcId;
       window.isGenTableDirty = false;
 
-      // 학급 칩 클릭 시에는 자동으로 과목 표를 불러오지 않고 [조회]를 눌러야 나오도록 표를 비웁니다.
-      const body = document.getElementById('gen-subject-body');
-      if (body) body.innerHTML = '';
-      if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+      // 학급 칩 클릭 시 이전 학급 정보가 남지 않도록 빈 상태(또는 저장된 상태)를 명확히 로드합니다.
+      if (window.loadClassHours) {
+        window.loadClassHours(gcId);
+      } else {
+        const body = document.getElementById('gen-subject-body');
+        if (body) body.innerHTML = '';
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+      }
 
       window.renderCreatedClassBadges();
       buildPreviewChips(window.activeGenClassIds);
       const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
-      renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      if (typeof renderGenGrid === 'function') {
+        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      }
     };
 
     window.removeActiveGenClass = function(gcId) {
@@ -2291,13 +2297,35 @@ async function initGeneratorTab() {
         window.open('popup-select-teachers.html?v=' + Date.now(), 'SelectTeachersPopup', `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
       };
 
-      window.addGenRowsForTeachers = function(selectedTeachers) {
-        if (!Array.isArray(selectedTeachers) || selectedTeachers.length === 0) return;
-        selectedTeachers.forEach(t => {
-          const subName = t.subject_name || t.subjectName;
-          const sub = (generatorData.subjects || []).find(s => s.name === subName);
-          window.addGenRow(sub ? sub.id : '', t.id, '');
+      window.syncGenRowsWithTeachers = function(selectedTeacherIds) {
+        if (!Array.isArray(selectedTeacherIds)) return;
+
+        const existingRows = Array.from(document.querySelectorAll('.gen-row'));
+        const existingTeacherIds = [];
+
+        // 1. 선택 해제된 교사 제거 (선택된 목록에 없는 경우 삭제)
+        existingRows.forEach(row => {
+          const tSelect = row.querySelector('.gen-teacher-select');
+          const tId = tSelect ? tSelect.value : null;
+          if (tId) {
+            if (!selectedTeacherIds.includes(tId)) {
+              row.remove();
+            } else {
+              existingTeacherIds.push(tId);
+            }
+          }
         });
+
+        // 2. 새로 선택된 교사 추가 (기존에 없는 경우만 추가)
+        selectedTeacherIds.forEach(tId => {
+          if (!existingTeacherIds.includes(tId)) {
+            const t = (generatorData.teachers || []).find(x => x.id === tId);
+            const subName = t ? (t.subject_name || t.subjectName) : null;
+            const sub = subName ? (generatorData.subjects || []).find(s => s.name === subName) : null;
+            window.addGenRow(sub ? sub.id : '', tId, '');
+          }
+        });
+
         window.markGenTableDirty();
         if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
         if (window.updateTotalGenHours) window.updateTotalGenHours();
