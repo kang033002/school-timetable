@@ -10,6 +10,7 @@ const { get, all, run } = require('../db/database');
 function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSlots, targetSubjectIds, allowOverlap) {
   const schedule = {};
   const teacherBusy = {};
+  const teacherPeriodCount = {}; // teacherId -> period -> count
   const result = [];
 
   for (const gc of assignments) {
@@ -18,6 +19,16 @@ function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSl
       schedule[gc.gradeClassId][d] = {};
     }
   }
+
+  const markTeacherBusy = (teacherId, d, p) => {
+    if (!teacherId) return;
+    if (!teacherBusy[teacherId]) teacherBusy[teacherId] = {};
+    if (!teacherBusy[teacherId][d]) teacherBusy[teacherId][d] = new Set();
+    teacherBusy[teacherId][d].add(p);
+
+    if (!teacherPeriodCount[teacherId]) teacherPeriodCount[teacherId] = {};
+    teacherPeriodCount[teacherId][p] = (teacherPeriodCount[teacherId][p] || 0) + 1;
+  };
 
   // 1. 수동 배치된 셀(fixedSlots) 먼저 고정(Lock) 처리
   const fixedCounts = {}; // key: `${gradeClassId}_${subjectId}_${teacherId}` -> count
@@ -29,9 +40,7 @@ function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     schedule[gradeClassId][dayOfWeek][period] = { subjectId, teacherId };
     
     if (teacherId) {
-      if (!teacherBusy[teacherId]) teacherBusy[teacherId] = {};
-      if (!teacherBusy[teacherId][dayOfWeek]) teacherBusy[teacherId][dayOfWeek] = new Set();
-      teacherBusy[teacherId][dayOfWeek].add(period);
+      markTeacherBusy(teacherId, dayOfWeek, period);
     }
 
     result.push({ gradeClassId, dayOfWeek, period, subjectId, teacherId, isFixed: true });
@@ -67,6 +76,7 @@ function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSl
   slots.sort(() => Math.random() - 0.5);
 
   const unassigned = [];
+  let penaltyScoreTotal = 0;
 
   for (const slot of slots) {
     const { gradeClassId, subjectId, teacherId } = slot;
@@ -75,30 +85,71 @@ function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     const options = [];
     for (let d = 1; d <= operatingDays; d++) {
       for (let p = 1; p <= maxPeriodsPerDay; p++) {
-        options.push({ d, p });
+        if (schedule[gradeClassId]?.[d]?.[p]) continue;
+        if (!allowOverlap && teacherId && teacherBusy[teacherId]?.[d]?.has(p)) continue;
+
+        const sameSubjectToday = Object.values(schedule[gradeClassId]?.[d] || {})
+          .filter(s => s.subjectId === subjectId).length;
+        if (sameSubjectToday >= 2) continue;
+
+        let penalty = 0;
+        if (teacherId) {
+          // 1) 교사별 동일 교시 주간 연속 편중 방지 (주간 동일 교시 횟수가 많을수록 패널티)
+          const pCount = teacherPeriodCount[teacherId]?.[p] || 0;
+          penalty += pCount * 12;
+
+          // 2) 4교시 / 5교시 (점심시간 전후) 편중 및 연속 수업 방지
+          if (p === 4 || p === 5) {
+            if (pCount >= 2) penalty += 25; // 4교시 또는 5교시가 주 2회 이상 들어가면 우선순위 감점
+
+            // 동일 요일에 이미 4교시 또는 5교시 수업이 들어있는지 체크 (점심 연수업)
+            const hasOtherLunchPeriod = (p === 4 && teacherBusy[teacherId]?.[d]?.has(5)) ||
+                                        (p === 5 && teacherBusy[teacherId]?.[d]?.has(4));
+            if (hasOtherLunchPeriod) {
+              let count45ConsecutiveDays = 0;
+              for (let day = 1; day <= operatingDays; day++) {
+                if (teacherBusy[teacherId]?.[day]?.has(4) && teacherBusy[teacherId]?.[day]?.has(5)) {
+                  count45ConsecutiveDays++;
+                }
+              }
+              if (count45ConsecutiveDays >= 1) {
+                penalty += 40; // 4, 5교시 연속 수업이 주 2회 이상 발생하지 않도록 강하게 제어
+              }
+            }
+          }
+
+          // 3) 교사 3연속 이상 수업 피로도 방지
+          const hasPrev1 = teacherBusy[teacherId]?.[d]?.has(p - 1);
+          const hasPrev2 = teacherBusy[teacherId]?.[d]?.has(p - 2);
+          const hasNext1 = teacherBusy[teacherId]?.[d]?.has(p + 1);
+          const hasNext2 = teacherBusy[teacherId]?.[d]?.has(p + 2);
+          if ((hasPrev1 && hasPrev2) || (hasNext1 && hasNext2) || (hasPrev1 && hasNext1)) {
+            penalty += 20;
+          }
+        }
+
+        options.push({ d, p, penalty });
       }
     }
-    options.sort(() => Math.random() - 0.5);
 
-    for (const { d, p } of options) {
-      if (schedule[gradeClassId]?.[d]?.[p]) continue;
-      if (!allowOverlap && teacherBusy[teacherId]?.[d]?.has(p)) continue;
+    // 패널티 점수가 낮은 최적 슬롯 우선 배치 (+ 노이즈로 다양성 확보)
+    options.sort((a, b) => (a.penalty + Math.random() * 3) - (b.penalty + Math.random() * 3));
 
-      const sameSubjectToday = Object.values(schedule[gradeClassId]?.[d] || {})
-        .filter(s => s.subjectId === subjectId).length;
-      if (sameSubjectToday >= 2) continue;
+    if (options.length > 0) {
+      const best = options[0];
+      const { d, p, penalty } = best;
 
       if (!schedule[gradeClassId]) schedule[gradeClassId] = {};
       if (!schedule[gradeClassId][d]) schedule[gradeClassId][d] = {};
       schedule[gradeClassId][d][p] = { subjectId, teacherId };
 
-      if (!teacherBusy[teacherId]) teacherBusy[teacherId] = {};
-      if (!teacherBusy[teacherId][d]) teacherBusy[teacherId][d] = new Set();
-      teacherBusy[teacherId][d].add(p);
+      if (teacherId) {
+        markTeacherBusy(teacherId, d, p);
+      }
 
       result.push({ gradeClassId, dayOfWeek: d, period: p, subjectId, teacherId });
+      penaltyScoreTotal += penalty;
       placed = true;
-      break;
     }
 
     if (!placed) {
@@ -106,7 +157,31 @@ function attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSl
     }
   }
 
-  return { result, unassigned };
+  return { result, unassigned, penaltyScoreTotal };
+}
+
+function generateTimetable(assignments, maxPeriodsPerDay, operatingDays, fixedSlots, targetSubjectIds, allowOverlap) {
+  let bestGeneration = null;
+  let minUnassigned = Infinity;
+  let minPenalty = Infinity;
+
+  // 50회 최적화 시도를 거쳐 미배정 및 교사 피로도 패널티 점수가 가장 적은 최선의 시간표 채택
+  for (let trial = 0; trial < 50; trial++) {
+    const gen = attemptGeneration(assignments, maxPeriodsPerDay, operatingDays, fixedSlots, targetSubjectIds, allowOverlap);
+    const unassignedCount = gen.unassigned.length;
+
+    if (unassignedCount < minUnassigned || (unassignedCount === minUnassigned && gen.penaltyScoreTotal < minPenalty)) {
+      minUnassigned = unassignedCount;
+      minPenalty = gen.penaltyScoreTotal;
+      bestGeneration = gen;
+
+      if (unassignedCount === 0 && gen.penaltyScoreTotal < 15) {
+        break;
+      }
+    }
+  }
+
+  return bestGeneration;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
