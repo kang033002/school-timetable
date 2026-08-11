@@ -267,6 +267,7 @@ router.get('/teachers', async (req, res) => {
 });
 
 // Bulk teacher registration by admin
+// Bulk teacher registration by admin
 router.post('/teachers/register-teachers-bulk', async (req, res) => {
   try {
     const { schoolId, teachers } = req.body;
@@ -279,7 +280,9 @@ router.post('/teachers/register-teachers-bulk', async (req, res) => {
       const { subjectName, name } = item;
       if (!name) continue;
 
+      const trimmedName = name.trim();
       const subName = (subjectName || '미지정').trim();
+
       if (subName && subName !== '미지정') {
         const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, subName]);
         if (!existingSub) {
@@ -287,36 +290,51 @@ router.post('/teachers/register-teachers-bulk', async (req, res) => {
         }
       }
 
-      const countRow = await get(
-        `SELECT COUNT(*) as cnt FROM teachers WHERE school_id = ?`,
-        [schoolId]
+      // 동일 학교 내 동명 교사가 이미 아이디를 보유 중인지 체크 (아이디 재사용)
+      const existingUser = await get(
+        `SELECT email, password_hash FROM user_accounts WHERE school_id = ? AND role = 'TEACHER' AND name = ? LIMIT 1`,
+        [schoolId, trimmedName]
       );
-      const nextSeq = String(countRow.cnt + 1).padStart(2, '0');
-      const baseEmail = `t${nextSeq}`;
-      const password = '1234';
 
-      let finalEmail = baseEmail;
-      let existingEmail = await get(`SELECT id FROM user_accounts WHERE email = ?`, [finalEmail]);
-      let salt = 1;
-      while (existingEmail) {
-        finalEmail = `t${nextSeq}_${salt++}`;
-        existingEmail = await get(`SELECT id FROM user_accounts WHERE email = ?`, [finalEmail]);
+      let finalEmail = '';
+      let password = '1234';
+
+      if (existingUser && existingUser.email) {
+        // 이미 존재하는 교사의 아이디와 비밀번호 공유
+        finalEmail = existingUser.email;
+        password = existingUser.password_hash || '1234';
+      } else {
+        // 신규 교사의 경우 순차적 아이디 부여 (t1, t2... / t01, t02...)
+        const countRow = await get(
+          `SELECT COUNT(DISTINCT name) as cnt FROM teachers WHERE school_id = ?`,
+          [schoolId]
+        );
+        const nextSeq = String(countRow.cnt + 1).padStart(2, '0');
+        const baseEmail = `t${nextSeq}`;
+
+        finalEmail = baseEmail;
+        let existingEmail = await get(`SELECT id FROM user_accounts WHERE email = ?`, [finalEmail]);
+        let salt = 1;
+        while (existingEmail) {
+          finalEmail = `t${nextSeq}_${salt++}`;
+          existingEmail = await get(`SELECT id FROM user_accounts WHERE email = ?`, [finalEmail]);
+        }
       }
 
       const teacherId = `t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       await run(
         `INSERT INTO teachers (id, school_id, name, subject_name) VALUES (?, ?, ?, ?)`,
-        [teacherId, schoolId, name, subName]
+        [teacherId, schoolId, trimmedName, subName]
       );
 
       const userId = `u-t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       await run(
         `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
          VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-        [userId, schoolId, finalEmail, password, teacherId, name]
+        [userId, schoolId, finalEmail, password, teacherId, trimmedName]
       );
 
-      results.push({ id: teacherId, email: finalEmail, password, name, subjectName: subName });
+      results.push({ id: teacherId, email: finalEmail, password, name: trimmedName, subjectName: subName });
     }
 
     res.json({ message: 'Teachers registered successfully', registered: results });
@@ -342,33 +360,23 @@ router.post('/teachers', async (req, res) => {
       // Update user_account
       if (email && password) {
         const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
-        if (existing) {
-          if (existing.name !== name) {
-            return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
-          } else {
-            // It belongs to the same teacher. Just update the password and name (in case name changed).
-            await run(
-              `UPDATE user_accounts SET password_hash = ?, name = ? WHERE email = ? AND school_id = ?`,
-              [password, name, email, schoolId]
-            );
-          }
+        if (existing && existing.name !== name) {
+          return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
+        }
+        
+        const userAcc = await get(`SELECT id FROM user_accounts WHERE teacher_id = ?`, [teacherId]);
+        if (userAcc) {
+          await run(
+            `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
+            [email, password, name, teacherId]
+          );
         } else {
-          // If no existing account for this email, maybe they are assigning a new email.
-          // But wait, does this teacher already have an account? Let's check by teacher_id.
-          const userAcc = await get(`SELECT id FROM user_accounts WHERE teacher_id = ?`, [teacherId]);
-          if (userAcc) {
-            await run(
-              `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
-              [email, password, name, teacherId]
-            );
-          } else {
-            const userId = `u-t-${Date.now()}`;
-            await run(
-              `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-               VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-              [userId, schoolId, email, password, teacherId, name]
-            );
-          }
+          const userId = `u-t-${Date.now()}`;
+          await run(
+            `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+             VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+            [userId, schoolId, email, password, teacherId, name]
+          );
         }
       }
     } else {
@@ -380,18 +388,15 @@ router.post('/teachers', async (req, res) => {
       );
       if (email && password) {
         const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
-        if (existing) {
-          if (existing.name !== name) {
-            return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
-          }
-        } else {
-          const userId = `u-t-${Date.now()}`;
-          await run(
-            `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
-             VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-            [userId, schoolId, email, password, teacherId, name]
-          );
+        if (existing && existing.name !== name) {
+          return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
         }
+        const userId = `u-t-${Date.now()}`;
+        await run(
+          `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
+           VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
+          [userId, schoolId, email, password, teacherId, name]
+        );
       }
     }
 

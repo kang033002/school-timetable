@@ -66,7 +66,7 @@
 
         <div style="display:flex; gap:0.5rem; margin-top:auto;">
           <button type="button" class="btn btn-outline" onclick="addTeacherInputRow()" style="flex:1;">➕ 행 추가</button>
-          <button type="button" class="btn btn-primary" onclick="submitNewTeachers()" style="flex:1.5;">⚡ 교사 일괄 생성 완료</button>
+          <button type="button" class="btn btn-primary" onclick="submitNewTeachers()" style="flex:1.5;">⚡ 교사 등록</button>
         </div>
       </div>
 
@@ -106,7 +106,8 @@
     <div class="settings-card" style="margin: 0; box-shadow: none; border: 1px solid var(--border-color); display:flex; flex-direction:column; gap:1rem;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h4 style="margin:0;">👩‍🏫 가입 완료 교사 목록</h4>
-        <div style="display:flex; gap:0.5rem;">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button class="btn btn-sm" id="btn-apply-and-go-generator" onclick="applyAndGoGenerator()" style="background:#2563eb; color:white; border:none; padding:0.4rem 0.8rem; border-radius:4px; font-weight:600;">적용 후 시간표 생성 보내기</button>
           <button class="btn btn-sm btn-outline btn-danger" id="btn-delete-selected-teachers" style="padding:0.4rem 0.8rem; border-radius:4px;">선택 삭제</button>
           <button class="btn btn-sm" id="btn-delete-all-teachers" style="background:#b91c1c; color:white; border:none; padding:0.4rem 0.8rem; border-radius:4px;">전체 삭제</button>
         </div>
@@ -138,7 +139,18 @@
       window.close();
     }
 
-    let allTeachers = [];
+    window.applyAndGoGenerator = function() {
+      if (opener && opener.loadSchoolMetadata) {
+        opener.loadSchoolMetadata();
+      }
+      if (opener && typeof opener.switchTab === 'function') {
+        opener.switchTab('generator');
+      } else if (opener && opener.document) {
+        const genTabBtn = opener.document.getElementById('tab-btn-generator');
+        if (genTabBtn) genTabBtn.click();
+      }
+      alert('교사 설정이 저장/반영되어 메인 화면이 시간표 생성 탭으로 즉시 이동되었습니다!');
+    };
 
     // Switch Left panel tabs
     window.switchLeftTab = function(mode) {
