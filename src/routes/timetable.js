@@ -912,7 +912,6 @@ router.get('/timetable/teacher', async (req, res) => {
 
     res.json({
       schoolId,
-      teacher,
       mondayDate: mondayStr,
       timetable
     });
