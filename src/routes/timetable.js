@@ -50,24 +50,32 @@ router.get('/schools/:schoolId/meta', async (req, res) => {
     const school = await get(`SELECT * FROM schools WHERE id = ? OR code = ?`, [schoolId, schoolId]);
     if (!school) return res.status(404).json({ error: 'School not found' });
 
-    // sports 삭제 및 교사 목록의 과목이 subjects 테이블에 없으면 자동 생성/동기화
-    await run(`DELETE FROM subjects WHERE LOWER(name) = 'sports' OR LOWER(short_name) = 'sports'`);
-
-    const teacherSubjects = await all(
-      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != '' AND LOWER(subject_name) != 'sports'`,
+    // 1) 현재 등록된 교사의 과목만 추출하여 유효한 과목 집합(Set) 생성
+    const activeTeacherSubjects = await all(
+      `SELECT DISTINCT subject_name FROM teachers WHERE school_id = ? AND subject_name IS NOT NULL AND subject_name != ''`,
       [school.id]
     );
-    for (const ts of teacherSubjects) {
-      const subName = (ts.subject_name || '').trim();
-      if (!subName || subName === '미지정' || subName.toLowerCase() === 'sports') continue;
+    const validSubjectNames = new Set(activeTeacherSubjects.map(ts => (ts.subject_name || '').trim()));
+
+    // 2) 현재 교사 목록에 존재하지 않는 과거 삭제 과목(유령 과목: 상담, 스포츠동아리, 인공지능 등) DB에서 즉시 영구 삭제
+    const allDbSubjects = await all(`SELECT id, name FROM subjects WHERE school_id = ?`, [school.id]);
+    for (const s of allDbSubjects) {
+      if (!validSubjectNames.has(s.name) || s.name === '미지정' || s.name.toLowerCase() === 'sports') {
+        await run(`DELETE FROM subjects WHERE id = ? AND school_id = ?`, [s.id, school.id]);
+      }
+    }
+
+    // 3) 현재 교사가 담당하는 과목 중 subjects 테이블에 없는 경우만 신규 등록하여 동기화
+    for (const tsName of validSubjectNames) {
+      if (!tsName || tsName === '미지정' || tsName.toLowerCase() === 'sports') continue;
       const existing = await get(
-        `SELECT id FROM subjects WHERE school_id = ? AND LOWER(name) = ?`,
-        [school.id, subName.toLowerCase()]
+        `SELECT id FROM subjects WHERE school_id = ? AND name = ?`,
+        [school.id, tsName]
       );
       if (!existing) {
         await run(
           `INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`,
-          [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, school.id, subName, subName]
+          [`sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`, school.id, tsName, tsName]
         );
       }
     }
