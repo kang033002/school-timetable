@@ -6,6 +6,9 @@
   <title>시간표 관리자 시스템 (School Timetable Admin)</title>
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=3.0">
+  <!-- Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <div id="app">
@@ -331,6 +334,22 @@
               <div style="display:flex; gap:0.5rem; align-items:center;">
                 <button type="button" id="btn-reset-daily-changes" class="btn btn-outline" style="border-color:#ef4444; color:#ef4444; font-weight:700;">🗑️ 일자별 조정 내역 초기화</button>
                 <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 일자별 시간표 인쇄</button>
+                <div class="export-dropdown" style="position:relative; display:inline-block;">
+                  <button type="button" class="btn btn-primary" onclick="toggleExportMenu(this, event)" style="font-weight:700; padding:0.45rem 1rem; background:#1e40af; border-color:#1e40af; color:#ffffff; cursor:pointer;">
+                    💾 시간표 저장 ▾
+                  </button>
+                  <div class="export-menu hidden" style="position:absolute; right:0; top:110%; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:9999; min-width:190px; padding:0.4rem 0;">
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('EXCEL')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b; border-bottom:1px solid #f1f5f9;">
+                      📊 Excel (.xlsx) 저장
+                    </button>
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('HWP')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b; border-bottom:1px solid #f1f5f9;">
+                      📝 한글 (.hwp) 저장
+                    </button>
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('PDF')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b;">
+                      📄 PDF 저장
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="table-responsive">
@@ -365,7 +384,25 @@
                 </div>
                 <span class="subtext">교사별 주간 시간표(결강 및 보강 내역 포함)를 조회합니다.</span>
               </div>
-              <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 시간표 인쇄</button>
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 시간표 인쇄</button>
+                <div class="export-dropdown" style="position:relative; display:inline-block;">
+                  <button type="button" class="btn btn-primary" onclick="toggleExportMenu(this, event)" style="font-weight:700; padding:0.45rem 1rem; background:#1e40af; border-color:#1e40af; color:#ffffff; cursor:pointer;">
+                    💾 시간표 저장 ▾
+                  </button>
+                  <div class="export-menu hidden" style="position:absolute; right:0; top:110%; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:9999; min-width:190px; padding:0.4rem 0;">
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('EXCEL')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b; border-bottom:1px solid #f1f5f9;">
+                      📊 Excel (.xlsx) 저장
+                    </button>
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('HWP')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b; border-bottom:1px solid #f1f5f9;">
+                      📝 한글 (.hwp) 저장
+                    </button>
+                    <button type="button" class="export-item" onclick="exportCurrentTimetable('PDF')" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; padding:0.55rem 0.9rem; border:none; background:none; cursor:pointer; font-weight:600; font-size:0.88rem; color:#1e293b;">
+                      📄 PDF 저장
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="table-responsive">
               <table class="timetable-grid">

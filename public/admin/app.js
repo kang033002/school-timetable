@@ -3009,4 +3009,194 @@ document.getElementById('btn-modal-delete')?.addEventListener('click', () => {
   }
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// 💾 시간표 저장 / 내보내기 (Excel / HWP / PDF)
+// ────────────────────────────────────────────────────────────────────────────
+window.toggleExportMenu = function(btn, event) {
+  if (event) event.stopPropagation();
+  const dropdown = btn.nextElementSibling;
+  document.querySelectorAll('.export-menu').forEach(m => {
+    if (m !== dropdown) m.classList.add('hidden');
+  });
+  if (dropdown) dropdown.classList.toggle('hidden');
+};
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.export-menu').forEach(m => m.classList.add('hidden'));
+});
+
+window.exportCurrentTimetable = function(type) {
+  let titleStr = '';
+  let gridTable = null;
+
+  if (activeTab === 'TEACHER') {
+    const sel = document.getElementById('teacher-title-select');
+    const tName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '교사';
+    titleStr = `${tName} 시간표`;
+    gridTable = document.querySelector('#tab-content-teacher .timetable-grid');
+  } else {
+    const grade = filterGradeSelect ? filterGradeSelect.value : '1';
+    const classNum = filterClassSelect ? filterClassSelect.value : '1';
+    const dateStr = weekDateSubtext ? weekDateSubtext.textContent.replace('기준주간 시작: ', '') : '';
+    titleStr = `${grade}학년 ${classNum}반 일자별 수업 시간표 (${dateStr})`;
+    gridTable = document.querySelector('#tab-content-daily .timetable-grid');
+  }
+
+  if (!gridTable) {
+    alert('저장할 시간표가 존재하지 않습니다.');
+    return;
+  }
+
+  const sanitizedTitle = titleStr.replace(/[/\\?%*:|"<>]/g, '_').trim();
+
+  if (type === 'EXCEL') {
+    exportToExcel(sanitizedTitle, gridTable);
+  } else if (type === 'HWP') {
+    exportToHwp(sanitizedTitle, gridTable);
+  } else if (type === 'PDF') {
+    exportToPdf(sanitizedTitle, gridTable);
+  }
+};
+
+function exportToExcel(title, table) {
+  try {
+    if (typeof XLSX === 'undefined') {
+      alert('Excel 라이브러리를 로딩 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+    const wsData = [];
+
+    wsData.push([title]);
+    wsData.push([]); // blank row
+
+    // Headers
+    const headers = [];
+    table.querySelectorAll('thead th').forEach(th => {
+      headers.push(th.innerText.replace(/\n/g, ' '));
+    });
+    wsData.push(headers);
+
+    // Rows
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const rowData = [];
+      tr.querySelectorAll('th, td').forEach(cell => {
+        rowData.push(cell.innerText.replace(/\n/g, ' '));
+      });
+      wsData.push(rowData);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 10 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }];
+    XLSX.utils.book_append_sheet(wb, ws, "시간표");
+
+    XLSX.writeFile(wb, `${title}.xlsx`);
+  } catch (err) {
+    console.error('Excel export error:', err);
+    alert('Excel 저장 중 오류가 발생했습니다.');
+  }
+}
+
+function exportToHwp(title, table) {
+  try {
+    let rowsHtml = '';
+
+    // Headers
+    const headThs = table.querySelectorAll('thead th');
+    let headCells = '';
+    headThs.forEach(th => {
+      headCells += `<th style="background-color:#eff6ff; border:1px solid #94a3b8; padding:8px; font-size:12pt; text-align:center; font-weight:bold;">${th.innerText.replace(/\n/g, '<br>')}</th>`;
+    });
+    rowsHtml += `<tr>${headCells}</tr>`;
+
+    // Rows
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      let rowCells = '';
+      tr.querySelectorAll('th, td').forEach(cell => {
+        const isTh = cell.tagName === 'TH';
+        const bg = isTh ? 'background-color:#f8fafc; font-weight:bold;' : '';
+        const txt = cell.innerText.replace(/\n/g, '<br>');
+        rowCells += `<td style="${bg} border:1px solid #cbd5e1; padding:10px; font-size:11pt; text-align:center; vertical-align:middle;">${txt}</td>`;
+      });
+      rowsHtml += `<tr>${rowCells}</tr>`;
+    });
+
+    const hwpHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body { font-family: "Malgun Gothic", "한컴바탕", sans-serif; margin: 25px; }
+    h2 { text-align: center; font-size: 18pt; margin-bottom: 20px; color: #1e293b; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>${title}</h2>
+  <table>
+    ${rowsHtml}
+  </table>
+</body>
+</html>`;
+
+    const blob = new Blob([hwpHtml], { type: 'application/x-hwp;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${title}.hwp`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.error('HWP export error:', err);
+    alert('한글(.hwp) 저장 중 오류가 발생했습니다.');
+  }
+}
+
+function exportToPdf(title, table) {
+  try {
+    if (typeof html2pdf === 'undefined') {
+      alert('PDF 라이브러리를 로딩 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    const element = document.createElement('div');
+    element.style.padding = '20px';
+    element.style.background = '#ffffff';
+
+    const h2 = document.createElement('h2');
+    h2.innerText = title;
+    h2.style.textAlign = 'center';
+    h2.style.fontSize = '18px';
+    h2.style.marginBottom = '15px';
+    h2.style.color = '#1e293b';
+
+    const cloneTable = table.cloneNode(true);
+    cloneTable.style.width = '100%';
+    cloneTable.style.borderCollapse = 'collapse';
+    cloneTable.querySelectorAll('th, td').forEach(c => {
+      c.style.border = '1px solid #cbd5e1';
+      c.style.padding = '8px';
+      c.style.textAlign = 'center';
+      c.style.fontSize = '11px';
+    });
+
+    element.appendChild(h2);
+    element.appendChild(cloneTable);
+
+    const opt = {
+      margin:       10,
+      filename:     `${title}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  } catch (err) {
+    console.error('PDF export error:', err);
+    alert('PDF 저장 중 오류가 발생했습니다.');
+  }
+}
+
 // (btn-load-base-timetable removed to enforce strict top-down cascade)
