@@ -588,16 +588,41 @@ async function loadSchoolMetadata() {
       teacherTitleSelect.appendChild(defTeacherOpt);
 
       if (currentSchoolMeta.teachers) {
+        const groupMap = new Map();
         currentSchoolMeta.teachers.forEach(t => {
+          const tName = (t.name || '').trim();
+          if (!tName) return;
+          if (!groupMap.has(tName)) {
+            groupMap.set(tName, {
+              name: tName,
+              ids: [t.id],
+              subjects: [t.subject_name || t.subjectName].filter(Boolean)
+            });
+          } else {
+            const grp = groupMap.get(tName);
+            grp.ids.push(t.id);
+            const sub = t.subject_name || t.subjectName;
+            if (sub && !grp.subjects.includes(sub)) {
+              grp.subjects.push(sub);
+            }
+          }
+        });
+
+        groupMap.forEach((grp) => {
           const opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = `${t.name} (${t.subject_name || t.subjectName})`;
+          opt.value = grp.ids.join(',');
+          opt.textContent = `${grp.name} (${grp.subjects.join(', ') || '과목미정'})`;
           teacherTitleSelect.appendChild(opt);
         });
       }
 
       if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-        teacherTitleSelect.value = currentUser.teacherId;
+        // Find matching option containing current teacher's ID
+        const opts = Array.from(teacherTitleSelect.options);
+        const matchOpt = opts.find(o => o.value.split(',').includes(String(currentUser.teacherId)));
+        if (matchOpt) {
+          teacherTitleSelect.value = matchOpt.value;
+        }
       }
     }
 
@@ -2599,23 +2624,20 @@ document.getElementById('btn-generate')?.addEventListener('click', async () => {
         if (unassignedAlert) unassignedAlert.classList.add('hidden');
       }
 
-      // 학급 칩 채우기 및 로컬 스토리지 저장
-      localStorage.setItem('genSelectedClassIds', JSON.stringify(selectedClassIds));
-      localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
-      localStorage.setItem('genResult', JSON.stringify(generatedResult));
-
-      buildPreviewChips(selectedClassIds);
-      if (selectedClassIds.length > 0) {
-        genCurrentClassId = selectedClassIds[0];
-        const maxPeriodSelect = document.getElementById('gen-max-period-select');
-        const maxPeriodsPerDay = maxPeriodSelect ? parseInt(maxPeriodSelect.value) : 10;
-        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      // 자동 생성 결과 서버 DB에 자동 반영 (학기 기본 시간표로 저장)
+      if (generatedResult && generatedResult.length > 0) {
+        await fetch(`${API_BASE}/admin/base-timetable-batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolId: currentUser.schoolId, timetable: generatedResult })
+        });
       }
 
-      alert(`🎉 AI 시간표 자동 생성 완료!\n${selectedClassIds.length}개 학급 × ${subjectsList.length}개 과목\n아래 미리보기를 확인 후 수정하세요.`);
+      alert(`🎉 시간표 자동 생성이 성공적으로 완료되어 데이터베이스에 반영되었습니다!\n상단 [📅 일자별 수업 시간표] 및 [👩‍🏫 교사 시간표] 탭에서 완성된 시간표를 확인하실 수 있습니다.`);
+      switchTab('DAILY');
 
     } catch (err) {
-      if (btnGen) { btnGen.textContent = '🤖 AI 시간표 자동 생성 시작'; btnGen.disabled = false; }
+      if (btnGen) { btnGen.textContent = '🤖 시간표 자동 생성 시작'; btnGen.disabled = false; }
       console.error('Generate error:', err);
       alert('생성 중 오류가 발생했습니다.');
     }

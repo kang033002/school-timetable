@@ -646,11 +646,29 @@ router.get('/timetable/teacher', async (req, res) => {
     fridayDate.setDate(monday.getDate() + 4);
     const fridayStr = fridayDate.toISOString().split('T')[0];
 
-    const teacher = await get(`SELECT * FROM teachers WHERE id = ?`, [teacherId]);
-    if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+    // Parse single or comma-separated teacher IDs
+    const rawIds = String(teacherId || '').split(',').map(s => s.trim()).filter(Boolean);
+    let baseTeachers = [];
+    if (rawIds.length > 0) {
+      baseTeachers = await all(
+        `SELECT id, name FROM teachers WHERE school_id = ? AND id IN (${rawIds.map(() => '?').join(',')})`,
+        [schoolId, ...rawIds]
+      );
+    }
 
-    const sameNameTeachers = await all(`SELECT id FROM teachers WHERE school_id = ? AND name = ?`, [schoolId, teacher.name]);
-    const teacherIds = sameNameTeachers.map(t => String(t.id));
+    let sameNameTeachers = [];
+    if (baseTeachers.length > 0) {
+      const names = Array.from(new Set(baseTeachers.map(t => t.name)));
+      sameNameTeachers = await all(
+        `SELECT id FROM teachers WHERE school_id = ? AND name IN (${names.map(() => '?').join(',')})`,
+        [schoolId, ...names]
+      );
+    } else {
+      const singleTeacher = await get(`SELECT name FROM teachers WHERE id = ? AND school_id = ?`, [teacherId, schoolId]);
+      const searchName = singleTeacher ? singleTeacher.name : teacherId;
+      sameNameTeachers = await all(`SELECT id FROM teachers WHERE school_id = ? AND name = ?`, [schoolId, searchName]);
+    }
+    const teacherIds = Array.from(new Set([...rawIds, ...sameNameTeachers.map(t => String(t.id))]));
 
     const baseOnly = req.query.baseOnly === 'true';
 

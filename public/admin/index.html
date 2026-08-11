@@ -528,61 +528,9 @@
                   </div>
                 </div>
 
-                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem; text-align:center;">생성 완료 후 아래 미리보기에서 확인 → 수동 수정 → '전체 학년/반에 최종 적용'을 누르면 <strong>학기 기본 시간표</strong>로 자동 저장됩니다.</p>
+                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0.5rem; text-align:center;">설정 완료 후 <strong>[🤖 시간표 자동 생성 시작]</strong>을 누르면 시간표가 생성 및 최종 적용되어 <strong>[일자별 수업 시간표]</strong> 및 <strong>[교사 시간표]</strong>에서 바로 조회가 가능합니다.</p>
               </div>
             </div>
-
-            <!-- 미배정 경고 -->
-            <div id="gen-unassigned-alert" class="alert alert-danger hidden" style="margin:1rem 0;">
-              <strong>⚠️ 미배정 슬롯 발생</strong>
-              <ul id="gen-unassigned-list"></ul>
-              <p style="font-size:0.85rem; margin-top:0.5rem;">위 슬롯은 시수 과다 또는 교사 충돌로 배정되지 못했습니다. 아래 테이블에서 수동으로 클릭하여 수정하세요.</p>
-            </div>
-
-            <!-- ④ 학급별 미리보기 테이블 + 전체 적용 버튼 -->
-            <div id="gen-preview" style="margin-top:1.5rem;">
-              <div class="timetable-header" style="margin-bottom:1rem;">
-                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-                  <h3 style="margin:0; font-weight:800; font-size:1.2rem;">📋 생성 결과 미리보기 및 수동 수정</h3>
-                  <select id="gen-target-class-dropdown" class="form-select" style="width:auto; font-weight:700; color:var(--primary-color); border:1.5px solid var(--primary-color); padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; background-color:var(--bg-card);"></select>
-                </div>
-                <div style="display:flex; gap:0.75rem; align-items:center;">
-                  <button type="button" id="btn-regen" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.88rem;">🔄 다시 생성</button>
-                  <button type="button" id="btn-apply-timetable" class="btn" style="padding:0.6rem 1.5rem; font-weight:700; background-color:#ffffff; color:#10b981; border:1px solid #10b981; transition:all 0.2s;">
-                    ✔ 시간표 적용
-                  </button>
-                  <button type="button" id="btn-reset-current-class" class="btn" style="padding:0.6rem 1.1rem; font-weight:700; background-color:#ffffff; color:#f97316; border:1px solid #f97316; transition:all 0.2s;">
-                    🗑 해당 학급 초기화
-                  </button>
-                  <button type="button" id="btn-reset-all-classes" class="btn" style="padding:0.6rem 1.1rem; font-weight:700; background-color:#ffffff; color:#ef4444; border:1px solid #ef4444; transition:all 0.2s;">
-                    🗑 전체 학년/반 초기화
-                  </button>
-                </div>
-              </div>
-
-              <!-- 미리보기 시간표 테이블 (항시 1~10교시 그리드) -->
-              <div class="table-responsive">
-                <table class="timetable-grid" id="gen-preview-table">
-                  <thead>
-                    <tr>
-                      <th class="th-period">교시</th>
-                      <th>월요일</th>
-                      <th>화요일</th>
-                      <th>수요일</th>
-                      <th>목요일</th>
-                      <th>금요일</th>
-                    </tr>
-                  </thead>
-                  <tbody id="timetable-body-gen">
-                    <!-- 항시 1~10교시 렌더링 -->
-                  </tbody>
-                </table>
-              </div>
-              <p id="gen-preview-hint" style="text-align:center; color:var(--text-sub); font-size:0.82rem; margin-top:0.75rem;">
-                💡 셀을 클릭하면 해당 교시의 과목과 교사를 직접 수정할 수 있습니다.
-              </p>
-            </div>
-
 
           </div>
 
