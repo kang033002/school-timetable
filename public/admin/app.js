@@ -2104,9 +2104,13 @@ async function initGeneratorTab() {
         }
       }
       genCurrentClassId = gcId;
-      if (window.loadClassHours) {
-        window.loadClassHours(gcId);
-      }
+      window.isGenTableDirty = false;
+
+      // 학급 칩 클릭 시에는 자동으로 과목 표를 불러오지 않고 [조회]를 눌러야 나오도록 표를 비웁니다.
+      const body = document.getElementById('gen-subject-body');
+      if (body) body.innerHTML = '';
+      if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+
       window.renderCreatedClassBadges();
       buildPreviewChips(window.activeGenClassIds);
       const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
@@ -2427,7 +2431,10 @@ async function initGeneratorTab() {
         if (parsedIds.length > 0) {
           if (!genCurrentClassId) genCurrentClassId = parsedIds[0];
           buildPreviewChips(parsedIds);
-          if (window.loadClassHours) window.loadClassHours(genCurrentClassId);
+          // [조회] 버튼을 누르기 전까지 2번 과목 설정표는 비워둡니다.
+          const body = document.getElementById('gen-subject-body');
+          if (body) body.innerHTML = '';
+          if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
           renderGenGrid(genCurrentClassId, defaultMaxPeriods);
         }
       } catch (e) {
