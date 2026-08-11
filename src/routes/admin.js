@@ -350,17 +350,20 @@ router.post('/teachers', async (req, res) => {
     const { id, schoolId, name, code, subjectName, email, password } = req.body;
     if (!schoolId || !name) return res.status(400).json({ error: 'schoolId and name are required' });
 
+    const trimmedName = name.trim();
+    const trimmedSub = (subjectName || '').trim();
+
     let teacherId = id;
     if (teacherId) {
       // Update teacher
       await run(
         `UPDATE teachers SET name = ?, code = ?, subject_name = ? WHERE id = ? AND school_id = ?`,
-        [name, code || null, subjectName || null, teacherId, schoolId]
+        [trimmedName, code || null, trimmedSub || null, teacherId, schoolId]
       );
       // Update user_account
       if (email && password) {
-        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
-        if (existing && existing.name !== name) {
+        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email.trim(), schoolId]);
+        if (existing && existing.name.trim() !== trimmedName) {
           return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
         }
         
@@ -368,51 +371,51 @@ router.post('/teachers', async (req, res) => {
         if (userAcc) {
           await run(
             `UPDATE user_accounts SET email = ?, password_hash = ?, name = ? WHERE teacher_id = ?`,
-            [email, password, name, teacherId]
+            [email.trim(), password.trim(), trimmedName, teacherId]
           );
         } else {
-          const userId = `u-t-${Date.now()}`;
+          const userId = `u-t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           await run(
             `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
              VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-            [userId, schoolId, email, password, teacherId, name]
+            [userId, schoolId, email.trim(), password.trim(), teacherId, trimmedName]
           );
         }
       }
     } else {
       // Create teacher
-      teacherId = `t-${Date.now()}`;
+      teacherId = `t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       await run(
         `INSERT INTO teachers (id, school_id, name, code, subject_name) VALUES (?, ?, ?, ?, ?)`,
-        [teacherId, schoolId, name, code || null, subjectName || null]
+        [teacherId, schoolId, trimmedName, code || null, trimmedSub || null]
       );
       if (email && password) {
-        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email, schoolId]);
-        if (existing && existing.name !== name) {
+        const existing = await get(`SELECT id, name FROM user_accounts WHERE email = ? AND school_id = ?`, [email.trim(), schoolId]);
+        if (existing && existing.name.trim() !== trimmedName) {
           return res.status(400).json({ error: '이미 다른 교사가 사용 중인 아이디입니다.' });
         }
-        const userId = `u-t-${Date.now()}`;
+        const userId = `u-t-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         await run(
           `INSERT INTO user_accounts (id, school_id, email, password_hash, role, teacher_id, name, status)
            VALUES (?, ?, ?, ?, 'TEACHER', ?, ?, 'APPROVED')`,
-          [userId, schoolId, email, password, teacherId, name]
+          [userId, schoolId, email.trim(), password.trim(), teacherId, trimmedName]
         );
       }
     }
 
     // Auto-create subject if it doesn't exist
-    if (subjectName) {
-      const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, subjectName]);
+    if (trimmedSub) {
+      const existingSub = await get(`SELECT id FROM subjects WHERE school_id = ? AND name = ?`, [schoolId, trimmedSub]);
       if (!existingSub) {
-        const subId = `s-${Date.now()}`;
-        await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [subId, schoolId, subjectName, subjectName]);
+        const subId = `s-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        await run(`INSERT INTO subjects (id, school_id, name, short_name) VALUES (?, ?, ?, ?)`, [subId, schoolId, trimmedSub, trimmedSub]);
       }
     }
 
     res.status(200).json({ message: 'Teacher saved successfully', id: teacherId });
   } catch (err) {
     console.error('Teacher setup error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 

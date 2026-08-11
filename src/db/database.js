@@ -196,10 +196,10 @@ async function initSchema() {
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS subject_name TEXT`);
     await pool.query(`ALTER TABLE base_timetable ADD COLUMN IF NOT EXISTS room_id TEXT`);
     
-    // Change unique constraint to allow duplicate emails across different schools
+    // Allow duplicate emails/IDs for the same teacher with multiple subjects
     await pool.query(`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS user_accounts_email_key`);
     await pool.query(`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS user_accounts_school_id_email_key`);
-    await pool.query(`ALTER TABLE user_accounts ADD CONSTRAINT user_accounts_school_id_email_key UNIQUE (school_id, email)`);
+    await pool.query(`DROP INDEX IF EXISTS user_accounts_school_id_email_key`);
   } catch (err) {
     console.log('Altering user_accounts columns/constraints error or already exists:', err.message);
   }
