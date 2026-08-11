@@ -803,6 +803,11 @@ router.get('/timetable/teacher', async (req, res) => {
       if (idStr && (teacherIds.includes(idStr) || teacherCodes.includes(idStr) || allNames.includes(idStr))) return true;
       if (codeStr && (teacherCodes.includes(codeStr) || teacherIds.includes(codeStr))) return true;
       if (nameStr && allNames.some(n => nameStr === n || nameStr.includes(n) || n.includes(nameStr))) return true;
+      
+      // Fallback for cases where teacher_id in DB is stored with subject (e.g. "강영환(자율)")
+      const cleanId = idStr.replace(/\s*\([^)]*\)/g, '').trim();
+      if (cleanId && allNames.some(n => cleanId === n || cleanId.includes(n) || n.includes(cleanId))) return true;
+      if (idStr && teacherCodes.some(c => idStr.includes(c))) return true;
 
       return false;
     };

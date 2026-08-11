@@ -1,0 +1,1 @@
+const sqlite3 = require('sqlite3').verbose(); const db = new sqlite3.Database('src/db/timetable.db'); db.all('SELECT bt.grade_class_id, bt.day_of_week, bt.period, bt.teacher_id, t.name as teacher_name FROM base_timetable bt LEFT JOIN teachers t ON CAST(bt.teacher_id AS TEXT) = CAST(t.id AS TEXT) LIMIT 10', (err, rows) => { console.log(rows); });
