@@ -2202,12 +2202,27 @@ async function initGeneratorTab() {
         window.isGenTableDirty = true;
       };
 
+      window.updateTotalGenHours = function() {
+        let sum = 0;
+        document.querySelectorAll('.gen-hours-input').forEach(input => {
+          const val = parseInt(input.value);
+          if (!isNaN(val) && val > 0) {
+            sum += val;
+          }
+        });
+        const display = document.getElementById('gen-total-hours-display');
+        if (display) {
+          display.innerText = `(총 시수: ${sum} 시간/주)`;
+        }
+      };
+
       window.clearAllGenRows = function() {
         const body = document.getElementById('gen-subject-body');
         if (body) {
           body.innerHTML = '';
           window.markGenTableDirty();
           if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+          if (window.updateTotalGenHours) window.updateTotalGenHours();
         }
       };
 
@@ -2228,6 +2243,7 @@ async function initGeneratorTab() {
         });
         window.markGenTableDirty();
         if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       window.applyClassSetup = function() {
@@ -2262,6 +2278,7 @@ async function initGeneratorTab() {
       window.saveGeneratorRowsState = function() {
         window.markGenTableDirty();
         if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
@@ -2339,6 +2356,7 @@ async function initGeneratorTab() {
 
         subjectBody.appendChild(tr);
         if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       function loadDefaultRows() {
@@ -2424,6 +2442,7 @@ async function initGeneratorTab() {
         }
         window.isGenTableDirty = false;
         if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       window.saveGeneratorRowsState = function() {

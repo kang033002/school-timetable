@@ -488,26 +488,37 @@
                   </div>
                   <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:0.75rem;">각 과목의 주간 수업 시수와 담당 교사를 선택하세요. 조회를 누른 후 상단 [적용] 버튼을 눌러야 설정이 최종 저장됩니다.</p>
                   
-                  <div class="table-responsive">
-                    <table class="logs-table" id="gen-subject-table">
-                      <thead>
-                        <tr>
-                          <th>과목명</th>
-                          <th>담당 교사</th>
-                          <th>주간 시수 (시간/주)</th>
-                          <th style="width: 100px; text-align:center;">
-                            <button type="button" id="btn-gen-clear-all-rows" class="btn btn-sm" style="background:#b91c1c; color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; font-weight:600; cursor:pointer;" onclick="clearAllGenRows()">전체 삭제</button>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody id="gen-subject-body">
-                        <!-- 동적 생성 -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style="margin-top: 0.5rem; text-align: right;">
-                    <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
-                  </div>
+                    <div class="table-responsive">
+                      <table class="logs-table" id="gen-subject-table">
+                        <thead>
+                          <tr>
+                            <th>과목명</th>
+                            <th>담당 교사</th>
+                            <th>주간 시수 (시간/주)</th>
+                            <th style="width: 100px; text-align:center;">
+                              <button type="button" id="btn-gen-clear-all-rows" class="btn btn-sm" style="background:#b91c1c; color:white; border:none; padding:0.25rem 0.6rem; border-radius:4px; font-weight:600; cursor:pointer;" onclick="clearAllGenRows()">전체 삭제</button>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody id="gen-subject-body">
+                          <!-- 동적 생성 -->
+                        </tbody>
+                        <tfoot id="gen-subject-tfoot" style="background:var(--bg-surface); border-top:2px solid var(--border-color);">
+                          <tr>
+                            <td colspan="2" style="text-align:right; font-weight:700; color:var(--text-sub); padding:0.65rem 0.85rem; font-size:0.95rem;">
+                              학급 주간 총 시수
+                            </td>
+                            <td style="font-weight:800; color:var(--primary-color); font-size:1.05rem; padding:0.65rem 0.85rem;">
+                              <span id="gen-total-hours-display" style="background:#eff6ff; color:#1d4ed8; padding:0.3rem 0.75rem; border-radius:6px; border:1px solid #bfdbfe; display:inline-block;">(총 시수: 0 시간/주)</span>
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                    <div style="margin-top: 0.5rem; text-align: right;">
+                      <button type="button" id="btn-gen-add-row" class="btn btn-sm btn-outline">+ 행 추가</button>
+                    </div>
                 </div>
 
               </div>
