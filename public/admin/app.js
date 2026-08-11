@@ -1401,39 +1401,43 @@ function populateModalDropdowns(slot) {
   const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
   const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
 
-  if (changeSubjectSelect) {
-    changeSubjectSelect.innerHTML = '<option value="">-- 변경할 과목 선택 --</option>';
-    changeSubjectSelect.innerHTML += '<option value="DELETE" style="color:red; font-weight:bold;">-- 🗑️ 해당 교시 삭제 (빈 시간으로 만들기) --</option>';
-    changeSubjectSelect.innerHTML += subs.map(s => `<option value="${s.id}" ${slot?.subjectId === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
-  }
   if (changeTeacherSelect) {
-    changeTeacherSelect.innerHTML = '<option value="">-- 교사 선택 --</option>' +
-      tchs.map(t => `<option value="${t.id}" ${slot?.teacherId === t.id ? 'selected' : ''}>${t.name} 선생님 (${t.subject_name || t.subjectName || ''})</option>`).join('');
+    changeTeacherSelect.innerHTML = '<option value="">-- 해당 교시 교과 및 교사 선택 --</option>';
+    changeTeacherSelect.innerHTML += tchs.map(t => {
+      const subName = t.subject_name || t.subjectName || '';
+      const isSelected = slot?.teacherId && String(slot.teacherId) === String(t.id);
+      return `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${t.name} (${subName})</option>`;
+    }).join('');
   }
-}
 
-// 모달 드롭다운 양방향 자동 연결
-if (changeSubjectSelect && changeTeacherSelect) {
-  changeSubjectSelect.addEventListener('change', (e) => {
-    const selectedSubjId = e.target.value;
-    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
-    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
-    const sub = subs.find(s => s.id === selectedSubjId);
-    if (sub) {
-      const match = tchs.find(t => (t.subject_name || t.subjectName || '') === sub.name);
-      if (match) changeTeacherSelect.value = match.id;
-    }
-  });
-
-  changeTeacherSelect.addEventListener('change', (e) => {
-    const selectedTchId = e.target.value;
-    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
-    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
-    const tch = tchs.find(t => t.id === selectedTchId);
+  // 모달 오픈 시 기존 배정 과목 ID 자동 연결
+  if (slot?.teacherId && changeTeacherSelect && changeSubjectSelect) {
+    const tch = tchs.find(t => String(t.id) === String(slot.teacherId));
     if (tch) {
       const subName = tch.subject_name || tch.subjectName;
       const sub = subs.find(s => s.name === subName);
       if (sub) changeSubjectSelect.value = sub.id;
+    }
+  }
+}
+
+// 모달 드롭다운 교사 선택 시 과목 ID 자동 연동
+if (changeTeacherSelect) {
+  changeTeacherSelect.addEventListener('change', (e) => {
+    const selectedTchId = e.target.value;
+    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
+    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
+    const tch = tchs.find(t => String(t.id) === String(selectedTchId));
+    if (tch && changeSubjectSelect) {
+      const subName = tch.subject_name || tch.subjectName;
+      const sub = subs.find(s => s.name === subName);
+      if (sub) {
+        changeSubjectSelect.value = sub.id;
+      } else {
+        changeSubjectSelect.value = '';
+      }
+    } else if (changeSubjectSelect) {
+      changeSubjectSelect.value = '';
     }
   });
 }
@@ -1470,14 +1474,15 @@ function openChangeModal(targetDate, dayOfWeek, period, slot, mode) {
 
   const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
   const dayName = daysKor[dayOfWeek] || '월';
-  const headerStr = activeTab === 'BASE' 
-    ? `학기 기본 시간표 원본 설정 (${dayName}요일 ${period}교시)` 
-    : `일자별 수업 조정 (${targetDate || '기본주간'} ${period}교시)`;
 
   if (slotInfoSummary) {
+    const curAssign = (slot && (slot.subjectName || slot.teacherName))
+      ? `${slot.subjectName || ''} (${slot.teacherName || ''} 선생님)`
+      : '배정 없음';
+
     slotInfoSummary.innerHTML = `
-      <strong>[선택 교시]</strong> ${headerStr} - ${gradeStr}학년 ${classNumStr}반<br>
-      <strong>[현재 배정 수업]</strong> ${slot && slot.subjectName ? `${slot.subjectName} (${slot.teacherName || '교사미정'} 선생님)` : '배정 없음'}
+      <strong>[수업 생성 수정]</strong> ${gradeStr}학년 ${classNumStr}반 ${dayName}요일 ${period}교시<br>
+      <strong>[현재 배정]</strong> ${curAssign}
     `;
   }
 
@@ -1514,8 +1519,19 @@ async function handleApplyChange(e) {
     return;
   }
 
-  const changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
   const changedTeacherId = changeTeacherSelect ? changeTeacherSelect.value : null;
+  let changedSubjectId = changeSubjectSelect ? changeSubjectSelect.value : null;
+
+  if (changedTeacherId && (!changedSubjectId || changedSubjectId === '')) {
+    const subs = (currentSchoolMeta?.subjects?.length ? currentSchoolMeta.subjects : generatorData?.subjects) || [];
+    const tchs = (currentSchoolMeta?.teachers?.length ? currentSchoolMeta.teachers : generatorData?.teachers) || [];
+    const tch = tchs.find(t => String(t.id) === String(changedTeacherId));
+    if (tch) {
+      const subName = tch.subject_name || tch.subjectName;
+      const sub = subs.find(s => s.name === subName);
+      if (sub) changedSubjectId = sub.id;
+    }
+  }
 
   if (activeTab === 'GENERATOR') {
     const { gradeClassId, dayOfWeek, period } = selectedSlotData;
@@ -2811,9 +2827,13 @@ function openGenCellModal(gradeClassId, dayOfWeek, period, slot, gc) {
   const gcName = gc ? `${gc.grade}학년 ${gc.class_number}반` : '';
 
   if (slotInfoSummary) {
+    const curAssign = (slot && (slot.subjectName || slot.teacherName))
+      ? `${slot.subjectName || ''} (${slot.teacherName || ''} 선생님)`
+      : '배정 없음';
+
     slotInfoSummary.innerHTML = `
-      <strong>[자동생성 수정]</strong> ${gcName} ${dayName}요일 ${period}교시<br>
-      <strong>[현재 배정]</strong> ${slot ? `${slot.subjectName} (${slot.teacherName} 선생님)` : '배정 없음'}
+      <strong>[수업 생성 수정]</strong> ${gcName} ${dayName}요일 ${period}교시<br>
+      <strong>[현재 배정]</strong> ${curAssign}
     `;
   }
   if (conflictAlert) conflictAlert.classList.add('hidden');
