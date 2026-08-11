@@ -647,31 +647,39 @@ router.get('/timetable/teacher', async (req, res) => {
     const fridayStr = fridayDate.toISOString().split('T')[0];
 
     // Fetch all teachers in this school
-    const schoolTeachers = await all(`SELECT id, name, subject_name FROM teachers WHERE school_id = ?`, [schoolId]);
+    const schoolTeachers = await all(`SELECT id, name, code, subject_name FROM teachers WHERE school_id = ?`, [schoolId]);
 
     const inputStr = String(teacherId || '').trim();
     const rawInputs = inputStr.split(',').map(s => s.trim()).filter(Boolean);
 
-    // Match teachers by ID or by Name
+    // Match teachers by ID, code, or Name
     const matched = schoolTeachers.filter(t => {
       const idStr = String(t.id);
+      const codeStr = String(t.code || '');
       const cleanName = (t.name || '').trim();
       return rawInputs.some(input => {
         const cleanInput = input.replace(/\s*\([^)]*\)/g, '').trim();
-        return idStr === input || cleanName === cleanInput || cleanName.includes(cleanInput);
+        return idStr === input || codeStr === input || cleanName === cleanInput || cleanName.includes(cleanInput);
       });
     });
 
-    // Collect target names
+    // Collect all target names for this teacher
     const allNames = Array.from(new Set([
-      ...matched.map(t => t.name.trim()),
+      ...matched.map(t => (t.name || '').trim()),
       ...rawInputs.map(input => input.replace(/\s*\([^)]*\)/g, '').trim())
     ])).filter(Boolean);
 
-    // Collect target teacher IDs
+    // Collect all target teacher records
+    const targetTeacherRecords = schoolTeachers.filter(t => allNames.includes((t.name || '').trim()));
+
     const teacherIds = Array.from(new Set([
-      ...schoolTeachers.filter(t => allNames.includes((t.name || '').trim())).map(t => String(t.id)),
+      ...targetTeacherRecords.map(t => String(t.id)),
       ...rawInputs.filter(input => !isNaN(Number(input)))
+    ]));
+
+    const teacherCodes = Array.from(new Set([
+      ...targetTeacherRecords.map(t => String(t.code || '')).filter(Boolean),
+      ...rawInputs
     ]));
 
     const baseOnly = req.query.baseOnly === 'true';
@@ -692,7 +700,7 @@ router.get('/timetable/teacher', async (req, res) => {
              r.name as room_name, r.is_special_room
       FROM base_timetable bt
       LEFT JOIN subjects sub ON bt.subject_id = sub.id
-      LEFT JOIN teachers t ON bt.teacher_id = t.id
+      LEFT JOIN teachers t ON (CAST(bt.teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR bt.teacher_id = t.code OR bt.teacher_id = t.name)
       LEFT JOIN rooms r ON bt.room_id = r.id
       WHERE bt.school_id = ?
     `, [schoolId]);
@@ -707,7 +715,7 @@ router.get('/timetable/teacher', async (req, res) => {
                r.name as room_name, r.is_special_room
         FROM timetable_changes tc
         LEFT JOIN subjects sub ON tc.changed_subject_id = sub.id
-        LEFT JOIN teachers t ON tc.changed_teacher_id = t.id
+        LEFT JOIN teachers t ON (CAST(tc.changed_teacher_id AS VARCHAR) = CAST(t.id AS VARCHAR) OR tc.changed_teacher_id = t.code OR tc.changed_teacher_id = t.name)
         LEFT JOIN rooms r ON tc.changed_room_id = r.id
         WHERE tc.school_id = ? AND tc.target_date >= ? AND tc.target_date <= ?
       `, [schoolId, mondayStr, fridayStr]);
@@ -730,6 +738,7 @@ router.get('/timetable/teacher', async (req, res) => {
         shortSubjectName: b.short_subject_name,
         teacherId: b.teacher_id,
         teacherName: b.teacher_name,
+        teacherCode: b.teacher_code,
         roomId: b.room_id,
         roomName: b.room_name || '일반교실',
         isChanged: false,
@@ -750,6 +759,7 @@ router.get('/timetable/teacher', async (req, res) => {
         if (ch.change_type === 'CANCEL' || ch.change_type === 'HOLIDAY') {
           if (effectiveMap[key]) {
             effectiveMap[key].teacherId = null;
+            effectiveMap[key].teacherName = null;
             effectiveMap[key].isChanged = true;
             effectiveMap[key].changeType = ch.change_type;
           }
@@ -785,9 +795,15 @@ router.get('/timetable/teacher', async (req, res) => {
       }
     }
 
-    const isMatch = (tId, tName) => {
-      if (tId && teacherIds.includes(String(tId))) return true;
-      if (tName && allNames.includes(String(tName).trim())) return true;
+    const isMatch = (tId, tName, tCode) => {
+      const idStr = String(tId || '').trim();
+      const nameStr = String(tName || '').trim();
+      const codeStr = String(tCode || '').trim();
+
+      if (idStr && (teacherIds.includes(idStr) || teacherCodes.includes(idStr) || allNames.includes(idStr))) return true;
+      if (codeStr && (teacherCodes.includes(codeStr) || teacherIds.includes(codeStr))) return true;
+      if (nameStr && allNames.includes(nameStr)) return true;
+
       return false;
     };
 
@@ -805,7 +821,7 @@ router.get('/timetable/teacher', async (req, res) => {
         for (const gcId in classMap) {
           const key = `${gcId}_${dayOfWeek}_${period}`;
           const slot = effectiveMap[key];
-          if (slot && isMatch(slot.teacherId, slot.teacherName)) {
+          if (slot && isMatch(slot.teacherId, slot.teacherName, slot.teacherCode)) {
             assignedSlot = {
               ...slot,
               targetDate: curDateStr
@@ -820,7 +836,7 @@ router.get('/timetable/teacher', async (req, res) => {
             const dateParts = String(ch.target_date).split('-').map(Number);
             const chDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
             const chDay = chDate.getDay() === 0 ? 7 : chDate.getDay();
-            return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && isMatch(ch.original_teacher_id, ch.teacher_name);
+            return ch.target_date === curDateStr && chDay === dayOfWeek && parseInt(ch.period) === period && isMatch(ch.original_teacher_id, ch.teacher_name, ch.teacher_code);
           });
 
           if (origChange) {
