@@ -614,16 +614,16 @@ async function loadSchoolMetadata() {
 
         groupMap.forEach((grp) => {
           const opt = document.createElement('option');
-          opt.value = grp.ids.join(',');
+          opt.value = grp.name;
           opt.textContent = `${grp.name} (${grp.subjects.join(', ') || '과목미정'})`;
           teacherTitleSelect.appendChild(opt);
         });
       }
 
-      if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-        // Find matching option containing current teacher's ID
+      if (currentUser?.role === 'TEACHER') {
+        const curName = (currentUser.name || currentUser.teacherName || '').trim();
         const opts = Array.from(teacherTitleSelect.options);
-        const matchOpt = opts.find(o => o.value.split(',').includes(String(currentUser.teacherId)));
+        const matchOpt = opts.find(o => o.value === curName || o.value.split(',').includes(String(currentUser.teacherId)));
         if (matchOpt) {
           teacherTitleSelect.value = matchOpt.value;
         }
