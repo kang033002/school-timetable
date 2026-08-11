@@ -1247,26 +1247,18 @@ function switchTab(tabName) {
   activeTab = tabName;
   updateFiltersForTab(tabName);
 
-  const tabBtnBase = document.getElementById('tab-btn-base');
   const tabBtnDaily = document.getElementById('tab-btn-daily');
   const tabBtnTeacher = document.getElementById('tab-btn-teacher');
   const tabBtnGenerator = document.getElementById('tab-btn-generator');
 
-  const contentBase = document.getElementById('tab-content-base');
   const contentDaily = document.getElementById('tab-content-daily');
   const contentTeacher = document.getElementById('tab-content-teacher');
   const contentGenerator = document.getElementById('tab-content-generator');
 
-  [tabBtnBase, tabBtnDaily, tabBtnTeacher, tabBtnGenerator].forEach(btn => btn && btn.classList.remove('active'));
-  [contentBase, contentDaily, contentTeacher, contentGenerator].forEach(cnt => cnt && cnt.classList.add('hidden'));
+  [tabBtnDaily, tabBtnTeacher, tabBtnGenerator].forEach(btn => btn && btn.classList.remove('active'));
+  [contentDaily, contentTeacher, contentGenerator].forEach(cnt => cnt && cnt.classList.add('hidden'));
 
-  if (tabName === 'BASE') {
-    if (tabBtnBase) tabBtnBase.classList.add('active');
-    if (contentBase) contentBase.classList.remove('hidden');
-    datePicker.parentElement.style.display = 'none';
-    loadTimetable();
-
-  } else if (tabName === 'DAILY') {
+  if (tabName === 'DAILY') {
     if (tabBtnDaily) tabBtnDaily.classList.add('active');
     if (contentDaily) contentDaily.classList.remove('hidden');
     datePicker.parentElement.style.display = 'flex';
@@ -1291,8 +1283,6 @@ function renderGrid(weeklyData, mode) {
   let targetBody = null;
   if (activeTab === 'DAILY') {
     targetBody = document.getElementById('timetable-body-daily');
-  } else if (activeTab === 'BASE') {
-    targetBody = document.getElementById('timetable-body-base');
   } else if (activeTab === 'TEACHER') {
     targetBody = document.getElementById('timetable-body-teacher');
   } else if (activeTab === 'GENERATOR') {

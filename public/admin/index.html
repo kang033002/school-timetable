@@ -316,17 +316,16 @@
         <!-- Timetable Grid Display -->
         <div class="timetable-container" id="timetable-display-container">
           <div class="timetable-tabs">
-            <button class="tab-btn active" id="tab-btn-daily">📅 일자별 시간표</button>
-            <button class="tab-btn" id="tab-btn-base">🏫 학기 시간표</button>
+            <button class="tab-btn active" id="tab-btn-daily">📅 일자별 수업 시간표</button>
             <button class="tab-btn" id="tab-btn-teacher">👩‍🏫 교사 시간표</button>
             <button class="tab-btn" id="tab-btn-generator">🤖 시간표 생성(자동/수동)</button>
           </div>
 
-          <!-- 1. 일자별 시간표 탭 영역 (기본 활성) -->
+          <!-- 1. 일자별 수업 시간표 탭 영역 (기본 활성) -->
           <div id="tab-content-daily" class="tab-content">
             <div class="timetable-header">
               <div>
-                <h3 id="timetable-title-daily">📅 일자별 시간표</h3>
+                <h3 id="timetable-title-daily">📅 일자별 수업 시간표</h3>
                 <span class="subtext" id="week-date-subtext">2026.08.03(월) ~ 2026.08.07(금)</span>
               </div>
               <div style="display:flex; gap:0.5rem; align-items:center;">
@@ -351,39 +350,6 @@
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <!-- 2. 학기 기본 시간표 탭 영역 -->
-          <div id="tab-content-base" class="tab-content hidden">
-            <div class="timetable-header">
-              <div>
-                <h3 id="timetable-title-base">🏫 학기 기본 시간표 원본 설정</h3>
-                <span class="subtext">각 학년/반 셀을 클릭하여 시간표를 직접 수동으로 입력 및 수정하여 적용할 수 있습니다. (고등학교 1~10교시 지원)</span>
-              </div>
-              <div style="display:flex; gap:0.5rem; align-items:center;">
-                <button type="button" id="btn-reset-base-timetable" class="btn btn-outline" style="border-color:#ef4444; color:#ef4444; font-weight:700;">🗑️ 학기 기본 시간표 초기화</button>
-                <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ 기본 시간표 인쇄</button>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="timetable-grid">
-                <thead>
-                  <tr>
-                    <th class="th-period">교시</th>
-                    <th>월요일</th>
-                    <th>화요일</th>
-                    <th>수요일</th>
-                    <th>목요일</th>
-                    <th>금요일</th>
-                  </tr>
-                </thead>
-                <tbody id="timetable-body-base">
-                  <!-- Dynamically populated grid for Base -->
-                </tbody>
-              </table>
-            </div>
-
-
           </div>
 
           <!-- 교사 시간표 탭 영역 -->
