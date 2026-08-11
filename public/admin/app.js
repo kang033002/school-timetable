@@ -506,7 +506,6 @@ async function showDashboard() {
     renderGrid([], 'CLASS');
 
     await loadSchoolMetadata();
-    await loadTimetable();
   } catch (err) {
     console.error('showDashboard error:', err);
     renderGrid([], 'CLASS');
@@ -575,13 +574,10 @@ async function loadSchoolMetadata() {
         });
       };
       
-      // Update classes when grade changes
+      // Update class options dropdown when grade changes (do NOT auto-load timetable)
       filterGradeSelect.addEventListener('change', () => {
         updateClassOptions();
-        loadTimetable();
       });
-      // Optionally reload when class changes
-      filterClassSelect.addEventListener('change', loadTimetable);
       
       // Initialize class options
       updateClassOptions();
