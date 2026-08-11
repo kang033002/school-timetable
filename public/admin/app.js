@@ -3108,8 +3108,10 @@ window.exportCurrentTimetable = function(type) {
   let gridTable = null;
 
   if (activeTab === 'TEACHER') {
-    const modeLabel = teacherSubtab === 'BASE' ? '기초 학기 시간표' : '일자별 수업 시간표';
-    titleStr = `${tName} ${modeLabel}`;
+    const tSelect = document.getElementById('teacher-title-select');
+    const tName = (tSelect && tSelect.selectedIndex > 0) ? tSelect.options[tSelect.selectedIndex].text : '전체교사';
+    const modeLabel = teacherSubtab === 'BASE' ? '학기(기초) 시간표' : '일자별 시간표';
+    titleStr = tName + ' ' + modeLabel;
     gridTable = document.querySelector('#tab-content-teacher .timetable-grid');
   } else {
     const grade = filterGradeSelect ? filterGradeSelect.value : '1';
