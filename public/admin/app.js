@@ -146,13 +146,8 @@ window.executeTeacherQuery = function() {
   loadTimetable();
 };
 
-  if (teacherTitleSelect) {
-    teacherTitleSelect.addEventListener('change', () => {
-      if (activeTab === 'TEACHER') {
-        loadTimetable();
-      }
-    });
-  }
+  // Only use button for searching teacher timetable as requested by the user
+  // teacherTitleSelect change listener removed
 
   if (tabBtnBase) tabBtnBase.addEventListener('click', () => switchTab('BASE'));
   if (tabBtnDaily) tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
