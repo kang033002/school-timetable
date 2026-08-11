@@ -2084,8 +2084,10 @@ async function initGeneratorTab() {
     };
 
     window.selectActiveGenClass = function(gcId) {
-      if (window.saveCurrentClassHours && genCurrentClassId) {
-        window.saveCurrentClassHours(genCurrentClassId);
+      if (window.isGenTableDirty && genCurrentClassId && genCurrentClassId !== gcId) {
+        if (!confirm('작업 중인 과목별 시수 및 교사 설정이 [적용]되지 않았습니다.\n[적용] 버튼을 누르지 않고 이동하면 수정 사항이 모두 손실됩니다.\n정말 다른 학급으로 이동하시겠습니까?')) {
+          return;
+        }
       }
       genCurrentClassId = gcId;
       if (window.loadClassHours) {
@@ -2223,9 +2225,6 @@ async function initGeneratorTab() {
 
       window.saveGeneratorRowsState = function() {
         window.markGenTableDirty();
-        if (genCurrentClassId) {
-          window.saveCurrentClassHours(genCurrentClassId);
-        }
       };
 
       window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
