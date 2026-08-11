@@ -375,11 +375,12 @@
           <div id="tab-content-teacher" class="tab-content hidden">
             <div class="timetable-header">
               <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
                   <h3 style="margin: 0;">👩‍🏫</h3>
-                  <select id="teacher-title-select" class="form-select" style="font-size: 1.25rem; font-weight: 700; width: auto; color: var(--text-main); border-color: #cbd5e1; height: auto; padding: 0.2rem 2rem 0.2rem 0.5rem;">
+                  <select id="teacher-title-select" class="form-select" style="font-size: 1.1rem; font-weight: 700; width: auto; color: var(--text-main); border-color: #cbd5e1; height: auto; padding: 0.3rem 2rem 0.3rem 0.6rem;">
                     <option value="">교사 선택</option>
                   </select>
+                  <button type="button" id="btn-search-teacher-timetable" class="btn btn-primary" style="font-weight:700; padding:0.35rem 1.1rem; border-radius:8px; font-size:0.9rem;" onclick="executeTeacherQuery()">조회</button>
                   <h3 style="margin: 0;">선생님 시간표</h3>
                 </div>
                 <span class="subtext">교사별 주간 시간표(결강 및 보강 내역 포함)를 조회합니다.</span>

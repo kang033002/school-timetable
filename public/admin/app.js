@@ -125,10 +125,10 @@ init();
     });
   }
 
-teacherTitleSelect.addEventListener('change', () => {
+window.executeTeacherQuery = function() {
   if (activeTab !== 'TEACHER') switchTab('TEACHER');
   loadTimetable();
-});
+};
 
   if (tabBtnBase) tabBtnBase.addEventListener('click', () => switchTab('BASE'));
   if (tabBtnDaily) tabBtnDaily.addEventListener('click', () => switchTab('DAILY'));
@@ -1191,7 +1191,7 @@ async function loadTimetable() {
   if (!currentSchoolMeta) return;
 
   const dateVal = datePicker.value;
-  const baseParam = (activeTab === 'BASE' || activeTab === 'TEACHER') ? '&baseOnly=true' : '';
+  const baseParam = activeTab === 'BASE' ? '&baseOnly=true' : '';
 
 
   try {
