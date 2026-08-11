@@ -2342,6 +2342,9 @@ async function initGeneratorTab() {
         }
 
         window.isGenTableDirty = false;
+        
+        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
+        if (window.updateTotalGenHours) window.updateTotalGenHours();
 
         const gc = (generatorData.classes || []).find(c => c.id === genCurrentClassId);
         const gcName = gc ? `${gc.grade}학년 ${gc.class_number || gc.classNumber}반` : '선택한 학급';
@@ -2369,8 +2372,6 @@ async function initGeneratorTab() {
 
       window.saveGeneratorRowsState = function() {
         window.markGenTableDirty();
-        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
-        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       window.addGenRow = function(defaultSubjectId = '', defaultTeacherId = '', defaultHours = '') {
@@ -2447,8 +2448,6 @@ async function initGeneratorTab() {
         });
 
         subjectBody.appendChild(tr);
-        if (window.renderGenSubjectFilter) window.renderGenSubjectFilter();
-        if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
       function loadDefaultRows() {
@@ -2537,11 +2536,7 @@ async function initGeneratorTab() {
         if (window.updateTotalGenHours) window.updateTotalGenHours();
       };
 
-      window.saveGeneratorRowsState = function() {
-        if (genCurrentClassId) {
-          window.saveCurrentClassHours(genCurrentClassId);
-        }
-      };
+
     }
     
     // 로컬 스토리지에서 이전 상태 복원
@@ -2800,9 +2795,14 @@ function buildPreviewChips(classIds) {
       targetDropdown.addEventListener('change', (e) => {
         const selectedGcId = e.target.value;
         if (!selectedGcId) return;
-        if (window.saveCurrentClassHours && genCurrentClassId) {
-          window.saveCurrentClassHours(genCurrentClassId);
+
+        if (window.isGenTableDirty) {
+          if (!confirm('설정하신 시수 및 교사 작업이 적용(저장)되지 않았습니다.\n이대로 이동하면 설정이 유실됩니다.\n다른 학급으로 이동하여 조회하시겠습니까?')) {
+            e.target.value = genCurrentClassId;
+            return;
+          }
         }
+
         genCurrentClassId = selectedGcId;
         if (window.loadClassHours) {
           window.loadClassHours(selectedGcId);
