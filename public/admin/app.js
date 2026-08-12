@@ -3176,9 +3176,29 @@ window.closePendingApprovalsOverlay = () => {
 // 🗑️ Delete button in Modal
 document.getElementById('btn-modal-delete')?.addEventListener('click', () => {
   if (confirm('정말로 해당 교시를 삭제(빈 시간)하시겠습니까?')) {
-    document.getElementById('modal-change-subject').value = 'DELETE';
-    document.getElementById('modal-change-teacher').value = ''; // Teacher not needed for delete
-    handleApplyChange();
+    const subjSelect = document.getElementById('change-subject-select');
+    const teacherSelect = document.getElementById('change-teacher-select');
+    
+    if (subjSelect) {
+      let opt = Array.from(subjSelect.options).find(o => o.value === 'DELETE');
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = 'DELETE';
+        subjSelect.appendChild(opt);
+      }
+      subjSelect.value = 'DELETE';
+    }
+    if (teacherSelect) {
+      let opt = Array.from(teacherSelect.options).find(o => o.value === '');
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = '';
+        teacherSelect.appendChild(opt);
+      }
+      teacherSelect.value = '';
+    }
+    
+    handleApplyChange({ preventDefault: () => {} });
   }
 });
 
