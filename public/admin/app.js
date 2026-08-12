@@ -2873,6 +2873,32 @@ function buildPreviewChips(classIds) {
         }
 
         genCurrentClassId = selectedGcId;
+        
+        // If no local data exists for this class, fetch from DB
+        if (!genClassMap[selectedGcId] || Object.keys(genClassMap[selectedGcId]).length === 0) {
+          try {
+            const btRes = await fetch(API_BASE + '/admin/base-timetable-all?schoolId=' + currentUser.schoolId);
+            if (btRes.ok) {
+              const btData = await btRes.json();
+              const classData = btData.filter(item => item.gradeClassId === selectedGcId);
+              if (classData.length > 0) {
+                if (!genClassMap[selectedGcId]) genClassMap[selectedGcId] = {};
+                classData.forEach(item => {
+                  if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
+                  genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
+                });
+                if (!generatedResult) generatedResult = [];
+                generatedResult = generatedResult.filter(r => r.gradeClassId !== selectedGcId);
+                generatedResult.push(...classData);
+                localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+                localStorage.setItem('genResult', JSON.stringify(generatedResult));
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load class from DB', e);
+          }
+        }
+
         if (window.loadClassHours) {
           window.loadClassHours(selectedGcId);
         }
