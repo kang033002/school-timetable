@@ -1409,7 +1409,9 @@ function renderGrid(weeklyData, mode) {
         const td = document.createElement('td');
         td.className = 'timetable-cell';
 
-        if (slot && slot.isChanged) {
+        const isCancel = slot && slot.changeType === 'CANCEL';
+
+        if (slot && slot.isChanged && !isCancel) {
           td.classList.add('is-changed');
           if (currentUser?.role !== 'STUDENT') {
             const badge = document.createElement('span');
@@ -1419,11 +1421,11 @@ function renderGrid(weeklyData, mode) {
           }
         }
 
-        // 수업 내용이 있거나(subjectName/gradeName), 변경/보강 이력이 있으면 표시
+        // 수업 내용이 있거나(subjectName/gradeName), 변경/보강 이력이 있으면 표시 (CANCEL은 제외하여 완전한 빈 칸으로 표시)
         const hasContent = slot && (slot.subjectName || slot.gradeName || slot.teacherName);
-        const hasChange = slot && slot.isChanged;
+        const hasChange = slot && slot.isChanged && !isCancel;
 
-        if (hasContent || hasChange) {
+        if ((hasContent || hasChange) && !isCancel) {
           const subDiv = document.createElement('div');
           subDiv.className = 'cell-subject';
           if (mode === 'CLASS') {
