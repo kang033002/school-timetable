@@ -2253,6 +2253,55 @@ async function initGeneratorTab() {
       });
     }
 
+    const btnView = document.getElementById('btn-gen-view');
+    if (btnView) {
+      const targetDropdown = document.getElementById('gen-class-list-select');
+      btnView.addEventListener('click', async () => {
+        const selectedGcId = targetDropdown.value;
+        if (!selectedGcId) return;
+
+        if (window.isGenTableDirty) {
+          if (!confirm('설정하신 시수 및 교사 작업이 적용(저장)되지 않았습니다.\n이대로 이동하면 설정이 유실됩니다.\n다른 학급으로 이동하여 조회하시겠습니까?')) {
+            targetDropdown.value = genCurrentClassId;
+            return;
+          }
+        }
+
+                genCurrentClassId = selectedGcId;
+
+        // If no local data exists for this class, fetch from DB
+        if (!genClassMap[selectedGcId] || Object.keys(genClassMap[selectedGcId]).length === 0) {
+          try {
+            const btRes = await fetch(API_BASE + '/admin/base-timetable-all?schoolId=' + currentUser.schoolId);
+            if (btRes.ok) {
+              const btData = await btRes.json();
+              const classData = btData.filter(item => item.gradeClassId === selectedGcId);
+              if (classData.length > 0) {
+                if (!genClassMap[selectedGcId]) genClassMap[selectedGcId] = {};
+                classData.forEach(item => {
+                  if (!genClassMap[item.gradeClassId][item.dayOfWeek]) genClassMap[item.gradeClassId][item.dayOfWeek] = {};
+                  genClassMap[item.gradeClassId][item.dayOfWeek][item.period] = item;
+                });
+                if (!generatedResult) generatedResult = [];
+                generatedResult = generatedResult.filter(r => r.gradeClassId !== selectedGcId);
+                generatedResult.push(...classData);
+                localStorage.setItem('genClassMap', JSON.stringify(genClassMap));
+                localStorage.setItem('genResult', JSON.stringify(generatedResult));
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load class from DB', e);
+          }
+        }
+
+        if (window.loadClassHours) {
+          window.loadClassHours(selectedGcId);
+        }
+        const maxPeriodsPerDay = document.getElementById('gen-max-period-select') ? parseInt(document.getElementById('gen-max-period-select').value) : 10;
+        renderGenGrid(genCurrentClassId, maxPeriodsPerDay);
+      });
+    }
+
     const btnDeleteClass = document.getElementById('btn-gen-delete-class');
     if (btnDeleteClass) {
       const newBtnDeleteClass = btnDeleteClass.cloneNode(true);
@@ -2812,7 +2861,7 @@ function buildPreviewChips(classIds) {
       const btnView = document.getElementById('btn-gen-target-class-view');
       const attachTarget = btnView || targetDropdown;
       const eventName = btnView ? 'click' : 'change';
-      attachTarget.addEventListener(eventName, (e) => {
+      attachTarget.addEventListener(eventName, async (e) => {
         const selectedGcId = targetDropdown.value;
         if (!selectedGcId) return;
 
