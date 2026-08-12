@@ -1263,22 +1263,22 @@ async function loadTimetable() {
         classNum = currentUser.classNumber;
       } else {
         if (!filterGradeSelect.value || !filterClassSelect.value) {
-          weekDateSubtext.textContent = \기준주간 시작: -\;
+          weekDateSubtext.textContent = `기준주간 시작: -`;
           renderGrid([], mode);
           return;
         }
         grade = filterGradeSelect.value;
         classNum = filterClassSelect.value;
       }
-      url = \\/timetable/class?schoolId=\&grade=\&classNumber=\&date=\\\;
+      url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
       if (activeTab === 'BASE') {
-        if (titleElemBase) titleElemBase.textContent = \🏫 \학년 \반 기본 시간표 원본 설정\;
+        if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
       } else {
         if (titleElemDaily) {
           if (currentUser?.role === 'STUDENT') {
-            titleElemDaily.textContent = \📅 \학년 \반 시간표\;
+            titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 시간표`;
           } else {
-            titleElemDaily.textContent = \📅 \학년 \반 일자별 시간표\;
+            titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 일자별 시간표`;
           }
         }
       }
