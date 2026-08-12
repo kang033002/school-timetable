@@ -93,7 +93,9 @@ router.post('/login', async (req, res) => {
       role: user.role,
       schoolId: user.school_id,
       teacherId: user.teacher_id,
-      name: user.name
+      name: user.name,
+      grade: user.grade,
+      classNumber: user.class_number
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
@@ -109,7 +111,9 @@ router.post('/login', async (req, res) => {
         schoolId: user.school_id,
         schoolName: user.school_name,
         schoolCode: user.school_code,
-        teacherId: user.teacher_id
+        teacherId: user.teacher_id,
+        grade: user.grade,
+        classNumber: user.class_number
       }
     });
   } catch (err) {
