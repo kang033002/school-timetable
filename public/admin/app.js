@@ -2809,13 +2809,16 @@ function buildPreviewChips(classIds) {
 
     if (!targetDropdown.dataset.bound) {
       targetDropdown.dataset.bound = 'true';
-      targetDropdown.addEventListener('change', (e) => {
-        const selectedGcId = e.target.value;
+      const btnView = document.getElementById('btn-gen-target-class-view');
+      const attachTarget = btnView || targetDropdown;
+      const eventName = btnView ? 'click' : 'change';
+      attachTarget.addEventListener(eventName, (e) => {
+        const selectedGcId = targetDropdown.value;
         if (!selectedGcId) return;
 
         if (window.isGenTableDirty) {
           if (!confirm('설정하신 시수 및 교사 작업이 적용(저장)되지 않았습니다.\n이대로 이동하면 설정이 유실됩니다.\n다른 학급으로 이동하여 조회하시겠습니까?')) {
-            e.target.value = genCurrentClassId;
+            targetDropdown.value = genCurrentClassId;
             return;
           }
         }

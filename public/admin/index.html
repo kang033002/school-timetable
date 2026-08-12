@@ -578,7 +578,10 @@
               <div class="timetable-header" style="margin-bottom:1rem;">
                 <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                   <h3 style="margin:0; font-weight:800; font-size:1.2rem;">📋 시간표 확인 및 수동 수정</h3>
-                  <select id="gen-target-class-dropdown" class="form-select" style="width:auto; font-weight:700; color:var(--primary-color); border:1.5px solid var(--primary-color); padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; background-color:var(--bg-card);"></select>
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <select id="gen-target-class-dropdown" class="form-select" style="width:auto; font-weight:700; color:var(--primary-color); border:1.5px solid var(--primary-color); padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; background-color:var(--bg-card);"></select>
+                    <button type="button" id="btn-gen-target-class-view" class="btn btn-primary" style="padding:0.4rem 0.8rem; font-weight:700;">🔍 조회</button>
+                  </div>
                 </div>
                 <div style="display:flex; gap:0.75rem; align-items:center;">
                   <button type="button" id="btn-apply-timetable" class="btn" style="padding:0.6rem 1.5rem; font-weight:700; background-color:#ffffff; color:#10b981; border:1px solid #10b981; transition:all 0.2s;">
