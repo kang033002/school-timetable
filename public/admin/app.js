@@ -484,17 +484,22 @@ async function showDashboard() {
         switchTab('DAILY');
       }
     } else if (currentUser?.role === 'STUDENT') {
-      if (tabDaily) {
-        tabDaily.style.display = 'inline-block';
-        tabDaily.textContent = '📅 학급 시간표';
-      }
+      const classFilterGroup = document.getElementById('class-filter-group');
+      const timetableTabs = document.querySelector('.timetable-tabs');
+      const weekDateSubtext = document.getElementById('week-date-subtext');
+      const btnDailyAll = document.getElementById('btn-daily-all');
+      const btnResetDailyChanges = document.getElementById('btn-reset-daily-changes');
+
+      if (classFilterGroup) classFilterGroup.style.display = 'none';
+      if (timetableTabs) timetableTabs.style.display = 'none';
+      if (weekDateSubtext) weekDateSubtext.style.display = 'none';
+      if (btnDailyAll) btnDailyAll.style.display = 'none';
+      if (btnResetDailyChanges) btnResetDailyChanges.style.display = 'none';
+
       if (tabBase) tabBase.style.display = 'none';
-      if (tabTeacher) {
-        tabTeacher.style.display = 'none';
-      }
+      if (tabTeacher) tabTeacher.style.display = 'none';
       if (tabGen) tabGen.style.display = 'none';
       if (btnSettings) btnSettings.style.display = 'none';
-      btnMainResets.forEach(btn => btn.style.display = 'none');
       
       if (activeTab !== 'DAILY') {
         switchTab('DAILY');
@@ -1252,18 +1257,30 @@ async function loadTimetable() {
       url = `${API_BASE}/timetable/teacher?schoolId=${currentUser.schoolId}&teacherId=${encodeURIComponent(teacherId)}&date=${dateVal}${isTeacherBase ? '&baseOnly=true' : ''}`;
     } else {
       mode = 'CLASS';
-      if (!filterGradeSelect.value || !filterClassSelect.value) {
-        weekDateSubtext.textContent = `기준주간 시작: -`;
-        renderGrid([], mode);
-        return;
-      }
-      const grade = filterGradeSelect.value;
-      const classNum = filterClassSelect.value;
-      url = `${API_BASE}/timetable/class?schoolId=${currentUser.schoolId}&grade=${grade}&classNumber=${classNum}&date=${dateVal}${baseParam}`;
-      if (activeTab === 'BASE') {
-        if (titleElemBase) titleElemBase.textContent = `🏫 ${grade}학년 ${classNum}반 기본 시간표 원본 설정`;
+      let grade, classNum;
+      if (currentUser?.role === 'STUDENT') {
+        grade = currentUser.grade;
+        classNum = currentUser.classNumber;
       } else {
-        if (titleElemDaily) titleElemDaily.textContent = `📅 ${grade}학년 ${classNum}반 일자별 시간표`;
+        if (!filterGradeSelect.value || !filterClassSelect.value) {
+          weekDateSubtext.textContent = \기준주간 시작: -\;
+          renderGrid([], mode);
+          return;
+        }
+        grade = filterGradeSelect.value;
+        classNum = filterClassSelect.value;
+      }
+      url = \\/timetable/class?schoolId=\&grade=\&classNumber=\&date=\\\;
+      if (activeTab === 'BASE') {
+        if (titleElemBase) titleElemBase.textContent = \🏫 \학년 \반 기본 시간표 원본 설정\;
+      } else {
+        if (titleElemDaily) {
+          if (currentUser?.role === 'STUDENT') {
+            titleElemDaily.textContent = \📅 \학년 \반 시간표\;
+          } else {
+            titleElemDaily.textContent = \📅 \학년 \반 일자별 시간표\;
+          }
+        }
       }
     }
 
